@@ -11,8 +11,12 @@
 
 - 环境变量 ``DDW_ACCESS_TOKEN``（生产推荐）
 - 或 ``config/deployment.yaml`` 的 ``auth.access_token``
-- 未配置时使用文档化的开发默认值 ``deepddw-dev-token-change-me``
-  （并打 warning；生产必须显式配置）
+
+⚠️ 未配置 Token 时**拒绝启动**（抛 RuntimeError）——绝不使用公开默认值，
+避免门禁形同虚设（对抗验收 P2-3 修复）。
+
+⚠️ Token 建议使用纯 ASCII 字符（HTTP header 传输中文/非 ASCII 可能
+被客户端编码破坏导致 401，对抗验收 P2-4 提示）。
 
 本模块同时提供 ASGI 门禁包装器（用于 streamable-http 的 Starlette Route）
 与 FastAPI 依赖（用于经典端点 /api/v1/mcp/jsonrpc|sse|info 与网关 API）。
@@ -29,15 +33,20 @@ from fastapi import HTTPException, Request, status
 
 logger = logging.getLogger(__name__)
 
-# 文档化的开发默认 Token（生产必须用 DDW_ACCESS_TOKEN / deployment.yaml 覆盖）
-_DEV_DEFAULT_TOKEN = "deepddw-dev-token-change-me"
 _ACCESS_TOKEN_ATTR = "access_token"
 
 WWW_AUTHENTICATE = 'Bearer realm="deepddw"'
 
 
+class AccessTokenNotConfiguredError(RuntimeError):
+    """未配置访问 Token（启动期抛错，拒绝以不安全方式运行）。"""
+
+
 def get_access_token() -> str:
-    """解析当前生效的静态访问 Token（环境变量 > deployment.yaml > 开发默认）。"""
+    """解析当前生效的静态访问 Token（环境变量 > deployment.yaml）。
+
+    未配置 → 抛 :class:`AccessTokenNotConfiguredError`（拒绝启动/拒绝服务）。
+    """
     env = os.environ.get("DDW_ACCESS_TOKEN")
     if env:
         return env
@@ -48,13 +57,12 @@ def get_access_token() -> str:
         if isinstance(cfg, str) and cfg.strip():
             return cfg.strip()
     except Exception as exc:  # noqa: BLE001  # 配置解析失败不阻断鉴权模块
-        logger.warning("token_gate: read config failed, use dev default: %s", exc)
-    if not getattr(get_access_token, "_warned", False):
-        logger.warning(
-            "DDW_ACCESS_TOKEN 未配置，使用开发默认 Token（生产环境必须设置）"
-        )
-        get_access_token._warned = True  # type: ignore[attr-defined]
-    return _DEV_DEFAULT_TOKEN
+        logger.warning("token_gate: read config failed: %s", exc)
+    raise AccessTokenNotConfiguredError(
+        "DDW_ACCESS_TOKEN 未配置（或 config/deployment.yaml auth.access_token 为空）。"
+        "deepDDW 拒绝以未设 Token 的方式启动/服务——请显式配置后重试。"
+        "参考 .env.example / README。"
+    )
 
 
 def verify_token(token: str) -> bool:

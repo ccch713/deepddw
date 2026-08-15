@@ -20,7 +20,6 @@ from __future__ import annotations
 import logging
 import os
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import AsyncIterator, Dict, Optional
 
 from sqlalchemy.exc import SQLAlchemyError

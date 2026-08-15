@@ -29,7 +29,7 @@ from core.api.chat import router as chat_router
 from core.api.knowledge import router as knowledge_router
 from core.api.llm import router as llm_router
 from core.config import get_settings
-from core.database.session import dispose_db, get_engine, init_db
+from core.database.session import dispose_db, init_db
 from core.mcp.protocol import SERVER_CAPABILITIES, SERVER_INFO
 from core.mcp.server import get_mcp_server
 from core.security.token_gate import require_access_token
@@ -84,8 +84,12 @@ def load_plugins(app: FastAPI) -> Dict[str, Any]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # P2-3：启动期 fail-fast——未配置访问 Token 直接拒绝启动
+    # （绝不以公开默认值运行；门禁形同虚设比不启动更危险）。
+    from core.security.token_gate import get_access_token
+
+    get_access_token()
     logger.info("deepDDW starting… mode=%s", get_settings().mode)
-    engine = get_engine()
     # 先加载插件（注册模型到 Base.metadata），再建表
     plugins = load_plugins(app)
     app.state.plugins = plugins

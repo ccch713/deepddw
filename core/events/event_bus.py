@@ -12,11 +12,10 @@ match a single level (e.g. ``record.*`` matches ``record.created``).
 from __future__ import annotations
 
 import asyncio
-import fnmatch
 import logging
 import re
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, DefaultDict, List, Optional, Set
 
 logger = logging.getLogger(__name__)

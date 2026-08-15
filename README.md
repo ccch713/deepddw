@@ -36,9 +36,15 @@ docker compose -f deepddw-compose.yml up -d --build
 
 打开 `http://<host>:8500/` → PWA 启动页 → 填 Token → 进入工作台（会话 / 知识库 / 记忆 / 文档）。
 
+> ⚠️ **LLM 未配置 = mock 演示（不是真实 AI 回答）**：未配置 `DDW_DEEPSEEK_API_KEY` 且未接 Ollama 时，
+> `ddw.llm.chat` 返回 `[DeepSeek V4 Pro mock]` 占位文本，仅用于演示链路，**不代表真实模型输出**。
+> 配置 LLM 后即为真实回答。知识库检索 / 记忆 / 文档检索不依赖 LLM，始终真实可用。
+
 ## 安全模型（P0-1）
 
 - 无账号体系：只有静态访问 Token（`DDW_ACCESS_TOKEN` / `config/deployment.yaml auth.access_token`）。
+- ⚠️ **未配置 Token 时 deepDDW 拒绝启动**（fail-fast）——绝不使用公开默认值，门禁形同虚设比不启动更危险。
+- ⚠️ **Token 请使用纯 ASCII 字符**：HTTP header 传输中文/非 ASCII 可能被客户端编码破坏导致 401（建议 `openssl rand -hex 24` 生成）。
 - 全部 MCP 端点（`/api/v1/mcp` streamable-http、`/api/v1/mcp/jsonrpc|sse|info` 经典）与网关 API
   必须携带 `Authorization: Bearer <token>` 或 `X-DDW-Token`，缺失/无效 → **401**。
 - MCP `tools/list` 按白名单过滤（core / ddw-docs-portal / ddw-searxng）——商业插件工具绝不注册、绝不外露。

@@ -17,11 +17,8 @@ we have to compensate for:
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
-
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 
 def ensure_sqlite_path(url: str) -> str:

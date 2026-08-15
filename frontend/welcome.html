@@ -178,13 +178,22 @@ nav button.active{color:var(--brand)}
   function sendChat() {
     var message = chatInput.value.trim();
     if (!message) return;
-    // LAN 免密模式：无 Token 也放行（服务端内网自动放行）；外网无 Token 才提示
-    if (!token && !window.__lanFree) { out("chat-out", "请先通过启动页填写 Token（外网访问需要）"); return; }
+    // LAN 免密模式：无 Token 直接发（服务端内网自动放行）；
+    // 外网无 Token 时服务端返回 401，届时再提示。
     out("chat-out", "思考中…");
     fetch("/api/v1/chat/", {
       method: "POST", headers: headers(),
       body: JSON.stringify({ message: message }),
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    }).then(function (r) {
+      return r.json().then(function (d) {
+        if (r.status === 401) {
+          out("chat-out", "未授权：请先通过启动页填写 Token（外网访问需要）");
+          return null;
+        }
+        return d;
+      });
+    }).then(function (d) {
+      if (!d) return;
       var data = d.data || d;
       out("chat-out", (data.content || JSON.stringify(d)).replace(/\[deepDDW\][^\n]*/g, "").trim() || "（空回复）");
     }).catch(function (e) { out("chat-out", "请求失败：" + e.message); });

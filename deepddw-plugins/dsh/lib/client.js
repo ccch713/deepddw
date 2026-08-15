@@ -409,6 +409,13 @@ window.__ModuleLoader__.load({
     }
 
     // ------------------------------------------------------------------ //
+    // inject: 声明 apply 需要从宿主拿的能力（缺此声明 ctx.slots 为 undefined，
+    // 报 "cannot get property 'slots' without inject"——官方插件同样模式）
+    // ------------------------------------------------------------------ //
+
+    const inject = ["slots"]
+
+    // ------------------------------------------------------------------ //
     // apply: register slots (settings sections + header utilities)
     // ------------------------------------------------------------------ //
 
@@ -444,6 +451,7 @@ window.__ModuleLoader__.load({
     }
 
     exports.apply = apply
+    exports.inject = inject
     return exports
   },
 })

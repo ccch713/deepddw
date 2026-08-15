@@ -213,9 +213,9 @@ def create_app() -> FastAPI:
             qr.add_data(pair_url)
             qr.make(fit=True)
             img = qr.make_image(image_factory=SvgPathImage)
-            buf = io.StringIO()
+            buf = io.BytesIO()
             img.save(buf)
-            qr_svg = buf.getvalue()
+            qr_svg = buf.getvalue().decode("utf-8")
         except Exception as exc:  # noqa: BLE001  # 二维码不可用不影响主流程
             logger.warning("pair qr generation failed: %s", exc)
         return {

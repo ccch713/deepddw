@@ -289,19 +289,23 @@ def create_app() -> FastAPI:
         #     到局域网（dsh 拒绝 0.0.0.0：防远程代码执行）。
         #     可用 env DEEPDDW_DSH_URL 指向其他 dsh 地址。
 
-        async def _proxy_to_dsh(path: str, request: Request, rewrite_html: bool):
-            """把请求转发到 dsh 引擎；rewrite_html 时重写 SPA 资源前缀 + 注入 polyfill。"""
+        async def _proxy_to_dsh(path: str, request: Request, rewrite_html: bool, path_prefix: str = ""):
+            """把请求转发到 dsh 引擎；rewrite_html 时重写 SPA 资源前缀 + 注入 polyfill。
+
+            path_prefix：目标路径前缀。/dsh/{path} → 转发 {base}/{path}（页面在 dsh 根）；
+            /api/{path} → 转发 {base}/api/{path}（dsh RPC 端点带 /api 前缀）。
+            """
             import httpx
 
             dsh_base = os.environ.get("DEEPDDW_DSH_URL", "http://127.0.0.1:3080").rstrip("/")
-            url = f"{dsh_base}/{path}" if path else f"{dsh_base}/"
+            target = f"{dsh_base}{path_prefix}/{path}" if path else f"{dsh_base}{path_prefix}/"
             if request.url.query:
-                url += f"?{request.url.query}"
+                target += f"?{request.url.query}"
             headers = {k: v for k, v in request.headers.items() if k.lower() not in ("host", "content-length")}
             body = await request.body() if request.method in ("POST", "PUT", "DELETE") else None
             async with httpx.AsyncClient(timeout=60) as client:
                 resp = await client.request(
-                    request.method, url, headers=headers, content=body,
+                    request.method, target, headers=headers, content=body,
                     follow_redirects=False,
                 )
             from fastapi.responses import Response
@@ -344,14 +348,14 @@ def create_app() -> FastAPI:
 
         @app.api_route("/dsh/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"], include_in_schema=False)
         async def dsh_proxy(path: str, request: Request):
-            return await _proxy_to_dsh(path, request, rewrite_html=True)
+            return await _proxy_to_dsh(path, request, rewrite_html=True, path_prefix="")
 
         # dsh 的 RPC/API 端点（/api/llm.providers 等）：浏览器经反代访问时请求发到
         # 网关根路径 /api/*（dsh 前端 API 基址 = location.origin）。
         # deepDDW 自己的 API 是 /api/v1/*，路径前缀不同不冲突；此处代理其余 /api/* 到 dsh。
         @app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"], include_in_schema=False)
         async def dsh_api_proxy(path: str, request: Request):
-            return await _proxy_to_dsh(path, request, rewrite_html=False)
+            return await _proxy_to_dsh(path, request, rewrite_html=False, path_prefix="/api")
     else:
         logger.warning("frontend directory not found: %s", frontend)
 

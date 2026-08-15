@@ -2,7 +2,7 @@
  * @deepddw/dsh-workbench — browser client half (full workbench).
  *
  * deepDDW capabilities injected into the STOCK DSH UI via official slots:
- *   1. `settings.section` ×3 — 知识库 / 记忆 / 模型配置 (settings-page left nav);
+ *   1. `settings.section` ×2 — 知识库 / 记忆（模型配置走 dsh 原版） (settings-page left nav);
  *   2. `conversation.session.header.utilities` — docs-rail toggle button
  *      (top-right utility seat) opening a collapsible 320px right rail.
  *
@@ -223,81 +223,6 @@ window.__ModuleLoader__.load({
     }
 
     // ------------------------------------------------------------------ //
-    // 模型配置 section (key 只写不读明文)
-    // ------------------------------------------------------------------ //
-
-    function LlmSection() {
-      var status, setStatus = react.useState(null)[1]
-      var provider, setProvider = react.useState('deepseek')[1]
-      var apiKey, setApiKey = react.useState('')[1]
-      var showKey, setShowKey = react.useState(false)[1]
-      var baseUrl, setBaseUrl = react.useState('')[1]
-      var model, setModel = react.useState('')[1]
-      var msg, setMsg = react.useState('')[1]
-
-      react.useEffect(function () {
-        api('/api/v1/llm/config')
-          .then(function (r) { return r.json() })
-          .then(function (d) {
-            setStatus(d)
-            if (d.providers && d.providers.deepseek) {
-              setBaseUrl(d.providers.deepseek.base_url || 'https://api.deepseek.com/v1')
-              setModel(d.providers.deepseek.model || 'deepseek-chat')
-            }
-          })
-          .catch(function () {})
-      }, [])
-
-      function save() {
-        var body = { provider: provider }
-        if (apiKey) body.api_key = apiKey
-        if (baseUrl) body.base_url = baseUrl
-        if (model) body.model = model
-        api('/api/v1/llm/config', { method: 'POST', body: body })
-          .then(function (r) { return r.json() })
-          .then(function (d) { setMsg('已保存（key_saved=' + d.key_saved + '）') })
-          .catch(function (e) { setMsg('保存失败：' + e.message) })
-      }
-      function testConn() {
-        setMsg('测试中…')
-        api('/api/v1/llm/test', { method: 'POST', body: { provider: provider } })
-          .then(function (r) { return r.json() })
-          .then(function (d) { setMsg(d.ok ? ('连接正常 ✓ ' + d.model) : ('连接失败：' + (d.error || 'unknown'))) })
-          .catch(function (e) { setMsg('测试失败：' + e.message) })
-      }
-
-      var providerStatus = (status && status.providers) || {}
-      var current = providerStatus[provider] || {}
-
-      return jsxRuntime.jsx('div', { children: [
-        jsxRuntime.jsx('div', { style: S.card, children: [
-          jsxRuntime.jsx('h3', { style: S.h3, children: '🤖 模型配置（deepDDW 侧）' }),
-          jsxRuntime.jsx('div', { style: S.hint, children: '主路径请用 dsh 原版设置配置 LLM；此处为 deepDDW 插件功能（知识库/记忆/文档）使用的模型通道。' }),
-          jsxRuntime.jsx('label', { style: S.label, children: 'Provider' }),
-          jsxRuntime.jsx('select', { style: S.input, value: provider, onChange: function (e) { provider = e.target.value; setProvider(provider); var ps = (status && status.providers) || {}; var c = ps[provider] || {}; setBaseUrl(c.base_url || (provider === 'ollama' ? 'http://localhost:11434' : 'https://api.deepseek.com/v1')); setModel(c.model || (provider === 'ollama' ? 'qwen2.5:7b' : 'deepseek-chat')) }, children: [
-            jsxRuntime.jsx('option', { value: 'deepseek', children: 'deepseek' }),
-            jsxRuntime.jsx('option', { value: 'ollama', children: 'ollama' }),
-          ] }),
-          jsxRuntime.jsx('div', { style: S.hint, children: '当前状态：' + (current.configured ? '已配置' : '未配置') + (current.has_key ? '（已存 key，不回显）' : '') }),
-          jsxRuntime.jsx('label', { style: S.label, children: 'API Key（password，只写不读明文）' }),
-          jsxRuntime.jsx('div', { children: [
-            jsxRuntime.jsx('input', { style: Object.assign({}, S.input, { flex: '1' }), type: showKey ? 'text' : 'password', placeholder: provider === 'ollama' ? '本机 Ollama 无需 Key' : 'sk-…', value: apiKey, onInput: function (e) { apiKey = e.target.value; setApiKey(apiKey) } }),
-            jsxRuntime.jsx('button', { style: { marginLeft: '8px', padding: '8px 10px', fontSize: '12px', background: 'transparent', border: '1px solid var(--dsw-alias-border-subtle, #333)', borderRadius: '8px', color: 'var(--dsw-alias-label-secondary, #aaa)', cursor: 'pointer' }, onClick: function () { setShowKey(!showKey) }, children: showKey ? '隐藏' : '显示' }),
-          ] }),
-          jsxRuntime.jsx('label', { style: S.label, children: 'Base URL' }),
-          jsxRuntime.jsx('input', { style: S.input, value: baseUrl, onInput: function (e) { baseUrl = e.target.value; setBaseUrl(baseUrl) } }),
-          jsxRuntime.jsx('label', { style: S.label, children: 'Model' }),
-          jsxRuntime.jsx('input', { style: S.input, value: model, onInput: function (e) { model = e.target.value; setModel(model) } }),
-          jsxRuntime.jsx('div', { children: [
-            jsxRuntime.jsx('button', { style: S.btn, onClick: save, children: '保存配置' }),
-            jsxRuntime.jsx('button', { style: Object.assign({}, S.btn, { background: 'transparent', color: 'var(--dsw-alias-label-primary)', border: '1px solid var(--dsw-alias-border-subtle, #333)' }), onClick: testConn, children: '测试连接' }),
-          ] }),
-          jsxRuntime.jsx('div', { style: S.msg, children: msg }),
-        ] }),
-      ] })
-    }
-
-    // ------------------------------------------------------------------ //
     // 右上角文档栏（可隐藏；当前对话/知识库文档列表 + 预览）
     // ------------------------------------------------------------------ //
 
@@ -426,22 +351,15 @@ window.__ModuleLoader__.load({
         name: 'settings.section',
         id: 'deepddw-kb',
         order: 100,
-        label: () => '📚 知识库',
+        label: () => '知识库',
       }, KbSection))
 
       ctx.slots.inject('settings.section', () => ctx.slots.register({
         name: 'settings.section',
         id: 'deepddw-memory',
         order: 110,
-        label: () => '🧠 记忆',
+        label: () => '记忆',
       }, MemorySection))
-
-      ctx.slots.inject('settings.section', () => ctx.slots.register({
-        name: 'settings.section',
-        id: 'deepddw-llm',
-        order: 120,
-        label: () => '🤖 模型配置',
-      }, LlmSection))
 
       ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({
         name: 'conversation.session.header.utilities',

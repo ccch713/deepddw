@@ -273,7 +273,15 @@ def create_app() -> FastAPI:
         app.mount("/ui", StaticFiles(directory=str(frontend), html=True), name="frontend")
 
         @app.get("/", include_in_schema=False)
-        async def root():
+        async def root(request: Request):
+            # 体验优化 A2（2026-08-16 竞品抢生态位提速）：LAN 免密时根路径直接跳 dsh 工作台
+            # （dsh 原版界面，零配置直达）；外网/需 Token 才走启动页。
+            # dsh 引擎地址可配置：env DEEPDDW_DSH_URL > 默认 http://127.0.0.1:3080
+            from core.security.token_gate import client_ip, lan_bypass_enabled, is_lan_client
+
+            dsh_url = os.environ.get("DEEPDDW_DSH_URL", "http://127.0.0.1:3080")
+            if lan_bypass_enabled() and is_lan_client(client_ip(request)):
+                return RedirectResponse(url=dsh_url)
             return RedirectResponse(url="/ui/deepddw-launcher.html")
     else:
         logger.warning("frontend directory not found: %s", frontend)

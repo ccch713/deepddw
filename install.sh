@@ -92,6 +92,11 @@ if [ "$WITH_DSH" = true ]; then
         # 2) MCP 桥配置追加到 profile patch（deepDDW 5 工具；LAN 免密可直接连）
         PATCH_FILE="$HOME/.dsh/profiles/web/cordis.patch.yml"
         if [ -f "$PATCH_FILE" ] && ! grep -q "mcp-deepddw" "$PATCH_FILE" 2>/dev/null; then
+            # 模板默认含空数组行 "[]"（占位）：追加 - insert 前必须删掉，否则 YAML 非法
+            if grep -q "^\[\]$" "$PATCH_FILE" 2>/dev/null; then
+                sed -i '' '/^\[\]$/d' "$PATCH_FILE"
+                log "已清理 patch 模板空数组占位行（避免 YAML 非法）"
+            fi
             cat >> "$PATCH_FILE" <<'MCPEOF'
 - insert:
     - id: mcp-deepddw

@@ -1,9 +1,0 @@
-special_findings 必须包含：
-- treatment_subtype: 医美子类型（veneer / whitening / composite / gingivoplasty）
-- material: 材料（porcelain / composite / ceramic / resin）
-- target_shade: 目标色号（A1/A2/A3/B1/B2 等）
-- tooth_count: 涉及牙位数
-- smile_design: 是否微笑设计（true/false）
-- photos_taken: 是否已拍照（true/false）
-- mock_up_done: 是否已做 mock-up（true/false）
-- follow_up_weeks: 复诊周数

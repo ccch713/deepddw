@@ -110,10 +110,10 @@ def new_request_id() -> str:
 
 
 SERVER_INFO = {
-    "name": "ddw-ai-hub",
-    "version": "6.0.0",
-    "vendor": "武汉锐果互动信息技术有限公司",
-    "description": "DDW AI Hub — 企业级 AI 底座平台（渡笃微）",
+    "name": "deepddw",
+    "version": "0.1.0",
+    "vendor": "deepDDW community",
+    "description": "deepDDW — 开源个人 AI 底座（DSH + 知识库 + 记忆 + 网关 + MCP）",
 }
 
 

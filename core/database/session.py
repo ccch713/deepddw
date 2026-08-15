@@ -73,17 +73,36 @@ async def session_scope() -> AsyncIterator[AsyncSession]:
 async def init_db() -> None:
     """启动时建表。
 
-    生产与 dev 均使用 create_all（幂等，自动补齐新表）。
-    Schema 演进（改列/约束）见 docs/DDW-数据库迁移机制评估-20260808.md：
-    当前单机 SQLite 形态不引入 Alembic；PostgreSQL SaaS 化时升级轻量
-    schema_versions 迁移链。
+    deepDDW 单机 SQLite：create_all（幂等，自动补齐新表）+ 兼容表（chat_messages）。
     """
     engine = get_engine()
     async with engine.begin() as conn:
         from core.database import models  # noqa: F401  触发模型注册
 
         await conn.run_sync(Base.metadata.create_all)
-    logger.info("DDW DB schema ensured")
+        # chat_messages：Chat API 以 SQLAlchemy Table 直连（兼容旧库），补建表
+        from sqlalchemy import text
+
+        await conn.execute(text(
+            """
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                tenant_id INTEGER,
+                conversation_id VARCHAR(64),
+                role VARCHAR(16),
+                content TEXT,
+                provider VARCHAR(64),
+                model VARCHAR(128),
+                tokens_in INTEGER,
+                tokens_out INTEGER,
+                cost FLOAT,
+                created_at DATETIME,
+                updated_at DATETIME
+            )
+            """
+        ))
+    logger.info("deepDDW DB schema ensured")
 
 
 async def dispose_db() -> None:

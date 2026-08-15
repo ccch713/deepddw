@@ -1,10 +1,10 @@
-"""DDW MCP 资源注册表（DDW AI Hub v5.4 — 模块 D1）。
+"""deepDDW MCP 资源注册表（开源裁剪版）。
 
-暴露：
-- ddw://knowledge-bases         知识库列表
-- ddw://plugins                 插件列表
-- ddw://training/courses        培训课程
-- ddw://hris/adapters           HRIS 适配器清单
+暴露（白名单组件）：
+- ddw://knowledge-bases         知识库列表（SQLite）
+- ddw://plugins                 插件列表（白名单插件）
+
+商业资源（training/courses、hris/adapters、客服等）已随插件移除。
 """
 
 from __future__ import annotations
@@ -64,56 +64,47 @@ class ResourceRegistry:
 
 def install_default_resources(registry: ResourceRegistry) -> None:
     async def knowledge_bases(ctx):
+        from core.knowledge import get_conn
+
+        try:
+            conn = get_conn()
+            try:
+                rows = conn.execute(
+                    "SELECT id, title FROM kb_documents ORDER BY id LIMIT 50"
+                ).fetchall()
+                items = [{"id": r["id"], "name": r["title"]} for r in rows]
+            finally:
+                conn.close()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("knowledge-bases resource degraded: %s", exc)
+            items = []
         return {
             "uri": "ddw://knowledge-bases",
             "mimeType": "application/json",
-            "text": '[{"id":1,"name":"企业公共知识库"},{"id":2,"name":"客服知识库-A"}]',
+            "text": str(items),
         }
 
     async def plugins(ctx):
         return {
             "uri": "ddw://plugins",
             "mimeType": "application/json",
-            "text": '[{"name":"customer-service","version":"2.0.0"},{"name":"ddw-training","version":"0.1.0"}]',
-        }
-
-    async def training_courses(ctx):
-        return {
-            "uri": "ddw://training/courses",
-            "mimeType": "application/json",
-            "text": '[{"id":"physics-g9","subject":"physics","grade":"9"},{"id":"chemistry-g9","subject":"chemistry","grade":"9"}]',
-        }
-
-    async def hris_adapters(ctx):
-        return {
-            "uri": "ddw://hris/adapters",
-            "mimeType": "application/json",
-            "text": '[{"name":"kingdee"},{"name":"wecom"},{"name":"beisen"},{"name":"feishu"},{"name":"dingtalk"}]',
+            "text": (
+                '[{"name":"ddw-docs-portal","version":"0.1.0","license":"free"},'
+                '{"name":"ddw-searxng","version":"0.1.0","license":"free"}]'
+            ),
         }
 
     registry.register(Resource(
         uri="ddw://knowledge-bases",
-        name="DDW 知识库列表",
-        description="所有可见的知识库（按权限过滤）",
+        name="deepDDW 知识库列表",
+        description="个人级知识库中的全部文档标题",
         handler=knowledge_bases,
     ))
     registry.register(Resource(
         uri="ddw://plugins",
-        name="DDW 插件列表",
-        description="已注册的 DDW 插件元信息",
+        name="deepDDW 插件列表",
+        description="deepDDW 白名单插件元信息",
         handler=plugins,
-    ))
-    registry.register(Resource(
-        uri="ddw://training/courses",
-        name="DDW 培训课程",
-        description="培训插件的全部课程配置",
-        handler=training_courses,
-    ))
-    registry.register(Resource(
-        uri="ddw://hris/adapters",
-        name="HRIS 适配器清单",
-        description="所有可用的 HRIS 适配器元信息",
-        handler=hris_adapters,
     ))
 
 

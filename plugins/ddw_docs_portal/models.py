@@ -1,19 +1,19 @@
-"""产品文档栏目插件 ORM + Pydantic 模型。
+"""产品文档栏目插件 ORM + Pydantic 模型（deepDDW 开源裁剪版）。
 
 三张表（平台主库 data/ddw_main.db，表名前缀 docs_）：
 - docs_category: 文档目录节点（树形）
-- docs_item: 文档元数据（内容实际存 ddw_doc_assistant，source_ref 引用其 doc_id）
+- docs_item: 文档元数据（正文内联存储于 content 列；source_ref 保留兼容字段）
 - docs_version: 版本历史
 
-租户模型：双轨制（PRD 决策 1）—— tenant_id=0 平台级（白皮书/手册，全租户登录可见）；
-tenant_id>0 租户级（客户规章制度，仅本租户）。不做跨租户共享表。
+单用户模型：无账号/租户体系——tenant_id 保留为普通列（默认 0），不再引用
+tenants 表外键；可见性退化为 public/draft/archived 语义。
 """
 from __future__ import annotations
 
 from datetime import datetime
 from typing import ClassVar, Optional
 
-from core.database.models import Base, TenantMixin, TimestampMixin
+from core.database.models import Base, TimestampMixin
 from pydantic import BaseModel, Field
 from sqlalchemy import (
     BigInteger,
@@ -34,7 +34,12 @@ VISIBILITY = ("public", "tenant", "draft")
 STATUS = ("draft", "published", "archived")
 
 
-class DocCategory(Base, TenantMixin, TimestampMixin):
+def _tenant_column() -> Mapped[int]:
+    """单用户 tenant_id 列（默认 0，无外键；保留与旧版 schema 的兼容）。"""
+    return mapped_column(BigInt, nullable=False, default=0, server_default="0", index=True)
+
+
+class DocCategory(Base, TimestampMixin):
     """文档目录节点（树形，parent_id 指向上级分类）。"""
 
     __tablename__ = "docs_category"
@@ -44,14 +49,15 @@ class DocCategory(Base, TenantMixin, TimestampMixin):
     )
 
     id: Mapped[int] = mapped_column(BigInt, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = _tenant_column()
     parent_id: Mapped[Optional[int]] = mapped_column(BigInt, nullable=True, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     slug: Mapped[str] = mapped_column(String(128), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
 
-class DocItem(Base, TenantMixin, TimestampMixin):
-    """文档元数据。内容正文只存 ddw_doc_assistant（source_ref），portal 不双写内容。"""
+class DocItem(Base, TimestampMixin):
+    """文档元数据。正文内联存储（content），deepDDW 不再依赖 ddw_doc_assistant。"""
 
     __tablename__ = "docs_item"
     __table_args__ = (
@@ -60,6 +66,7 @@ class DocItem(Base, TenantMixin, TimestampMixin):
     )
 
     id: Mapped[int] = mapped_column(BigInt, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = _tenant_column()
     category_id: Mapped[Optional[int]] = mapped_column(BigInt, nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     slug: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
@@ -67,32 +74,34 @@ class DocItem(Base, TenantMixin, TimestampMixin):
         String(32), default="whitepaper", nullable=False
     )  # whitepaper/manual/solution/regulation/notice
     visibility: Mapped[str] = mapped_column(
-        String(16), default="tenant", nullable=False
-    )  # public（全租户）/tenant（本租户）/draft（仅作者+管理员）
+        String(16), default="public", nullable=False
+    )  # public（登录可见）/draft（作者可见）
     status: Mapped[str] = mapped_column(
         String(16), default="draft", nullable=False
     )  # draft/published/archived
     version: Mapped[str] = mapped_column(String(16), default="v1.0", nullable=False)
+    content: Mapped[str] = mapped_column(Text, default="", nullable=False)  # 正文（deepDDW 内联）
     source_ref: Mapped[str] = mapped_column(
         String(64), default="", nullable=False
-    )  # 指向 ddw_doc_assistant 的 doc_id（内容存那边）
+    )  # 兼容字段：原指向 ddw_doc_assistant，现保留为空/内容哈希
     content_hash: Mapped[Optional[str]] = mapped_column(
         String(64), nullable=True, index=True
-    )  # 重建正文 sha256（离线包导入去重幂等，决策 4）
+    )  # 正文 sha256（离线包导入去重幂等）
     summary: Mapped[Optional[str]] = mapped_column(
         Text, nullable=True
-    )  # ≤200 字摘要，publish 时写入 enterprise 记忆
+    )  # ≤200 字摘要
     author_id: Mapped[int] = mapped_column(BigInt, default=0, nullable=False)
     published_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
 
-class DocVersion(Base, TenantMixin, TimestampMixin):
-    """版本历史：每次更新（PATCH）记录旧 source_ref，保证旧版本可查（归档语义）。"""
+class DocVersion(Base, TimestampMixin):
+    """版本历史：每次更新（PATCH）记录旧版本，保证旧版本可查（归档语义）。"""
 
     __tablename__ = "docs_version"
     __table_args__: ClassVar[dict] = {"extend_existing": True}
 
     id: Mapped[int] = mapped_column(BigInt, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = _tenant_column()
     doc_id: Mapped[int] = mapped_column(BigInt, nullable=False, index=True)
     version: Mapped[str] = mapped_column(String(16), nullable=False)
     change_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

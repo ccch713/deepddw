@@ -1,8 +1,8 @@
 """DDW SearXNG 插件 API 路由。
 
 端点：
-- GET /search  （Depends(current_user)）
-- GET /health  （Depends(current_user)）
+- GET /search  （Token 门禁）
+- GET /health  （Token 门禁）
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ import logging
 
 from fastapi import APIRouter, Depends, Query
 
-from core.auth.jwt import current_user
+from core.security.token_gate import require_access_token
 
 from . import PLUGIN_NAME
 from .schemas import HealthResp, SearchResp
@@ -32,7 +32,7 @@ def build_router() -> APIRouter:
         q: str = Query(..., min_length=1, description="搜索关键词"),
         limit: int = Query(5, ge=1, le=20, description="返回条数"),
         engines: str = Query(None, description="引擎列表，逗号分隔"),
-        _user: dict = Depends(current_user),
+        _claims: dict = Depends(require_access_token),
     ) -> SearchResp:
         try:
             result = await search(q, limit=limit, engines=engines)
@@ -48,7 +48,7 @@ def build_router() -> APIRouter:
 
     @router.get("/health", response_model=HealthResp)
     async def health_endpoint(
-        _user: dict = Depends(current_user),
+        _claims: dict = Depends(require_access_token),
     ) -> HealthResp:
         result = await health_check()
         return HealthResp(**result)

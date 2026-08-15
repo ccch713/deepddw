@@ -1,15 +1,13 @@
-"""DDW MCP 工具注册表（DDW AI Hub v5.4 — 模块 D1）。
+"""deepDDW MCP 工具注册表（开源裁剪版）。
 
 每个工具通过 :class:`Tool` 描述，由 plugin 自动注册（也可手动 register）。
 
-默认内置：
-- ddw.llm.chat         LLM 对话
-- ddw.kb.search        知识库搜索
-- ddw.training.start_session  启动培训会话
-- ddw.training.get_progress   查询学习进度
-- ddw.smart_cs.handle_message 智能客服
-- ddw.email.send       邮件发送
-- ddw.hris.sync_employees     同步员工
+deepDDW 0.1 默认内置（白名单组件，真实实现，非 stub）：
+- ddw.llm.chat         LLM 对话（DeepSeek/Ollama 网关；断网降级不阻塞）
+- ddw.kb.search        知识库搜索（SQLite FTS5/LIKE）
+
+商业插件工具（ddw.training.* / ddw.smart_cs.* / ddw.email.send / ddw.hris.* 等）
+随插件一起移除，绝不在开源版注册。
 """
 
 from __future__ import annotations
@@ -87,50 +85,69 @@ class ToolRegistry:
 
 def install_default_tools(registry: ToolRegistry) -> None:
     async def llm_chat(args, ctx):
-        return {
-            "content": [{"type": "text", "text": f"[stub LLM reply] 你说的是：{args.get('message', '')}"}],
-            "model": "minimax-M3",
-            "usage": {"prompt_tokens": 0, "completion_tokens": 0},
-        }
+        """LLM 对话（真实网关实现；断网/无 Key 降级为友好提示，不阻塞主流程）。"""
+        from core.llm_gateway.base import ChatMessage, RouteContext
+        from core.llm_gateway.gateway import chat as llm_chat
+
+        message = str(args.get("message", ""))
+        system = args.get("system")
+        try:
+            messages = []
+            if system:
+                messages.append(ChatMessage(role="system", content=str(system)))
+            messages.append(ChatMessage(role="user", content=message))
+            resp = await llm_chat(messages, ctx=RouteContext(extra={"source": "mcp"}))
+            if getattr(resp, "finish_reason", None) == "error":
+                raise RuntimeError(resp.content)
+            return {
+                "content": [{"type": "text", "text": resp.content}],
+                "model": resp.model,
+                "provider": resp.provider,
+                "usage": {
+                    "prompt_tokens": resp.tokens_in,
+                    "completion_tokens": resp.tokens_out,
+                },
+            }
+        except Exception as exc:  # noqa: BLE001  # 断网/网关故障降级
+            logger.warning("mcp llm.chat degraded: %s", exc)
+            return {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            "[deepDDW] LLM 网关暂不可用（无 API Key 或网络故障），"
+                            "对话主流程未阻塞。请配置 DDW_DEEPSEEK_API_KEY 或本机 Ollama。"
+                        ),
+                    }
+                ],
+                "model": "unavailable",
+                "provider": "degraded",
+                "usage": {"prompt_tokens": 0, "completion_tokens": 0},
+            }
 
     async def kb_search(args, ctx):
-        q = args.get("query", "")
-        return {
-            "content": [{"type": "text", "text": f"[stub KB] 检索 {q} 返回 0 条结果"}],
-            "results": [],
-        }
+        """知识库检索（真实 SQLite 实现）。"""
+        from core.knowledge import kb_search as _kb_search
 
-    async def training_start(args, ctx):
+        q = str(args.get("query", ""))
+        top_k = int(args.get("top_k") or 5)
+        result = _kb_search(q, top_k)
+        items = result.get("results", [])
+        if not items:
+            text = f"知识库未命中“{q}”（degraded={result.get('degraded', False)}）"
+        else:
+            text = "知识库检索结果：\n" + "\n".join(
+                f"- {it['title']}: {it['excerpt']}" for it in items[:5]
+            )
         return {
-            "content": [{"type": "text", "text": f"[stub] 已为用户 {args.get('user_id')} 启动培训会话"}],
-            "session_id": "stub-session",
-        }
-
-    async def training_progress(args, ctx):
-        return {
-            "content": [{"type": "text", "text": "[stub] 进度：50%"}],
-            "progress": 0.5,
-        }
-
-    async def smart_cs(args, ctx):
-        return {
-            "content": [{"type": "text", "text": f"[stub CS] 已收到：{args.get('message', '')}"}],
-        }
-
-    async def email_send(args, ctx):
-        return {
-            "content": [{"type": "text", "text": f"[stub email] 已发往 {args.get('to')} 主题 {args.get('subject', '')}"}],
-        }
-
-    async def hris_sync(args, ctx):
-        return {
-            "content": [{"type": "text", "text": f"[stub hris] 已同步 {args.get('adapter', 'kingdee')} 员工"}],
-            "synced": 0,
+            "content": [{"type": "text", "text": text}],
+            "results": items,
+            "degraded": result.get("degraded", False),
         }
 
     registry.register(Tool(
         name="ddw.llm.chat",
-        description="DDW LLM 对话。message: 用户消息；可选 system/model/temperature",
+        description="deepDDW LLM 对话。message: 用户消息；可选 system/model/temperature",
         parameters={
             "properties": {
                 "message": {"type": "string", "description": "用户消息"},
@@ -145,7 +162,7 @@ def install_default_tools(registry: ToolRegistry) -> None:
     ))
     registry.register(Tool(
         name="ddw.kb.search",
-        description="DDW 知识库检索。query: 检索词；top_k: 返回条数（默认 5）",
+        description="deepDDW 知识库检索。query: 检索词；top_k: 返回条数（默认 5）",
         parameters={
             "properties": {
                 "query": {"type": "string", "description": "检索词"},
@@ -157,72 +174,86 @@ def install_default_tools(registry: ToolRegistry) -> None:
         plugin_name="core",
     ))
     registry.register(Tool(
-        name="ddw.training.start_session",
-        description="启动培训会话。user_id/course_id/subject",
+        name="ddw.memory.put",
+        description="写入一条长期记忆。namespace/key/value；可选 tags 数组",
         parameters={
             "properties": {
-                "user_id": {"type": "string"},
-                "course_id": {"type": "string"},
-                "subject": {"type": "string"},
+                "namespace": {"type": "string", "description": "命名空间（默认 default）"},
+                "key": {"type": "string", "description": "记忆键"},
+                "value": {"type": "string", "description": "记忆内容"},
+                "tags": {"type": "array", "items": {"type": "string"}, "description": "标签（可选）"},
             },
-            "required": ["user_id", "course_id"],
+            "required": ["key", "value"],
         },
-        handler=training_start,
+        handler=memory_put_handler,
         plugin_name="core",
     ))
     registry.register(Tool(
-        name="ddw.training.get_progress",
-        description="查询学习进度。session_id 或 user_id+course_id",
+        name="ddw.memory.search",
+        description="检索记忆。query: 检索词；namespace（可选）；top_k（默认 5）",
         parameters={
             "properties": {
-                "session_id": {"type": "string"},
-                "user_id": {"type": "string"},
-                "course_id": {"type": "string"},
+                "query": {"type": "string", "description": "检索词"},
+                "namespace": {"type": "string", "description": "命名空间（默认 default）"},
+                "top_k": {"type": "integer", "description": "返回条数"},
             },
+            "required": ["query"],
         },
-        handler=training_progress,
+        handler=memory_search_handler,
         plugin_name="core",
     ))
-    registry.register(Tool(
-        name="ddw.smart_cs.handle_message",
-        description="智能客服回复。message: 用户消息；session_id（可选）",
-        parameters={
-            "properties": {
-                "message": {"type": "string"},
-                "session_id": {"type": "string"},
-            },
-            "required": ["message"],
-        },
-        handler=smart_cs,
-        plugin_name="core",
-    ))
-    registry.register(Tool(
-        name="ddw.email.send",
-        description="发送邮件。to/subject/body",
-        parameters={
-            "properties": {
-                "to": {"type": "string"},
-                "subject": {"type": "string"},
-                "body": {"type": "string"},
-            },
-            "required": ["to", "subject", "body"],
-        },
-        handler=email_send,
-        plugin_name="core",
-    ))
-    registry.register(Tool(
-        name="ddw.hris.sync_employees",
-        description="同步员工。adapter: kingdee/wecom/beisen/feishu/dingtalk",
-        parameters={
-            "properties": {
-                "adapter": {"type": "string", "enum": ["kingdee", "wecom", "beisen", "feishu", "dingtalk"]},
-                "since": {"type": "string"},
-            },
-            "required": ["adapter"],
-        },
-        handler=hris_sync,
-        plugin_name="core",
-    ))
+
+
+async def memory_put_handler(args: Dict[str, Any], ctx: Dict[str, Any]) -> Dict[str, Any]:
+    """ddw.memory.put 真实 handler（SQLite 记忆存储）。"""
+    from core.knowledge import memory_put
+
+    try:
+        result = memory_put(
+            namespace=str(args.get("namespace") or "default"),
+            key=str(args.get("key", "")),
+            value=str(args.get("value", "")),
+            tags=list(args.get("tags") or []),
+        )
+        return {
+            "content": [{"type": "text", "text": f"记忆已保存（id={result['id']}）"}],
+            "ok": True,
+            "id": result["id"],
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("mcp memory.put degraded: %s", exc)
+        return {
+            "content": [{"type": "text", "text": f"记忆保存失败（已降级，不影响对话）：{exc}"}],
+            "ok": False,
+            "degraded": True,
+        }
+
+
+async def memory_search_handler(args: Dict[str, Any], ctx: Dict[str, Any]) -> Dict[str, Any]:
+    """ddw.memory.search 真实 handler（SQLite 记忆检索）。"""
+    from core.knowledge import memory_search
+
+    try:
+        result = memory_search(
+            namespace=str(args.get("namespace") or "default"),
+            query=str(args.get("query", "")),
+            top_k=int(args.get("top_k") or 5),
+        )
+        items = result.get("results", [])
+        if not items:
+            text = "记忆未命中（degraded={})".format(result.get("degraded", False))
+        else:
+            text = "记忆检索结果：\n" + "\n".join(
+                f"- [{it['key']}] {it['value']}" for it in items[:5]
+            )
+        return {"content": [{"type": "text", "text": text}], "results": items}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("mcp memory.search degraded: %s", exc)
+        return {
+            "content": [{"type": "text", "text": f"记忆检索失败（已降级）：{exc}"}],
+            "results": [],
+            "degraded": True,
+        }
 
 
 __all__ = ["Tool", "ToolRegistry", "install_default_tools"]

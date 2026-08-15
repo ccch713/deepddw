@@ -1,1 +1,0 @@
-"""WeCom adapter package."""

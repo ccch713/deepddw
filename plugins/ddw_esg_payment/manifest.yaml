@@ -1,8 +1,0 @@
-name: ddw-esg-payment
-license: commercial
-tier: beta
-version: 0.1.0
-description: ESG payment processing with order management, promotion/commission system, and payment gateway framework
-author: DDW AI Hub
-dependencies:
-  plugins: {}

@@ -1,8 +1,0 @@
-# 运行时数据
-data/
-
-# 缓存
-__pycache__/
-.pytest_cache/
-.ruff_cache/
-*.pyc

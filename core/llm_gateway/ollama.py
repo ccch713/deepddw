@@ -23,7 +23,7 @@ from core.llm_gateway.base import BaseLLMProvider, ChatMessage, ChatResponse
 logger = logging.getLogger(__name__)
 
 DEFAULT_API_BASE = "http://localhost:11434"
-DEFAULT_MODEL = "deepseek-coder-v2:16b-lite-instruct-q4_K_M"
+DEFAULT_MODEL = "qwen2.5:7b"
 
 
 class OllamaProvider(BaseLLMProvider):

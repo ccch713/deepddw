@@ -26,9 +26,12 @@ class Plugin(PluginBase):
     router_prefix = f"/api/v1/plugins/{PLUGIN_NAME}"
 
     def setup(self) -> None:
-        """注册路由 + LLM 工具。"""
+        """注册路由 + MCP 工具。
+
+        注意：router 不在此处 include_router——PluginBase.register() 会
+        在 setup() 之后统一挂载 self._router（避免路由重复注册）。
+        """
         self._router = build_router()
-        self.app.include_router(self._router)
 
         # 决策 3：注册 docs_search 工具（失败不阻塞插件加载）
         try:

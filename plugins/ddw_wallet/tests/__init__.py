@@ -1,1 +1,0 @@
-"""ddw_wallet tests"""

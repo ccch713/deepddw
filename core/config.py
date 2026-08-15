@@ -1,7 +1,8 @@
-"""DDW AI Hub 核心配置（v5.4）。
+"""deepDDW 核心配置（开源裁剪版）。
 
 加载 ``config/deployment.yaml``，合并环境变量覆盖。
-与 v0.1 的 ``deployment.yaml`` 字段保持兼容（mode / server / databases / llm_gateway / auth / events）。
+与 v6.0 的字段保持兼容（mode / server / databases / llm_gateway / auth / events），
+但已删除商业配置块：SaaS 定价、泛微 OA SSO、license broker、billing、JWT 账号体系。
 """
 
 from __future__ import annotations
@@ -34,59 +35,28 @@ DEFAULTS: Dict[str, Any] = {
         "main": {"engine": "sqlite", "path": "./data/ddw_main.db", "pool_size": 5, "echo": False},
     },
     "llm_gateway": {
-        "default_provider": "minimax",
+        "default_provider": "deepseek",
         "providers": {
-            "minimax": {
-                "base_url": "https://api.minimaxi.com/v1",
-                "api_key": "${MINIMAX_API_KEY}",
-                "default_model": "MiniMax-M3",
+            "deepseek": {
+                "base_url": "https://api.deepseek.com/v1",
+                "api_key": "${DDW_DEEPSEEK_API_KEY}",
+                "default_model": "deepseek-chat",
                 "timeout": 30,
+            },
+            "ollama": {
+                "base_url": "http://localhost:11434",
+                "default_model": "qwen2.5:7b",
+                "timeout": 60,
             },
         },
     },
     "auth": {
-        "jwt": {
-            "algorithm": "HS256",
-            "secret": "${DDW_JWT_SECRET}",
-            "expires_minutes": 720,
-            "issuer": "ddw-ai-hub",
-        },
-        "password_max_age_days": 90,
+        # 静态访问 Token（P0-1 门禁）：环境变量 DDW_ACCESS_TOKEN 优先
+        "access_token": "${DDW_ACCESS_TOKEN}",
     },
     "events": {"backend": "inprocess"},
-    "billing": {"enabled": False},
     "plugins": {"root_dir": "./plugins", "sandbox_timeout": 30},
     "logging": {"level": "INFO", "path": "./data/logs"},
-    "doctor": {"canary": 1},
-    # 泛微OA统一认证中心 SSO 配置
-    # 在 deployment.yaml 中覆盖此配置以启用
-    "weaver_sso": {
-        "enabled": False,
-        "active_protocol": "cas",  # cas 或 oauth2
-        "auto_register": True,     # OA用户首次SSO登录自动创建DDW账号
-        "default_tenant_id": 1,    # SSO自动注册用户的默认租户ID
-        "embed_shared_secret": "",  # OA嵌入iframe模式的共享密钥
-        "cas": {
-            "enabled": False,
-            "oa_url": "",          # 泛微OA访问地址，如 http://192.168.1.100:8080
-            "appid": "",           # OA「认证应用管理」中注册的应用标识
-            "callback_url": "",    # DDW的CAS回调地址，如 https://ddw.example.com/api/v1/sso/cas/callback
-        },
-        "oauth2": {
-            "enabled": False,
-            "oa_url": "",
-            "client_id": "",       # OA「认证应用管理」中的应用标识
-            "client_secret": "",   # OA「认证应用管理」中的应用密钥
-            "callback_url": "",    # DDW的OAuth2回调地址
-        },
-    },
-    "saas": {
-        "plans": {
-            "free": {"name": "免费版", "price_cny": 0, "user_limit": 5, "features": ["基础 LLM 对话", "社区支持"]},
-            "standard": {"name": "标准版", "price_cny": 4999, "user_limit": 50, "features": ["全部插件", "邮件支持"]},
-            "enterprise": {"name": "企业版", "price_cny": 19999, "user_limit": 200, "features": ["FDE 现场", "7×12 工单"]},
-        }
-    },
 }
 
 
@@ -134,18 +104,8 @@ class Settings:
 
     @property
     def env(self) -> str:
-        """部署环境（DDW_ENV）：production=生产（license fail-closed 门控），
-        其余按开发/演示处理。"""
+        """部署环境（DDW_ENV）：production / development / demo / test。"""
         return os.environ.get("DDW_ENV", "development")
-
-    @property
-    def license_broker(self) -> Dict[str, Any]:
-        """跨机授权广播 Broker 配置（P4）：enabled / url / token / ttl_seconds。
-
-        权威节点配置 broker 端点；业务节点配置 url + token 拉取权威 state。
-        token 也可由环境变量 ``DDW_LICENSE_BROKER_TOKEN`` 注入（优先级更高）。
-        """
-        return self.raw.get("license", {}).get("broker", {})
 
     @property
     def server(self) -> Dict[str, Any]:
@@ -169,38 +129,10 @@ class Settings:
         return self.raw.get("llm_gateway", {})
 
     @property
-    def jwt(self) -> Dict[str, Any]:
-        return self.raw.get("auth", {}).get("jwt", {})
-
-    @property
-    def jwt_secret(self) -> str:
-        sec = self.jwt.get("secret") or self.server.get("secret_key") or "ddw-ai-hub-default-jwt-secret-2026-change-in-production-32bytes"
-        if isinstance(sec, str) and sec.startswith("${"):
-            return os.environ.get(sec[2:-1], "ddw-ai-hub-default-jwt-secret-2026-change-in-production-32bytes")
-        return str(sec)
-
-    @property
-    def jwt_algorithm(self) -> str:
-        return self.jwt.get("algorithm", "HS256")
-
-    @property
-    def jwt_expires_minutes(self) -> int:
-        return int(self.jwt.get("expires_minutes", 720))
-
-    @property
-    def saas_plans(self) -> Dict[str, Any]:
-        return self.raw.get("saas", {}).get("plans", {})
-
-    @property
-    def password_max_age_days(self) -> int:
-        """密码有效期天数（环境变量 DDW_PASSWORD_MAX_AGE_DAYS 可覆盖）。"""
-        env_val = os.environ.get("DDW_PASSWORD_MAX_AGE_DAYS")
-        if env_val is not None:
-            try:
-                return int(env_val)
-            except ValueError:
-                pass
-        return int(self.raw.get("auth", {}).get("password_max_age_days", 90))
+    def access_token(self) -> str:
+        """静态访问 Token（P0-1 门禁）。"""
+        v = self.raw.get("auth", {}).get("access_token", "")
+        return v if isinstance(v, str) and v.strip() else ""
 
     @property
     def plugin_root(self) -> Path:
@@ -259,11 +191,11 @@ class _LLMProxy:
 
     @property
     def default_provider(self) -> str:
-        return self._raw.get("default_provider", "minimax")
+        return self._raw.get("default_provider", "deepseek")
 
     @property
     def fallback_chain(self) -> list:
-        return self._raw.get("fallback_chain", ["minimax", "deepseek", "ollama"])
+        return self._raw.get("fallback_chain", ["deepseek", "ollama"])
 
     @property
     def routing_rules(self) -> list:

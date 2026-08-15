@@ -18,7 +18,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from core.auth.jwt import current_admin
+from core.security.token_gate import require_access_token
 from core.llm_gateway.gateway import health as llm_health
 from core.llm_gateway.gateway import register_provider
 from core.config import get_settings
@@ -32,7 +32,7 @@ _CUSTOM_PROVIDERS_FILE = Path("data/llm_providers.json")
 
 
 class ProviderCreate(BaseModel):
-    provider: str = Field(..., description="provider 类型：minimax / deepseek / ollama")
+    provider: str = Field(..., description="provider 类型：deepseek / ollama")
     name: str = Field(..., min_length=1, max_length=64, description="显示名称")
     model: str = Field(..., min_length=1, max_length=128)
     base_url: str | None = None
@@ -58,11 +58,9 @@ def _save_custom_providers(items: list[Dict[str, Any]]) -> None:
 def _build_provider(provider_type: str, model: str, api_key: str | None, base_url: str | None):
     """构建 provider 实例（key 仅本次进程生效）。"""
     from core.llm_gateway.deepseek import DeepSeekProvider
-    from core.llm_gateway.minimax import MiniMaxProvider
     from core.llm_gateway.ollama import OllamaProvider
 
     cls_map = {
-        "minimax": MiniMaxProvider,
         "deepseek": DeepSeekProvider,
         "ollama": OllamaProvider,
     }
@@ -76,7 +74,7 @@ def _build_provider(provider_type: str, model: str, api_key: str | None, base_ur
 
 
 @router.get("/providers", response_model=Dict[str, Any])
-async def list_providers(claims: Dict[str, Any] = Depends(current_admin)) -> Dict[str, Any]:
+async def list_providers(claims: Dict[str, Any] = Depends(require_access_token)) -> Dict[str, Any]:
     """LLM 提供商目录 + 健康状态（2026-08-11：过滤未配置/mock，只显示真实可用的）。"""
     try:
         h = await llm_health()
@@ -111,7 +109,7 @@ async def list_providers(claims: Dict[str, Any] = Depends(current_admin)) -> Dic
 
 
 @router.post("/providers", response_model=Dict[str, Any])
-async def create_provider(payload: ProviderCreate, claims: Dict[str, Any] = Depends(current_admin)) -> Dict[str, Any]:
+async def create_provider(payload: ProviderCreate, claims: Dict[str, Any] = Depends(require_access_token)) -> Dict[str, Any]:
     """新增 LLM 提供商：API Key 仅内存注册（不落盘），元数据持久化。
 
     重启后需重新录入 Key 才能生效——红线：明文 Key 不写长期文件。
@@ -143,7 +141,7 @@ async def create_provider(payload: ProviderCreate, claims: Dict[str, Any] = Depe
 
 
 @router.get("/rules")
-async def list_rules(claims: Dict[str, Any] = Depends(current_admin)) -> Dict[str, Any]:
+async def list_rules(claims: Dict[str, Any] = Depends(require_access_token)) -> Dict[str, Any]:
     """路由规则列表。返回 {items, total} 信封。"""
     try:
         settings = get_settings()
@@ -161,7 +159,7 @@ async def list_rules(claims: Dict[str, Any] = Depends(current_admin)) -> Dict[st
 
 
 @router.get("/fallback", response_model=Dict[str, Any])
-async def fallback(claims: Dict[str, Any] = Depends(current_admin)) -> Dict[str, Any]:
+async def fallback(claims: Dict[str, Any] = Depends(require_access_token)) -> Dict[str, Any]:
     """回退链。"""
     try:
         settings = get_settings()

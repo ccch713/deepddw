@@ -1,9 +1,0 @@
-special_findings 必须包含：
-- tooth_position: 牙位（如 "左下8"）
-- extraction_reason: 拔牙原因（impaction/caries/periodontal/orthodontic/trauma）
-- difficulty_level: 难度（simple/surgical/complex）
-- anesthesia_type: 麻醉方式（local/intraligamentary/inferior_alveolar）
-- anticoagulant_use: 是否使用抗凝药（true/false + 药名）
-- bleeding_amount: 术中出血量（ml 估计）
-- socket_management: 牙槽窝处理（normal/suturing/bone_graft）
-- contraindications: 禁忌症检查结果

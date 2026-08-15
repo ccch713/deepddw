@@ -48,7 +48,11 @@ python-multipart>=0.0.6
 captcha>=0.5
 Pillow>=10
 
+# --- MCP（双协议：streamable-http 2025-03-26 + 经典 2024-11-05） ---
+# 注意：mcp 2.x 已移除 mcp.server.fastmcp（FastMCP），deepDDW 固定使用 1.x 系列
+# （实测 1.29.0 与 fastapi<0.116 / starlette<0.50 依赖组合兼容）。
+mcp>=1.2,<2
+
 # --- 测试 ---
 pytest>=8.0.0
 pytest-asyncio>=0.21.0
-mcp

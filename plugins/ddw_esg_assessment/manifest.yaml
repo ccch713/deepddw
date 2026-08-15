@@ -1,9 +1,0 @@
-name: ddw-esg-assessment
-license: commercial
-tier: beta
-version: 1.0.0
-description: ESG assessment engine with scoring, skip logic, benchmarking, and multi-framework support
-author: DDW AI Hub
-type: plugin
-dependencies:
-  plugins: {}

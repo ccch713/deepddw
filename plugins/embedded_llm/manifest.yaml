@@ -1,9 +1,0 @@
-name: embedded-llm
-license: free
-tier: beta
-version: 0.1.0
-description: Embedded LLM plugin for on-device inference
-dependencies: []
-permissions:
-  - filesystem
-  - compute

@@ -18,15 +18,16 @@ _ROOT = Path(__file__).resolve().parents[3]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-os.environ.setdefault("DDW_JWT_SECRET", "test-secret-key-for-testing-32bytes-ok")
+os.environ.setdefault("DDW_ACCESS_TOKEN", "test-token-for-deepddw-unit-tests")
 
-from core.auth.jwt import create_access_token  # noqa: E402
+from core.security.token_gate import get_access_token  # noqa: E402
 from plugins.ddw_searxng.router import build_router  # noqa: E402
 
 
 @pytest.fixture
 def admin_token():
-    return create_access_token(user_id=1, tenant_id=1, role="admin")
+    """deepDDW 静态访问 Token（无账号体系）。"""
+    return get_access_token()
 
 
 @pytest_asyncio.fixture

@@ -27,7 +27,6 @@ from core.llm_gateway.base import (
     RouteContext,
 )
 from core.llm_gateway.deepseek import DeepSeekProvider
-from core.llm_gateway.minimax import MiniMaxProvider
 from core.llm_gateway.ollama import OllamaProvider
 from core.llm_gateway.usage import UsageTracker
 
@@ -78,7 +77,7 @@ class LLMRouter:
     # ------------------------------------------------------------------ #
 
     def _init_providers(self) -> None:
-        self._providers["minimax"] = MiniMaxProvider()
+        # deepDDW 白名单通道：DeepSeek（云端）+ Ollama（本地）；商业渠道已移除
         self._providers["deepseek"] = DeepSeekProvider()
         self._providers["ollama"] = OllamaProvider()
         # Allow plugins to register custom providers via the gateway

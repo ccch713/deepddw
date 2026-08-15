@@ -20,7 +20,7 @@ from core.llm_gateway.base import (
 logger = logging.getLogger(__name__)
 
 DEFAULT_API_BASE = "https://api.deepseek.com/v1"
-DEFAULT_MODEL = "deepseek-v4-pro"
+DEFAULT_MODEL = "deepseek-chat"
 
 
 class DeepSeekProvider(BaseLLMProvider):

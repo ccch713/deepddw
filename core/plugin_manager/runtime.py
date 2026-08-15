@@ -1,22 +1,17 @@
-"""DDW 插件运行时（P4 热加载，设计方案 v0.1）。
+"""deepDDW 插件运行时（开源裁剪版）。
 
 核心能力：
-- ``PluginRuntime.load_many``：启动批量加载（等价原 ``load_plugins`` 循环，行为不变）
+- ``PluginRuntime.load_many``：启动批量加载（扫描 plugins/*/manifest.yaml）
 - ``PluginRuntime.load_one``：单插件加载（安装即生效 / 热启）
-- ``PluginRuntime.unload_entry`` / ``reload_one``：停用入口 / 滚动重挂（更新策略）
+- ``PluginRuntime.unload_entry`` / ``reload_one``：停用入口 / 滚动重挂
 - ``PluginRegistry``：已加载插件索引（manifest/instance/router/state/error）
 - 审计：每次操作写 ``data/plugin_runtime_audit.jsonl``（JSONL 追加）+ logger
 
-三条红线（确保授权/防盗版零削弱）：
-1. 加载唯一入口是验签通过的 installer 落盘目录；本模块不接受"绕过落盘"的加载
-2. license 授权过滤与启动路径同源（``resolve_license_gate``），
-   热装顺序固定"先授权后加载"
-3. ``status: locked`` 插件在启动与热装两个路径都被拒绝
-
-边界（诚实）：
-- 不做运行中路由卸载（FastAPI 不可逆）——``unload_entry`` 只停入口，彻底清理走重启
-- 模块级单例插件（如 ddw_memory）热更新不彻底——``reload_one`` 返回后由调用方
-  根据 manifest 标记 ``pending_restart``，重启才完成更新
+开源版差异（相对商业仓 6.0）：
+- 无 license 授权体系：``resolve_license_gate`` 恒为放行（插件目录只含白名单组件，
+  manifest ``license`` 仅作元数据展示，不再作为加载门禁）
+- ``status: locked`` 插件在启动与热装两个路径都被拒绝（保留红线语义）
+- 平台保留名（``_template`` / ``embedded_llm``）不参与加载
 """
 
 from __future__ import annotations
@@ -39,97 +34,21 @@ AUDIT_FILE_DEFAULT = "./data/plugin_runtime_audit.jsonl"
 
 
 # ---------------------------------------------------------------------------
-# 授权门控（与 load_plugins 原有逻辑同源，P3 加固语义保留）
+# 授权门控（开源版恒放行；保留接口供外部调用方兼容）
 # ---------------------------------------------------------------------------
 
 
 def resolve_license_gate(settings: Any) -> Dict[str, Any]:
-    """解析当前授权门控：{production, authorized_plugins, license_present}。
+    """解析当前授权门控（deepDDW 开源版：无授权体系，恒放行）。
 
-    逻辑与 core/main.load_plugins 原有实现一致：
-    - DDW_ENV=production → fail-closed
-    - 未显式设置 DDW_ENV 但存在 license 文件 → 按生产处理（P3 加固）
-    - DDW_ENV 未知值 → critical 日志 + 按生产处理
-    - license 验签成功 → authorized_plugins；失败且生产 → []（fail-closed）
+    返回与商业版同形：``{production: False, authorized_plugins: None, license_present: False}``，
+    语义 = 全部插件可加载（插件目录本身只含白名单组件）。
     """
-    from core.utils.license_validator import (
-        get_authorized_plugins,
-        validate_license_file,
-    )
-
-    result = {
+    return {
         "production": False,
         "authorized_plugins": None,
         "license_present": False,
     }
-    license_cache_path = Path(
-        settings.raw.get("license", {}).get("cache_path", "./data/license_cache.json")
-    )
-    license_present = license_cache_path.exists()
-    result["license_present"] = license_present
-
-    explicit_env = os.environ.get("DDW_ENV")
-    production = settings.env == "production"
-    if explicit_env is None:
-        if license_present:
-            production = True
-            logger.warning(
-                "DDW_ENV not set but license file present — treated as production "
-                "(fail-closed); set DDW_ENV=development explicitly to override"
-            )
-    elif settings.env not in {"production", "development", "demo", "test"}:
-        logger.critical(
-            "DDW_ENV=%s is not a known value (production/development/demo/test) — "
-            "treated as production (fail-closed)",
-            settings.env,
-        )
-        production = True
-    result["production"] = production
-
-    if license_present:
-        try:
-            is_valid, reason, lic_data = validate_license_file(license_cache_path)
-            if is_valid:
-                result["authorized_plugins"] = get_authorized_plugins(lic_data)
-                logger.info(
-                    "license validated: %s customer=%s, %d plugins authorized",
-                    lic_data.get("license_key"),
-                    lic_data.get("customer"),
-                    len(result["authorized_plugins"]),
-                )
-            elif production:
-                result["authorized_plugins"] = []  # fail-closed
-                logger.warning(
-                    "license validation failed in production (fail-closed): %s"
-                    " customer=%s — only free plugins will load",
-                    reason,
-                    lic_data.get("customer"),
-                )
-            else:
-                logger.warning(
-                    "license validation failed (dev mode): %s customer=%s"
-                    " — loading all plugins",
-                    reason,
-                    lic_data.get("customer"),
-                )
-        except Exception as e:  # noqa: BLE001
-            if production:
-                result["authorized_plugins"] = []
-                logger.warning(
-                    "license check error in production (fail-closed): %s"
-                    " — only free plugins will load",
-                    e,
-                )
-            else:
-                logger.warning("license check error: %s — loading all plugins", e)
-    elif production:
-        result["authorized_plugins"] = []
-        logger.warning(
-            "no license file in production (fail-closed): only free plugins will load"
-        )
-    else:
-        logger.warning("no license in dev mode — loading all plugins")
-    return result
 
 
 # ---------------------------------------------------------------------------

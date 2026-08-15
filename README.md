@@ -34,7 +34,27 @@ cp .env.example .env   # 填写 DDW_ACCESS_TOKEN
 docker compose -f deepddw-compose.yml up -d --build
 ```
 
-打开 `http://<host>:8500/` → PWA 启动页 → 填 Token → 进入工作台（会话 / 知识库 / 记忆 / 文档）。
+打开 `http://<host>:8500/` → PWA 启动页 → 填 Token → 进入工作台（dsh 原版界面）。
+
+## 工作台（v2.0：dsh 原版界面 + 插件注入）
+
+工作台 = **dsh 原版界面（100% 原样，不改 dsh 源码/bundle、不重写界面）**，
+deepDDW 能力通过官方用户插件机制（cordis 插件包 `@deepddw/dsh-workbench`）注入：
+
+- 设置页左侧新增：📚 知识库 / 🧠 记忆 / 🤖 模型配置（`settings.section` slots）
+- 右上角 📄 按钮 → 可隐藏的右侧文档栏（`conversation.session.header.utilities`）
+- LLM/模型配置用 dsh 原版设置；deepDDW 插件只做补充快捷入口（key 只写不读明文）
+- dsh 通过原生 MCP 客户端调 deepDDW 网关（5 工具：`ddw.llm.chat` /
+  `ddw.kb.search` / `ddw.memory.put` / `ddw.memory.search` / `ddw.docs_portal.search`）
+
+安装（详见 `deepddw-plugins/dsh/README.md` 与 `install.sh --with-dsh`）：
+
+```bash
+bash install.sh --with-dsh          # 一键：安装插件到 dsh web profile + 写 MCP 桥
+# 或手动：
+#   dsh plugin --profile web add ./deepddw-plugins/dsh
+#   （重启 dsh web 后生效；插件卸载后 dsh 恢复原版）
+```
 
 > ⚠️ **LLM 未配置 = mock 演示（不是真实 AI 回答）**：未配置 `DDW_DEEPSEEK_API_KEY` 且未接 Ollama 时，
 > `ddw.llm.chat` 返回 `[DeepSeek V4 Pro mock]` 占位文本，仅用于演示链路，**不代表真实模型输出**。
@@ -80,7 +100,8 @@ ruff check --select=E,W,F core plugins sdk tests
 ```
 core/               底座壳（网关/插件框架/安全/LLM 网关/MCP 双协议）
 plugins/            白名单插件：ddw-docs-portal、ddw-searxng
-frontend/           PWA：deepddw-launcher.html / welcome.html（工作台）/ docs
+frontend/           PWA：deepddw-launcher.html（启动页，iframe 内嵌 dsh 原版界面）/ docs
+deepddw-plugins/    dsh 工作台插件（@deepddw/dsh-workbench，cordis 包）
 sdk/                插件开发 SDK（PluginBase 等）
 config/             部署配置模板（deployment.yaml 被 gitignore，不入库）
 data/               运行时数据（gitignore）

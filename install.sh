@@ -8,11 +8,13 @@ PORT=${DDW_PORT:-8500}
 RUN_TESTS=true
 BG_MODE=false
 USE_DOCKER=false
+WITH_DSH=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --port) PORT=$2; shift 2;;
         --docker) USE_DOCKER=true; shift;;
+        --with-dsh) WITH_DSH=true; shift;;
         --no-test) RUN_TESTS=false; shift;;
         --bg) BG_MODE=true; shift;;
         -h|--help)
@@ -20,6 +22,7 @@ while [[ $# -gt 0 ]]; do
             echo "用法: bash install.sh [选项]"
             echo "  --port PORT   服务端口 (默认 8500)"
             echo "  --docker      使用 Docker Compose 部署（推荐全新服务器）"
+            echo "  --with-dsh    安装 dsh 工作台插件（@deepddw/dsh-workbench）+ MCP 桥到 dsh web profile"
             echo "  --no-test     跳过测试"
             echo "  --bg          后台运行（非 docker 模式）"
             exit 0;;
@@ -73,6 +76,36 @@ fi
 
 if [ ! -f .env ] && [ -z "${DDW_ACCESS_TOKEN:-}" ]; then
     log "⚠️  未配置 DDW_ACCESS_TOKEN，将使用开发默认 Token（生产环境务必设置）"
+fi
+
+# ---- dsh 工作台插件（v2.0：dsh 原版界面 + deepDDW 插件注入） ----
+# 安装 @deepddw/dsh-workbench 到 dsh web profile + 写 MCP 桥配置。
+# 需要本机已安装 dsh（npm i -g @deepseek-ai/dsh）。重启 dsh web 后生效。
+if [ "$WITH_DSH" = true ]; then
+    log "安装 dsh 工作台插件..."
+    DSH_BIN="$(command -v dsh || true)"
+    if [ -z "$DSH_BIN" ]; then
+        log "⚠️  未找到 dsh 命令，跳过插件安装（可手动执行 dsh plugin --profile web add ./deepddw-plugins/dsh）"
+    else
+        # 1) 插件包安装（link 到本地源码；bundle 层自动登记）
+        dsh plugin --profile web add "$SCRIPT_DIR/deepddw-plugins/dsh" || log "⚠️  插件安装失败，跳过"
+        # 2) MCP 桥配置追加到 profile patch（deepDDW 5 工具；LAN 免密可直接连）
+        PATCH_FILE="$HOME/.dsh/profiles/web/cordis.patch.yml"
+        if [ -f "$PATCH_FILE" ] && ! grep -q "mcp-deepddw" "$PATCH_FILE" 2>/dev/null; then
+            cat >> "$PATCH_FILE" <<'MCPEOF'
+- insert:
+    - id: mcp-deepddw
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: deepddw
+        transport: streamable-http
+        url: http://127.0.0.1:8600/api/v1/mcp
+        headers: {}
+MCPEOF
+            log "MCP 桥已写入 $PATCH_FILE（重启 dsh web 后生效）"
+        fi
+        log "完成：重启 dsh web（dsh web）后，设置页左侧出现知识库/记忆/模型配置，右上角出现文档栏按钮"
+    fi
 fi
 
 log "启动 deepDDW (端口 $PORT)..."

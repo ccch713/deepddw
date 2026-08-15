@@ -53,6 +53,10 @@ footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--text-muted
   <label for="token">访问 Token（局域网内可留空）</label>
   <input id="token" type="password" placeholder="外网访问才需要" autocomplete="off">
 
+  <label for="dsh">工作台地址（dsh 原版界面）</label>
+  <input id="dsh" type="url" placeholder="http://127.0.0.1:3080" autocomplete="off">
+  <div class="hint">dsh 引擎地址，默认本机 3080；可通过 ?dsh= 参数预填</div>
+
   <button class="btn" id="connect">进入工作台</button>
   <div class="msg" id="msg"></div>
 
@@ -72,19 +76,23 @@ footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--text-muted
   var msg = document.getElementById("msg");
   var addrEl = document.getElementById("addr");
   var tokenEl = document.getElementById("token");
+  var dshEl = document.getElementById("dsh");
 
-  // URL 参数预填（手机分享链接场景）：?token=xxx 或 ?server=xxx&token=xxx
+  // URL 参数预填（手机分享链接场景）：?token=xxx / ?server=xxx / ?dsh=xxx
   // 优先级高于 localStorage/sessionStorage（新链接优先，避免旧值覆盖）
   // ⚠️ 预填后立即从地址栏清除 token（replaceState），防止 token 留在 URL/历史中
   try {
     var qp = new URLSearchParams(window.location.search);
     var urlToken = (qp.get("token") || "").trim();
     var urlServer = (qp.get("server") || "").trim();
+    var urlDsh = (qp.get("dsh") || "").trim();
     if (urlToken) tokenEl.value = urlToken;
     if (urlServer) addrEl.value = urlServer;
-    if (urlToken || urlServer) {
+    if (urlDsh) dshEl.value = urlDsh;
+    if (urlToken || urlServer || urlDsh) {
       qp.delete("token");
       qp.delete("server");
+      qp.delete("dsh");
       var clean = window.location.pathname + (qp.toString() ? "?" + qp.toString() : "");
       window.history.replaceState({}, "", clean);
     }
@@ -94,6 +102,7 @@ footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--text-muted
   try {
     if (!urlServer && localStorage.getItem("deepddw_addr")) addrEl.value = localStorage.getItem("deepddw_addr");
     if (!urlToken && sessionStorage.getItem("deepddw_token")) tokenEl.value = sessionStorage.getItem("deepddw_token");
+    if (!urlDsh && localStorage.getItem("deepddw_dsh")) dshEl.value = localStorage.getItem("deepddw_dsh");
   } catch (e) { /* 隐私模式忽略 */ }
 
   function baseAddr() {
@@ -178,18 +187,23 @@ footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--text-muted
   }
 
   function enterWorkbench(base, token) {
+    // v2.0：工作台 = dsh 原版界面（100% 原样，不包装不重写）。
+    // deepDDW 能力由 dsh 用户插件（@deepddw/dsh-workbench）注入。
+    var dshUrl = (dshEl.value.trim().replace(/\/+$/, "") || "http://127.0.0.1:3080");
+    if (!/^https?:\/\//.test(dshUrl)) { msg.className = "msg err"; msg.textContent = "工作台地址需以 http(s):// 开头"; return; }
     var iframe = document.createElement("iframe");
     iframe.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:none;background:#fff";
-    iframe.src = base + "/ui/welcome.html";  // URL 中绝不携带 token
+    iframe.src = dshUrl;  // URL 中绝不携带 token
     document.body.appendChild(iframe);
     document.querySelector(".card").style.display = "none";
-    // 通过 postMessage 把 token 交给同源工作台（不经过 URL / 请求头之外的明文通道）
+    try { localStorage.setItem("deepddw_dsh", dshUrl); } catch (e) {}
+    // 通过 postMessage 把 token 交给 dsh 页面内的 deepDDW 插件
+    // （targetOrigin 精确到 dsh 源；不经过 URL / iframe src / 日志）
     iframe.onload = function () {
-      iframe.contentWindow.postMessage({ type: "deepddw-token", token: token }, base);
+      try { iframe.contentWindow.postMessage({ type: "deepddw-token", token: token }, dshUrl); } catch (e) {}
     };
-    // 回退：工作台也可从 sessionStorage 读取（同源场景）
     setTimeout(function () {
-      try { iframe.contentWindow.postMessage({ type: "deepddw-token", token: token }, base); } catch (e) {}
+      try { iframe.contentWindow.postMessage({ type: "deepddw-token", token: token }, dshUrl); } catch (e) {}
     }, 800);
   }
 })();

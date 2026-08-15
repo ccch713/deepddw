@@ -138,9 +138,11 @@ def create_app() -> FastAPI:
     cors_origins = [
         "http://localhost:8500",
         "http://localhost:3000",
+        "http://localhost:3080",
         "http://localhost:8766",
         "http://127.0.0.1:8500",
         "http://127.0.0.1:3000",
+        "http://127.0.0.1:3080",
         "http://127.0.0.1:8766",
     ]
     extra = os.environ.get("DDW_CORS_EXTRA_ORIGINS", "")

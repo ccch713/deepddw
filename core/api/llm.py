@@ -1,26 +1,35 @@
-"""LLM 管理 API（/llm）— 提供商 / 路由规则。
+"""LLM 管理 API（/llm）— 提供商 / 路由规则 / 模型配置（dsh 工作台插件用）。
 
-前端 admin.html 频道依赖：
-- GET /llm/providers    LLM 提供商健康/列表
-- GET /llm/rules        路由规则
-- GET /llm/fallback     回退链
-- POST /llm/providers   新增自定义提供商（2026-08-11，key 仅内存注册不落盘）
+端点：
+- GET  /llm/providers          LLM 提供商健康/列表
+- GET  /llm/rules              路由规则
+- GET  /llm/fallback           回退链
+- POST /llm/providers          新增自定义提供商（key 仅内存注册不落盘）
+- GET  /llm/config             模型配置读取（configured/has_key 布尔，不回明文 key）
+- POST /llm/config             保存模型配置（key 写部署配置，权限 600）
+- POST /llm/test               测试 LLM 连通（真实 chat 一次，不回传 key）
+
+安全红线（鉴权开发说明 §3）：
+- GET 只返回 ``configured: true/false``，绝不回传明文 API key；
+- POST 接收 key 写入部署配置（chmod 600）；日志不打印 key。
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from core.security.token_gate import require_access_token
+from core.config import get_settings
+from core.llm_gateway.gateway import chat as llm_chat
 from core.llm_gateway.gateway import health as llm_health
 from core.llm_gateway.gateway import register_provider
-from core.config import get_settings
+from core.security.token_gate import require_access_token
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +38,12 @@ router = APIRouter(prefix="/api/v1/llm", tags=["llm"])
 # 自定义提供商元数据（API Key 不落盘——红线：明文 Key 不进长期文件）
 _CUSTOM_PROVIDERS_FILE = Path("data/llm_providers.json")
 
+# 允许保存/测试的 provider（白名单通道）
+_LLM_PROVIDERS = ("deepseek", "ollama")
+
+# 部署配置路径（gitignore；POST /config 写 key 后 chmod 600）
+_DEPLOYMENT_YAML = Path("config/deployment.yaml")
+
 
 class ProviderCreate(BaseModel):
     provider: str = Field(..., description="provider 类型：deepseek / ollama")
@@ -36,6 +51,24 @@ class ProviderCreate(BaseModel):
     model: str = Field(..., min_length=1, max_length=128)
     base_url: str | None = None
     api_key: str | None = None
+
+
+class LlmConfigReq(BaseModel):
+    """模型配置保存请求（api_key 可选——仅填需要变更的字段）。"""
+
+    provider: str = Field(..., description="provider：deepseek / ollama")
+    api_key: str | None = Field(
+        None, max_length=512, description="API key（不读回、不打印）"
+    )
+    base_url: str | None = Field(None, max_length=512)
+    model: str | None = Field(None, max_length=128)
+
+
+class LlmTestReq(BaseModel):
+    """LLM 连通测试请求。"""
+
+    provider: str | None = Field(
+        None, description="provider：deepseek / ollama（默认当前默认通道）")
 
 
 def _load_custom_providers() -> list[Dict[str, Any]]:
@@ -54,7 +87,9 @@ def _save_custom_providers(items: list[Dict[str, Any]]) -> None:
     )
 
 
-def _build_provider(provider_type: str, model: str, api_key: str | None, base_url: str | None):
+def _build_provider(
+    provider_type: str, model: str, api_key: str | None, base_url: str | None
+):
     """构建 provider 实例（key 仅本次进程生效）。"""
     from core.llm_gateway.deepseek import DeepSeekProvider
     from core.llm_gateway.ollama import OllamaProvider
@@ -65,7 +100,9 @@ def _build_provider(provider_type: str, model: str, api_key: str | None, base_ur
     }
     cls = cls_map.get(provider_type)
     if cls is None:
-        raise HTTPException(status_code=400, detail=f"不支持的 provider 类型：{provider_type}")
+        raise HTTPException(
+            status_code=400, detail=f"不支持的 provider 类型：{provider_type}"
+        )
     try:
         return cls(api_key=api_key, api_base=base_url, model=model)
     except TypeError:
@@ -73,7 +110,9 @@ def _build_provider(provider_type: str, model: str, api_key: str | None, base_ur
 
 
 @router.get("/providers", response_model=Dict[str, Any])
-async def list_providers(claims: Dict[str, Any] = Depends(require_access_token)) -> Dict[str, Any]:
+async def list_providers(
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
     """LLM 提供商目录 + 健康状态（2026-08-11：过滤未配置/mock，只显示真实可用的）。"""
     try:
         h = await llm_health()
@@ -108,7 +147,10 @@ async def list_providers(claims: Dict[str, Any] = Depends(require_access_token))
 
 
 @router.post("/providers", response_model=Dict[str, Any])
-async def create_provider(payload: ProviderCreate, claims: Dict[str, Any] = Depends(require_access_token)) -> Dict[str, Any]:
+async def create_provider(
+    payload: ProviderCreate,
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
     """新增 LLM 提供商：API Key 仅内存注册（不落盘），元数据持久化。
 
     重启后需重新录入 Key 才能生效——红线：明文 Key 不写长期文件。
@@ -141,7 +183,9 @@ async def create_provider(payload: ProviderCreate, claims: Dict[str, Any] = Depe
 
 
 @router.get("/rules")
-async def list_rules(claims: Dict[str, Any] = Depends(require_access_token)) -> Dict[str, Any]:
+async def list_rules(
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
     """路由规则列表。返回 {items, total} 信封。"""
     try:
         settings = get_settings()
@@ -159,7 +203,9 @@ async def list_rules(claims: Dict[str, Any] = Depends(require_access_token)) -> 
 
 
 @router.get("/fallback", response_model=Dict[str, Any])
-async def fallback(claims: Dict[str, Any] = Depends(require_access_token)) -> Dict[str, Any]:
+async def fallback(
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
     """回退链。"""
     try:
         settings = get_settings()
@@ -170,3 +216,159 @@ async def fallback(claims: Dict[str, Any] = Depends(require_access_token)) -> Di
     except Exception as exc:  # noqa: BLE001
         logger.warning("fallback failed: %s", exc)
         return {"chain": [], "error": str(exc)}
+
+
+# ---------------------------------------------------------------------------
+# 模型配置（dsh 工作台插件"模型配置"子项；key 红线：不回明文、写 600）
+# ---------------------------------------------------------------------------
+
+
+def _read_deployment_yaml() -> Dict[str, Any]:
+    """读取现有 config/deployment.yaml（缺失返回空 dict）。"""
+    try:
+        if _DEPLOYMENT_YAML.exists():
+            import yaml
+
+            data = yaml.safe_load(_DEPLOYMENT_YAML.read_text(encoding="utf-8")) or {}
+            return data if isinstance(data, dict) else {}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("read deployment.yaml failed: %s", exc)
+    return {}
+
+
+def _write_deployment_yaml(data: Dict[str, Any]) -> None:
+    """写回 config/deployment.yaml（权限 600）；失败不阻塞接口（仅告警）。"""
+    try:
+        import yaml
+
+        _DEPLOYMENT_YAML.parent.mkdir(parents=True, exist_ok=True)
+        _DEPLOYMENT_YAML.write_text(
+            yaml.safe_dump(data, allow_unicode=True, sort_keys=False),
+            encoding="utf-8",
+        )
+        try:
+            os.chmod(_DEPLOYMENT_YAML, 0o600)
+        except OSError as exc:  # noqa: BLE001
+            logger.warning("chmod deployment.yaml failed: %s", exc)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("write deployment.yaml failed: %s", exc)
+
+
+def _provider_status() -> Dict[str, Any]:
+    """各白名单 provider 的配置状态（只报布尔，绝不回传明文 key）。"""
+    settings = get_settings()
+    providers = (settings.llm or {}).get("providers", {}) or {}
+    status: Dict[str, Any] = {}
+    for name in _LLM_PROVIDERS:
+        p = providers.get(name, {}) or {}
+        api_key = p.get("api_key") or ""
+        # 只回传是否已配置（has_key 布尔）与连接信息；key 明文永不离开服务端
+        status[name] = {
+            "configured": bool(api_key) or name == "ollama",
+            "has_key": bool(api_key),
+            "base_url": p.get("base_url", ""),
+            "model": p.get("default_model", ""),
+        }
+    settings_llm = settings.llm or {}
+    return {
+        "provider": settings_llm.get("default_provider", "deepseek"),
+        "providers": status,
+    }
+
+
+@router.get("/config", response_model=Dict[str, Any])
+async def get_llm_config(
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """读取模型配置（configured/has_key 布尔；**不回传明文 API key**）。"""
+    return _provider_status()
+
+
+@router.post("/config", response_model=Dict[str, Any])
+async def save_llm_config(
+    payload: LlmConfigReq,
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """保存模型配置：api_key 写 config/deployment.yaml（权限 600）+ 内存注册即时生效。
+
+    - 日志不打印 key（logger 只记 provider 名与布尔标记）；
+    - 响应不回传 key，只回 ``key_saved`` 布尔。
+    """
+    provider = payload.provider
+    if provider not in _LLM_PROVIDERS:
+        raise HTTPException(status_code=400, detail=f"不支持的 provider：{provider}")
+
+    data = _read_deployment_yaml()
+    providers = data.setdefault("llm_gateway", {}).setdefault("providers", {})
+    entry = providers.setdefault(provider, {})
+    if payload.api_key:
+        entry["api_key"] = payload.api_key
+    if payload.base_url:
+        entry["base_url"] = payload.base_url
+    if payload.model:
+        entry["default_model"] = payload.model
+    _write_deployment_yaml(data)
+
+    # 内存注册即时生效（key 仅本次进程可用，重启后从 deployment.yaml 重新加载）
+    if payload.api_key:
+        try:
+            from core.llm_gateway.base import BaseLLMProvider
+
+            if provider == "deepseek":
+                from core.llm_gateway.deepseek import DeepSeekProvider
+
+                provider_inst: BaseLLMProvider = DeepSeekProvider(
+                    api_key=payload.api_key,
+                    api_base=payload.base_url,
+                    model=payload.model,
+                )
+            else:
+                from core.llm_gateway.ollama import OllamaProvider
+
+                provider_inst = OllamaProvider(
+                    api_base=payload.base_url,
+                    model=payload.model,
+                )
+            register_provider(provider_inst)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "llm config: in-memory register failed for %s: %s", provider, exc)
+
+    # 日志只记布尔，不记 key
+    logger.info("llm config saved: provider=%s key_saved=%s base_url=%s",
+                provider, bool(payload.api_key), bool(payload.base_url))
+    return {"ok": True, "provider": provider, "key_saved": bool(payload.api_key)}
+
+
+@router.post("/test", response_model=Dict[str, Any])
+async def test_llm(
+    payload: LlmTestReq,
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """LLM 连通测试：对指定 provider 发一条最小 chat；不回传 key。
+
+    返回 ``{ok, provider, model, error?}``——失败信息只含错误摘要。
+    """
+    from core.llm_gateway.base import ChatMessage
+
+    settings = get_settings()
+    settings_llm = settings.llm or {}
+    provider = payload.provider or settings_llm.get("default_provider", "deepseek")
+    if provider not in _LLM_PROVIDERS:
+        raise HTTPException(status_code=400, detail=f"不支持的 provider：{provider}")
+
+    try:
+        resp = await llm_chat(
+            [ChatMessage(role="user", content="ping")],
+            rule="simple_chat",
+            ctx=None,
+        )
+        ok = getattr(resp, "finish_reason", None) != "error"
+        return {
+            "ok": ok,
+            "provider": provider,
+            "model": getattr(resp, "model", ""),
+            "error": None if ok else (getattr(resp, "content", "") or "")[:200],
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "provider": provider, "model": "", "error": str(exc)[:200]}

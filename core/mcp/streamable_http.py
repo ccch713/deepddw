@@ -116,6 +116,35 @@ def _build_fastmcp():
         manager = mcp._session_manager  # type: ignore[attr-defined]
         if manager is not None:
             manager.session_idle_timeout = 1800
+            # 宽容模式（2026-08-16 用户拍板）：客户端（dsh）带着失效/未知
+            # Mcp-Session-Id 请求时，SDK 按 MCP 规范返回 404 "Session not found"，
+            # dsh 不会自动重连 → 工具持续失败。这里包装 stateful handler：
+            # 若 session id 不在服务端已知集合，剥离该 id 让 SDK 走"新会话创建"
+            # 分支（新 session 经响应头 Mcp-Session-Id 返回，客户端自动接管），
+            # 实现无感知恢复。
+            _orig = manager._handle_stateful_request
+
+            async def _lenient_stateful(scope, receive, send):
+                try:
+                    # 深拷贝 headers，避免污染原始 scope
+                    headers = list(scope.get("headers") or [])
+                    session_hdr = b"mcp-session-id"
+                    sid = None
+                    for k, v in headers:
+                        if k.lower() == session_hdr:
+                            sid = v.decode("latin-1")
+                            break
+                    if sid and sid not in getattr(manager, "_server_instances", {}):
+                        logger.warning(
+                            "mcp lenient: stale session %s, recreating", sid[:16]
+                        )
+                        headers = [(k, v) for k, v in headers if k.lower() != session_hdr]
+                        scope["headers"] = headers
+                except Exception as exc:  # noqa: BLE001
+                    logger.debug("mcp lenient session scrub skipped: %s", exc)
+                await _orig(scope, receive, send)
+
+            manager._handle_stateful_request = _lenient_stateful  # type: ignore[method-assign]
     except Exception:  # noqa: BLE001
         pass
     # P1-2：SDK 私有属性访问加 try/except 降级（不同 SDK 版本属性名可能不同）

@@ -109,6 +109,12 @@ def _build_fastmcp():
         streamable_http_path="/",  # 挂载到 /api/v1/mcp 后，根路径即端点
         host="0.0.0.0",
     )
+    # 先触发 streamable_http_app() 创建 _session_manager（SDK lazy 初始化，
+    # 不调用则 manager 为 None，下面的 timeout/宽容 patch 全部静默跳过）。
+    try:
+        mcp.streamable_http_app()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("mcp streamable_http_app init failed: %s", exc)
     # 会话空闲超时拉长到 30 分钟：SDK 默认较短导致 dsh 工具调用间隔稍长就
     # "Session not found"（2026-08-16 实测）。FastMCP 不接受该参数，改私有属性
     # （P1-2 模式：try/except 降级，SDK 版本差异不阻塞）。

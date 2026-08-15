@@ -1,0 +1,41 @@
+# Caddy 路由：ddw.9cio.com → DDW AI Hub Core
+# 追加到现有 Caddyfile
+
+ddw.9cio.com {
+    log {
+        output file /var/log/caddy/ddw-access.log {
+            roll_size 50mb
+            roll_keep 5
+            roll_keep_for 720h
+        }
+        format json
+    }
+
+    # API 路由
+    handle_path /api/* {
+        reverse_proxy ddw-core:8500 {
+            header_up Host {host}
+            header_up X-Real-IP {remote}
+            header_up X-Forwarded-For {remote}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # 前端静态文件
+    handle /* {
+        reverse_proxy ddw-core:8500 {
+            header_up Host {host}
+            header_up X-Real-IP {remote}
+        }
+    }
+
+    # 速率限制
+    rate_limit 50r/s
+
+    # 安全头
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+    }
+}

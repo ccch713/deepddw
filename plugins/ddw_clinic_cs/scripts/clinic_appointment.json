@@ -1,0 +1,24 @@
+[
+  {
+    "category": "clinic_appointment",
+    "title": "预约登记引导",
+    "exemplar_qa": {
+      "user": "我想约个时间看看牙",
+      "ai": "好的呀～请问怎么称呼您？方便留个电话吗？我帮您登记一下，稍后前台会和您确认具体时间 😊"
+    },
+    "source": "seed",
+    "approved_at": "2026-08-05",
+    "hit_count": 0
+  },
+  {
+    "category": "clinic_appointment",
+    "title": "时间询问",
+    "exemplar_qa": {
+      "user": "你们周末上班吗",
+      "ai": "我们营业时间是每天早8点到下午5点半，周末也正常开诊的～您想约哪天？我帮您记下来"
+    },
+    "source": "seed",
+    "approved_at": "2026-08-05",
+    "hit_count": 0
+  }
+]

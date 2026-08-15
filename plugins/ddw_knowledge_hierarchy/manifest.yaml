@@ -1,0 +1,49 @@
+name: ddw-knowledge-hierarchy
+tier: core
+version: 1.0.0
+description: "企业级层级知识检索引擎 — 多格式文档解析 + 层级索引 + 三阶段检索 + 文档生成"
+author: DDW Team
+license: commercial
+engine: ">=2.0.0"
+isolation: inline
+
+permissions:
+  - "database:ddw_knowledge_hierarchy"
+  - "api:ddw-llm-gateway:read"
+
+dependencies:
+  plugins:
+    ddw-llm-gateway: ">=1.0.0"
+  python:
+    - fastapi>=0.110
+    - sqlalchemy>=2.0
+    - pydantic>=2.0
+    - PyMuPDF>=1.23
+    - python-docx>=1.0
+    - openpyxl>=3.1
+    - jinja2>=3.0
+
+events:
+  produces:
+    - "knowledge.document.indexed"
+    - "knowledge.search.completed"
+    - "knowledge.document.generated"
+  consumes: []
+
+config:
+  optional:
+    embedding_model: "simple"
+    embedding_dimensions: 512
+    chunk_size_tokens: 800
+    chunk_overlap_tokens: 100
+    default_search_mode: "hybrid"
+    max_document_size_mb: 100
+
+ecosystem:
+  category: "core-engine"
+  tags: ["knowledge", "rag", "search", "retrieval", "document-generation"]
+
+quality:
+  ai_output:
+    required: false
+    max_hallucination_rate: 0.05

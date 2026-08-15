@@ -1,0 +1,27 @@
+name: ddw-searxng
+tier: beta
+version: 0.1.0
+display_name: DDW 聚合搜索
+description: SearXNG 元搜索引擎封装，提供聚合搜索与引擎健康检查能力。支持国内引擎，超时 15s，失败降级不影响底座。
+engine: plugin_base
+isolation: inline
+
+permissions:
+  - network.read
+
+config_schema:
+  type: object
+  properties:
+    searxng_url:
+      type: string
+      default: http://127.0.0.1:8888
+      description: SearXNG 服务地址（也可通过 SEARXNG_URL 环境变量设置）
+    timeout:
+      type: integer
+      default: 15
+      description: 请求超时秒数
+
+router_prefix: /api/v1/plugins/ddw-searxng
+
+author: Ruiguo
+license: free

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>社会化登录配置 · DDW AI Hub</title>
+<link rel="icon" href="/company/assets/logo/logo-favicon.png">
+<link rel="stylesheet" href="/company/assets/css/base.css">
+<link rel="stylesheet" href="/company/assets/css/themes/standard.css">
+<style>
+  .config-page { max-width: 960px; margin: 32px auto; padding: 0 24px; }
+  .config-page h1 { font-size: 22px; margin-bottom: 24px; color: var(--text-primary); }
+  .channel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 20px; }
+  .channel-card { background: var(--bg-card); border: 1.5px solid var(--border-strong); border-radius: 12px; padding: 24px; }
+  .channel-card h3 { margin: 0 0 16px; font-size: 16px; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+  .channel-card h3 .icon { font-size: 22px; }
+  .field-group { margin-bottom: 14px; }
+  .field-group label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 600; }
+  .field-group input[type=text], .field-group input[type=password] {
+    width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--border);
+    border-radius: 6px; font-size: 14px; background: var(--bg-page); color: var(--text-primary);
+  }
+  .field-group input:focus { outline: none; border-color: var(--brand); }
+  .switch-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .switch-row label { font-size: 14px; color: var(--text-primary); cursor: pointer; }
+  .toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-switch .slider { position: absolute; inset: 0; background: var(--border); border-radius: 24px; cursor: pointer; transition: .3s; }
+  .toggle-switch .slider::before { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: .3s; }
+  .toggle-switch input:checked + .slider { background: var(--brand); }
+  .toggle-switch input:checked + .slider::before { transform: translateX(20px); }
+  .btn-save { padding: 8px 24px; background: var(--brand); color: #fff; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; margin-top: 8px; }
+  .btn-save:hover { background: var(--brand-hover); }
+  .toast { position: fixed; top: 24px; right: 24px; padding: 12px 24px; border-radius: 8px; font-size: 14px; color: #fff; z-index: 9999; opacity: 0; transition: opacity .3s; }
+  .toast.show { opacity: 1; }
+  .toast.success { background: #52c41a; }
+  .toast.error { background: #ff4d4f; }
+</style>
+</head>
+<body>
+<div class="config-page">
+  <h1>🔗 社会化登录通道配置</h1>
+  <div class="channel-grid" id="channelGrid">
+    <!-- JS 动态渲染 -->
+  </div>
+  <div style="margin-top: 24px; text-align: center;">
+    <button class="btn-save" id="saveAllBtn" onclick="saveAll()">💾 全部保存</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '/api/v1/plugins/ddw-social-login';
+const CHANNELS = [
+  { provider: 'wechat_open', icon: '💚', name: '微信扫码' },
+  { provider: 'qq',          icon: '🐧', name: 'QQ 登录' },
+  { provider: 'dingtalk',    icon: '📌', name: '钉钉登录' },
+  { provider: 'feishu',      icon: '🐦', name: '飞书登录' },
+];
+
+let configData = [];
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 2500);
+}
+
+async function loadConfig() {
+  try {
+    const resp = await fetch(API + '/config', {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+    });
+    if (!resp.ok) throw new Error('加载配置失败');
+    configData = await resp.json();
+    renderCards();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+function renderCards() {
+  const grid = document.getElementById('channelGrid');
+  grid.innerHTML = '';
+  CHANNELS.forEach(ch => {
+    const cfg = configData.find(c => c.provider === ch.provider) || {};
+    const card = document.createElement('div');
+    card.className = 'channel-card';
+    card.innerHTML = `
+      <h3><span class="icon">${ch.icon}</span> ${ch.name}</h3>
+      <div class="switch-row">
+        <label class="toggle-switch">
+          <input type="checkbox" id="enabled_${ch.provider}" ${cfg.enabled ? 'checked' : ''}>
+          <span class="slider"></span>
+        </label>
+        <label for="enabled_${ch.provider}">启用此通道</label>
+      </div>
+      <div class="field-group">
+        <label>AppID</label>
+        <input type="text" id="appid_${ch.provider}" value="${cfg.appid || ''}" placeholder="第三方应用 AppID">
+      </div>
+      <div class="field-group">
+        <label>AppSecret</label>
+        <input type="password" id="secret_${ch.provider}" value="${cfg.app_secret || ''}" placeholder="第三方应用 AppSecret">
+      </div>
+      <div class="field-group">
+        <label>回调 URL（可选，留空自动生成）</label>
+        <input type="text" id="callback_${ch.provider}" value="${cfg.callback_url || ''}" placeholder="https://your-domain.com/api/v1/plugins/ddw-social-login/callback/${ch.provider}">
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+async function saveAll() {
+  const channels = CHANNELS.map(ch => ({
+    provider: ch.provider,
+    enabled: document.getElementById('enabled_' + ch.provider).checked,
+    appid: document.getElementById('appid_' + ch.provider).value || null,
+    app_secret: document.getElementById('secret_' + ch.provider).value || null,
+    callback_url: document.getElementById('callback_' + ch.provider).value || null,
+  }));
+  try {
+    const resp = await fetch(API + '/config', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+      },
+      body: JSON.stringify({ channels }),
+    });
+    if (!resp.ok) throw new Error('保存失败');
+    showToast('✅ 配置已保存');
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+loadConfig();
+</script>
+</body>
+</html>

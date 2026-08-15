@@ -1,0 +1,46 @@
+name: ddw-position-designer
+license: commercial
+tier: beta
+version: 1.0.0
+display_name: DDW 人机协同岗位设计器
+description: |
+  DDW 岗位设计器插件 v1.0.0。
+  核心能力：
+  1) 4 维岗位设计（Outcome × 人的责任 × Agent Stack × Decision Rights）
+  2) 5 因素加权决策路由引擎（risk_level / explainability / complexity / urgency / precedent）
+  3) 按部门自动推荐 Agent 组合（11 部门 × 4-5 个 Agent）
+  4) HTML 岗位说明书导出（独立可打开、可打印）
+  5) 联动 ddw_opc_departments：按部门查询岗位、与部门配置页面互通
+  数据源：Best Consulting「AI原生组织」第 3 张 PPT。
+engine: plugin_base
+isolation: inline
+
+permissions:
+  - database.read
+  - database.write
+
+dependencies:
+  plugins:
+    - ddw-opc-departments  # 联动：按部门查询岗位
+
+config_schema:
+  type: object
+  properties:
+    default_tenant_id:
+      type: integer
+      default: 1
+    default_page_size:
+      type: integer
+      default: 20
+    default_status:
+      type: string
+      default: draft
+      enum: [draft, active, archived]
+    max_outcomes:
+      type: integer
+      default: 10
+    max_decision_scenarios:
+      type: integer
+      default: 20
+
+router_prefix: /api/v1/plugins/ddw-position-designer

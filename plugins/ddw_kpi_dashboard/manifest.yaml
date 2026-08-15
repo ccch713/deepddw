@@ -1,0 +1,19 @@
+name: ddw_kpi_dashboard
+license: commercial
+tier: beta
+version: "0.1.0"
+description: KPI 与经营报表
+author: DDW Team
+endpoints:
+  - path: /api/v1/plugins/ddw_kpi_dashboard/health
+    method: GET
+  - path: /api/v1/plugins/ddw_kpi_dashboard/overview
+    method: GET
+  - path: /api/v1/plugins/ddw_kpi_dashboard/doctors
+    method: GET
+  - path: /api/v1/plugins/ddw_kpi_dashboard/treatments
+    method: GET
+  - path: /api/v1/plugins/ddw_kpi_dashboard/patients
+    method: GET
+  - path: /api/v1/plugins/ddw_kpi_dashboard/trend
+    method: GET

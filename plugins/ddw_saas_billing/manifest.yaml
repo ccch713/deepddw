@@ -1,0 +1,11 @@
+name: ddw-saas-billing
+license: commercial
+tier: beta
+version: 0.1.0
+display_name: DDW SaaS 计费
+description: 订阅管理 + 用量计量 + 支付对接
+engine: plugin_base
+isolation: inline
+permissions:
+  - database.read
+  - database.write

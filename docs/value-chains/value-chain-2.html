@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>链2 · 交付履约价值链</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1a1a1a; --sub: #6b7280;
+    --line: #e5e7eb; --brand: #16a34a; --brand-soft: #f0fdf4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--ink); padding: 32px 24px; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .sub { color: var(--sub); font-size: 13px; margin-bottom: 28px; }
+  .chain { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; }
+  .step { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 150px; flex: 1; position: relative; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+  .step .no { font-size: 11px; color: var(--brand); font-weight: 700; letter-spacing: 1px; }
+  .step .name { font-size: 15px; font-weight: 600; margin: 4px 0; }
+  .step .plugin { font-size: 11px; color: var(--sub); font-family: ui-monospace, Menlo, monospace; }
+  .arrow { display: flex; align-items: center; color: var(--brand); font-size: 20px; font-weight: 700; padding: 0 6px; flex-shrink: 0; }
+  .legend { margin-top: 24px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; font-size: 13px; line-height: 1.9; }
+  .legend b { color: var(--brand); }
+  .tag { display: inline-block; background: var(--brand-soft); color: var(--brand); border-radius: 6px; padding: 1px 8px; font-size: 11px; margin-left: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>链2 · 交付履约价值链</h1>
+  <div class="sub">订单 → 实例绑定 → 授权 → 收款 → 对账 → 开票 → 应收（华为 LTC 后段 + FDE）</div>
+  <div class="chain">
+        <div class="step"><div class="no">1</div><div class="name">订单承接</div><div class="plugin">ddw-order</div></div>    <div class="arrow">→</div>
+    <div class="step"><div class="no">2</div><div class="name">实例绑定/部署</div><div class="plugin">ddw-instance-binding</div></div>    <div class="arrow">→</div>
+    <div class="step"><div class="no">3</div><div class="name">授权发放</div><div class="plugin">ddw-license-core</div></div>    <div class="arrow">→</div>
+    <div class="step"><div class="no">4</div><div class="name">收款（微信/支付宝）</div><div class="plugin">ddw_wallet · ddw_offline_pos</div></div>    <div class="arrow">→</div>
+    <div class="step"><div class="no">5</div><div class="name">对账</div><div class="plugin">ddw-reconciliation</div></div>    <div class="arrow">→</div>
+    <div class="step"><div class="no">6</div><div class="name">开票</div><div class="plugin">ddw-invoice</div></div>    <div class="arrow">→</div>
+    <div class="step"><div class="no">7</div><div class="name">应收台账</div><div class="plugin">ddw-receivable</div></div>
+  </div>
+  <div class="legend"><b>Demo 剧本（问渠/嘉必优）</b>：订单 → 实例绑定（客户现场部署登记）→ 授权码发放 → 微信/支付宝收款 → 对账一致 → 开票 → 应收台账。<br><b>验收</b>：bash scripts/smoke_value_chain_2_delivery.sh</div>
+</div>
+</body>
+</html>

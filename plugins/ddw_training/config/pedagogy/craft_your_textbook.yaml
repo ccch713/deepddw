@@ -1,0 +1,84 @@
+name: craft-your-textbook
+description: 6 阶段造书流程，将 PDF 教材加工为可教学的多媒体课件
+stages:
+  - id: 1
+    name: extract
+    display: 提取
+    description: 从 PDF 提取文本/公式/图表/章节结构
+    color: "#1890FF"
+    inputs: [pdf_file]
+    outputs: [markdown_text, chapter_structure, formula_list, image_list]
+    tools: [MinerU, PaddleOCR]
+    estimated_minutes: 3
+    bloom_level: remember
+
+  - id: 2
+    name: analyze
+    display: 分析
+    description: 识别核心概念/学习目标/知识图谱/难度层级
+    color: "#13C2C2"
+    inputs: [markdown_text, chapter_structure]
+    outputs: [key_concepts, learning_objectives, knowledge_graph, difficulty_levels]
+    llm: MiniMax-M3
+    estimated_minutes: 5
+    bloom_level: understand
+
+  - id: 3
+    name: blueprint
+    display: 蓝图
+    description: 生成教学蓝图：6 思维动作 + 12 图景映射
+    color: "#52C41A"
+    inputs: [key_concepts, learning_objectives]
+    outputs: [blueprint, six_moves_mapping, twelve_vignettes_mapping]
+    llm: MiniMax-M3
+    estimated_minutes: 7
+    bloom_level: apply
+
+  - id: 4
+    name: generate
+    display: 生成
+    description: 生成多媒体课件：幻灯片+交互仿真+测验+PBL
+    color: "#FAAD14"
+    inputs: [blueprint]
+    outputs: [slides, interactives, quizzes, pbls, games, viz3d, whiteboards]
+    generators:
+      - slide_generator
+      - quiz_generator
+      - interactive_generator
+      - pbl_generator
+      - viz3d_generator
+      - game_generator
+      - whiteboard_engine
+    estimated_minutes: 20
+    bloom_level: analyze
+
+  - id: 5
+    name: narrate
+    display: 配音
+    description: AI 教师语音讲解 + 白板演示动画
+    color: "#FA541C"
+    inputs: [blueprint, slides]
+    outputs: [tts_audio, whiteboard_animations]
+    tools: [tts_engine, whiteboard_engine]
+    estimated_minutes: 7
+    bloom_level: evaluate
+
+  - id: 6
+    name: deliver
+    display: 交付
+    description: 编排课件序列 → 课堂模式（多 Agent 互动）
+    color: "#722ED1"
+    inputs: [all_assets]
+    outputs: [course_package, session_config]
+    multi_agent: true
+    director: training_director
+    estimated_minutes: 0
+    bloom_level: create
+
+stage_groups:
+  mechanical: [1, 2]      # 机械：内容工程
+  cognitive: [3, 4, 5, 6] # 认知：教学设计
+
+selection_algorithm: |
+  完整流程跑全 6 阶段；快速模式跳过 stage 5（narrate），仅生成图文课件；
+  单概念模式只跑 stage 1→3→4，针对单个 concept 生成课件包。

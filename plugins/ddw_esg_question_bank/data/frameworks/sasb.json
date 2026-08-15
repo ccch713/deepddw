@@ -1,0 +1,397 @@
+{
+  "id": "sasb",
+  "name": "SASB 可持续发展会计准则",
+  "organization": "SASB",
+  "url": "https://sasb.org",
+  "description": "针对不同行业的可持续发展信息披露标准，帮助投资者获取可比较的ESG数据。",
+  "version": "2023",
+  "category": "international",
+  "status": "draft",
+  "standard_code": "SASB Standards 2023",
+  "is_mandatory": false,
+  "issuing_body": "SASB (now part of IFRS Foundation)",
+  "issue_date": "2023-01-01",
+  "effective_date": "2023-01-01",
+  "supported_sizes": [
+    "large",
+    "enterprise"
+  ],
+  "category_color": "#007AFF",
+  "themes": [
+    {
+      "id": "DIS",
+      "name": "行业披露",
+      "category": "governance",
+      "weight": 1,
+      "description": "行业特定的ESG信息披露",
+      "color": "#007AFF"
+    }
+  ],
+  "indicators": [
+    {
+      "code": "DIS1",
+      "name": "财务披露",
+      "theme_id": "DIS",
+      "weight": 1,
+      "description": "可持续发展相关的财务影响披露",
+      "questions": [
+        {
+          "id": "DIS1-Q1",
+          "text": "企业是否披露行业特定的ESG指标？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未披露"
+            },
+            {
+              "value": 2,
+              "label": "部分披露"
+            },
+            {
+              "value": 3,
+              "label": "SASB标准"
+            },
+            {
+              "value": 4,
+              "label": "全面披露"
+            },
+            {
+              "value": 5,
+              "label": "SASB+同行对比"
+            }
+          ]
+        },
+        {
+          "id": "DIS1-Q2",
+          "text": "ESG数据是否与财务报告整合？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未整合"
+            },
+            {
+              "value": 2,
+              "label": "参考引用"
+            },
+            {
+              "value": 3,
+              "label": "年度报告"
+            },
+            {
+              "value": 4,
+              "label": "财务影响分析"
+            },
+            {
+              "value": 5,
+              "label": "integrated reporting"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "DIS2",
+      "name": "同行对比",
+      "theme_id": "DIS",
+      "weight": 1,
+      "description": "与同行的ESG绩效对比",
+      "questions": [
+        {
+          "id": "DIS2-Q1",
+          "text": "企业是否与同行进行ESG绩效对比？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未对比"
+            },
+            {
+              "value": 2,
+              "label": "简单了解"
+            },
+            {
+              "value": 3,
+              "label": "定期对比"
+            },
+            {
+              "value": 4,
+              "label": "深入分析"
+            },
+            {
+              "value": 5,
+              "label": "基准对标+战略调整"
+            }
+          ]
+        },
+        {
+          "id": "DIS2-Q2",
+          "text": "企业是否关注行业ESG趋势？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未关注"
+            },
+            {
+              "value": 2,
+              "label": "偶有关注"
+            },
+            {
+              "value": 3,
+              "label": "定期关注"
+            },
+            {
+              "value": 4,
+              "label": "趋势分析"
+            },
+            {
+              "value": 5,
+              "label": "前瞻性研究+引领"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "DIS3",
+      "name": "数据管理",
+      "theme_id": "DIS",
+      "weight": 1,
+      "description": "ESG数据的收集与管理",
+      "questions": [
+        {
+          "id": "DIS3-Q1",
+          "text": "企业是否建立ESG数据收集流程？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "无流程"
+            },
+            {
+              "value": 2,
+              "label": "基本收集"
+            },
+            {
+              "value": 3,
+              "label": "标准化流程"
+            },
+            {
+              "value": 4,
+              "label": "自动化收集"
+            },
+            {
+              "value": 5,
+              "label": "数字化平台+质量控制"
+            }
+          ]
+        },
+        {
+          "id": "DIS3-Q2",
+          "text": "ESG数据是否经过验证？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未验证"
+            },
+            {
+              "value": 2,
+              "label": "内部检查"
+            },
+            {
+              "value": 3,
+              "label": "交叉验证"
+            },
+            {
+              "value": 4,
+              "label": "独立审核"
+            },
+            {
+              "value": 5,
+              "label": "第三方鉴证"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "DIS4",
+      "name": "监管合规",
+      "theme_id": "DIS",
+      "weight": 1,
+      "description": "ESG监管合规与披露要求",
+      "questions": [
+        {
+          "id": "DIS4-Q1",
+          "text": "企业是否关注ESG监管趋势？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未关注"
+            },
+            {
+              "value": 2,
+              "label": "偶有关注"
+            },
+            {
+              "value": 3,
+              "label": "定期关注"
+            },
+            {
+              "value": 4,
+              "label": "主动研究"
+            },
+            {
+              "value": 5,
+              "label": "前瞻性合规+引领"
+            }
+          ]
+        },
+        {
+          "id": "DIS4-Q2",
+          "text": "企业是否提前适应新的ESG披露要求？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未准备"
+            },
+            {
+              "value": 2,
+              "label": "初步了解"
+            },
+            {
+              "value": 3,
+              "label": "差距分析"
+            },
+            {
+              "value": 4,
+              "label": "合规计划"
+            },
+            {
+              "value": 5,
+              "label": "提前合规+最佳实践"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "DIS5",
+      "name": "行业基准",
+      "theme_id": "DIS",
+      "weight": 1,
+      "description": "行业ESG基准对标",
+      "questions": [
+        {
+          "id": "DIS5-Q1",
+          "text": "企业是否参与行业ESG基准制定？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未参与"
+            },
+            {
+              "value": 2,
+              "label": "了解中"
+            },
+            {
+              "value": 3,
+              "label": "参考基准"
+            },
+            {
+              "value": 4,
+              "label": "参与制定"
+            },
+            {
+              "value": 5,
+              "label": "行业引领+标准制定"
+            }
+          ]
+        },
+        {
+          "id": "DIS5-Q2",
+          "text": "企业是否将ESG数据与投资决策整合？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未整合"
+            },
+            {
+              "value": 2,
+              "label": "参考信息"
+            },
+            {
+              "value": 3,
+              "label": "定期评估"
+            },
+            {
+              "value": 4,
+              "label": "投资决策因子"
+            },
+            {
+              "value": 5,
+              "label": "ESG投资策略+绩效归因"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

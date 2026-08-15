@@ -1,0 +1,36 @@
+name: ddw-account-linker
+license: free
+tier: beta
+version: 1.0.0
+display_name: DDW 账号/租户/实例映射
+description: 销售端 CRM 账号映射中枢。将 DDW 客户企业映射到三种下游账号/租户/实例（user / saas_tenant / on_premise_instance），支撑跨系统账号关联、唯一性校验、生命周期管理。同一 link_type 内 external_id 唯一，删除走软删除。
+engine: plugin_base
+isolation: inline
+
+permissions:
+  - database.read
+  - database.write
+
+dependencies:
+  plugins:
+    - ddw-company-profile
+
+config_schema:
+  type: object
+  properties:
+    default_tenant_id:
+      type: integer
+      default: 1
+    default_page_size:
+      type: integer
+      default: 20
+    link_types:
+      type: array
+      default: [user, saas_tenant, on_premise_instance]
+      description: 链接类型枚举
+    statuses:
+      type: array
+      default: [active, inactive]
+      description: 链接状态枚举
+
+router_prefix: /api/v1/plugins/ddw-account-linker

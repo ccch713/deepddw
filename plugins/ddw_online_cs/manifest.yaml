@@ -1,0 +1,48 @@
+# DDW 在线客服插件 (Online Customer Service)
+# 版本: 1.0.0
+# 适用: 官网/产品页在线 AI 客服对话框
+# 协议: 平台 inline 插件 (plugin.py + Plugin(PluginBase) + setup 注册 router)
+
+name: ddw_online_cs
+tier: core
+version: 2.0.0
+description: |
+  DDW 在线客服插件 — 官网联系我们页 AI 客服对话框后端。
+  基于官网知识库 RAG 检索 + 平台 LLM 网关生成回答，
+  复用平台 minimax→deepseek→ollama 兜底链路，无外部依赖。
+
+author: "DDW Team"
+license: commercial
+type: plugin
+adapter:
+  type: "identity"
+  vendor: "ddw"
+  protocol: "internal"
+
+dependencies:
+  plugins:
+    ddw-core: ">=2.0.0"
+
+config:
+  optional:
+    knowledge_dir:
+      default: "./knowledge"
+      description: "客服知识库目录（相对插件目录）"
+    max_history:
+      default: 12
+      description: "单会话保留的最大消息条数"
+    llm_rule:
+      default: "local_simple"
+      description: "LLM 网关路由规则"
+    log_retention_days:
+      default: 30
+      description: "对话日志保留天数"
+    script_top_k:
+      default: 3
+      description: "few-shot 话术注入条数（每分类）"
+    auto_approve_threshold:
+      default: 0.9
+      description: "洞察自动入库置信度阈值"
+    asset_version_prefix:
+      default: "v1"
+      description: "资产包版本前缀"

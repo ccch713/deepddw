@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>业务指标仪表盘 · DDW AI Hub</title>
+<link rel="stylesheet" href="./css/theme.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231a1a2e'/><text x='50%' y='55%' font-family='Arial' font-size='20' font-weight='800' fill='%23e8b86d' text-anchor='middle' dominant-baseline='middle'>D</text></svg>">
+<style>
+  .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+  .dash-header h2 { margin: 0; font-size: 22px; color: var(--c-bg-dark); }
+  .dash-header .asof { font-size: 12px; color: var(--c-text-muted); }
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+  .kpi-card { background: var(--c-bg-alt); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow-sm); border: 1px solid transparent; }
+  .kpi-card .k-label { font-size: 12px; color: var(--c-text-muted); margin-bottom: 6px; }
+  .kpi-card .k-value { font-size: 28px; font-weight: 800; color: var(--c-bg-dark); line-height: 1.1; }
+  .kpi-card .k-sub { font-size: 12px; color: var(--c-text-muted); margin-top: 6px; }
+  .kpi-card .k-up { color: #2e9e44; font-weight: 700; }
+  .kpi-card .k-down { color: #e6452a; font-weight: 700; }
+  .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .dash-grid .full { grid-column: 1 / -1; }
+  .panel { background: var(--c-bg-alt); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow-sm); }
+  .panel h3 { margin: 0 0 14px; font-size: 15px; color: var(--c-bg-dark); }
+  .chart-wrap { width: 100%; }
+  .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px; color: var(--c-text-muted); }
+  .bar-row .b-name { width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-row .b-track { flex: 1; height: 18px; background: var(--c-bg-dark); border-radius: 6px; overflow: hidden; position: relative; }
+  .bar-row .b-fill { height: 100%; background: linear-gradient(90deg, var(--c-accent), #f0a860); border-radius: 6px; min-width: 2px; }
+  .bar-row .b-val { width: 52px; text-align: right; font-weight: 700; color: var(--c-bg-dark); }
+  .funnel-step { margin-bottom: 10px; }
+  .funnel-step .f-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; color: var(--c-bg-dark); }
+  .funnel-step .f-track { height: 26px; background: var(--c-bg-dark); border-radius: 8px; overflow: hidden; }
+  .funnel-step .f-fill { height: 100%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; color: #fff; font-size: 12px; font-weight: 700; }
+  .f-leads .f-fill { background: linear-gradient(90deg, #4a6cf7, #6a8cff); }
+  .f-opps .f-fill { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+  .f-orders .f-fill { background: linear-gradient(90deg, #2e9e44, #4cc96b); }
+  .empty-note { padding: 24px; text-align: center; color: var(--c-text-muted); font-size: 13px; }
+  /* SVG 图表 */
+  svg text { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  .legend { display: flex; gap: 16px; font-size: 12px; color: var(--c-text-muted); margin-bottom: 8px; }
+  .legend span i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; }
+  @media (max-width: 900px) { .dash-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="admin-layout">
+  <!-- Sidebar -->
+  <aside class="admin-sidebar">
+    <h4>主导航</h4>
+    <a href="./admin.html">管理后台</a>
+    <a href="./plugin-market.html">插件市场</a>
+    <a href="./metrics-dashboard.html" class="active">业务仪表盘</a>
+    <h4>系统</h4>
+    <a href="./admin" target="_blank">SQL Admin</a>
+    <a href="./docs" target="_blank">API 文档</a>
+  </aside>
+
+  <!-- Main -->
+  <main class="admin-main">
+    <div class="dash-header">
+      <h2>业务指标仪表盘</h2>
+      <div class="asof" id="asOf">数据截止：—</div>
+    </div>
+
+    <!-- KPI -->
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="k-label">月度经常性收入 MRR</div>
+        <div class="k-value" id="kpiMrr">—</div>
+        <div class="k-sub" id="kpiMrrSub"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="k-label">周活跃用户 WAU</div>
+        <div class="k-value" id="kpiWau">—</div>
+        <div class="k-sub" id="kpiWauSub"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="k-label">Token 用量（近 7 天）</div>
+        <div class="k-value" id="kpiToken">—</div>
+        <div class="k-sub">全租户口径</div>
+      </div>
+      <div class="kpi-card">
+        <div class="k-label">线索→订单转化率</div>
+        <div class="k-value" id="kpiConv">—</div>
+        <div class="k-sub" id="kpiConvSub"></div>
+      </div>
+    </div>
+
+    <!-- 图表 -->
+    <div class="dash-grid">
+      <div class="panel">
+        <h3>MRR 趋势（近 6 月）</h3>
+        <div class="chart-wrap" id="mrrChart"><div class="empty-note">加载中...</div></div>
+      </div>
+      <div class="panel">
+        <h3>WAU 趋势（近 8 周）</h3>
+        <div class="chart-wrap" id="wauChart"><div class="empty-note">加载中...</div></div>
+      </div>
+      <div class="panel full">
+        <h3>销售漏斗（线索 → 商机 → 订单）</h3>
+        <div id="funnelBox"><div class="empty-note">加载中...</div></div>
+      </div>
+      <div class="panel full">
+        <h3>插件使用率 Top 10</h3>
+        <div id="topPlugins"><div class="empty-note">加载中...</div></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const API = '/api/v1';
+
+function getToken() {
+  return localStorage.getItem('ddw_token') || sessionStorage.getItem('ddw_token') || '';
+}
+
+function authHeaders() {
+  const t = getToken();
+  return t ? { 'Authorization': 'Bearer ' + t } : {};
+}
+
+async function apiFetch(path) {
+  const resp = await fetch(API + path, { headers: { ...authHeaders() } });
+  if (resp.status === 401) { window.location.href = './welcome.html'; return null; }
+  if (!resp.ok) return null;
+  return resp.json();
+}
+
+function fmtMoney(cents) {
+  if (cents === null || cents === undefined) return '—';
+  const y = cents / 100;
+  return '¥' + y.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtInt(n) {
+  return (n === null || n === undefined) ? '—' : Number(n).toLocaleString('zh-CN');
+}
+
+function trendHtml(cur, prev) {
+  if (cur === null || cur === undefined || !prev) return '<span>—</span>';
+  const pct = prev !== 0 ? ((cur - prev) / Math.abs(prev)) * 100 : 100;
+  const cls = pct >= 0 ? 'k-up' : 'k-down';
+  const arrow = pct >= 0 ? '▲' : '▼';
+  return `<span class="${cls}">${arrow} ${Math.abs(pct).toFixed(1)}%</span> <span>较上期</span>`;
+}
+
+// ---- SVG 柱状图（MRR）----
+function barChart(el, points, unit) {
+  const w = 560, h = 200, padL = 64, padB = 30, padT = 16, padR = 12;
+  const iw = w - padL - padR, ih = h - padT - padB;
+  const vals = points.map(p => Number(p.value) || 0);
+  const max = Math.max(...vals, 1);
+  const n = points.length || 1;
+  const bw = iw / n * 0.55;
+  let bars = '';
+  points.forEach((p, i) => {
+    const bh = (Number(p.value) || 0) / max * ih;
+    const x = padL + i * (iw / n) + (iw / n - bw) / 2;
+    const y = padT + ih - bh;
+    bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(bh, 2).toFixed(1)}" rx="4" fill="#4a6cf7" opacity="0.9"><title>${p.label}: ${unit}${p.value}</title></rect>`;
+    bars += `<text x="${(x + bw / 2).toFixed(1)}" y="${(h - padB + 14).toFixed(1)}" text-anchor="middle" font-size="10" fill="#888">${p.label}</text>`;
+    if (bh > 14) bars += `<text x="${(x + bw / 2).toFixed(1)}" y="${(y - 5).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="#333">${p.value}</text>`;
+  });
+  // 网格线
+  let grid = '';
+  for (let g = 0; g <= 4; g++) {
+    const gy = padT + ih * g / 4;
+    const gv = max * (4 - g) / 4;
+    grid += `<line x1="${padL}" y1="${gy.toFixed(1)}" x2="${w - padR}" y2="${gy.toFixed(1)}" stroke="#eee" stroke-dasharray="4 4"/>`;
+    grid += `<text x="${padL - 8}" y="${(gy + 4).toFixed(1)}" text-anchor="end" font-size="10" fill="#999">${gv.toFixed(0)}</text>`;
+  }
+  el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-height:220px">${grid}${bars}</svg>`;
+}
+
+// ---- SVG 折线图（WAU）----
+function lineChart(el, points) {
+  const w = 560, h = 200, padL = 40, padB = 30, padT = 16, padR = 12;
+  const iw = w - padL - padR, ih = h - padT - padB;
+  const vals = points.map(p => Number(p.value) || 0);
+  const max = Math.max(...vals, 1);
+  const n = points.length || 1;
+  const step = iw / Math.max(n - 1, 1);
+  const coords = points.map((p, i) => ({
+    x: padL + i * step,
+    y: padT + ih - ((Number(p.value) || 0) / max * ih),
+  }));
+  const line = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+  const area = coords.length ? `${line} L${coords[coords.length - 1].x.toFixed(1)},${padT + ih} L${coords[0].x.toFixed(1)},${padT + ih} Z` : '';
+  let dots = '', labels = '';
+  coords.forEach((c, i) => {
+    dots += `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="4" fill="#f59e0b" stroke="#fff" stroke-width="1.5"><title>${points[i].label}: ${points[i].value}</title></circle>`;
+    labels += `<text x="${c.x.toFixed(1)}" y="${(h - padB + 14).toFixed(1)}" text-anchor="middle" font-size="10" fill="#888">${points[i].label}</text>`;
+  });
+  let grid = '';
+  for (let g = 0; g <= 4; g++) {
+    const gy = padT + ih * g / 4;
+    const gv = max * (4 - g) / 4;
+    grid += `<line x1="${padL}" y1="${gy.toFixed(1)}" x2="${w - padR}" y2="${gy.toFixed(1)}" stroke="#eee" stroke-dasharray="4 4"/>`;
+    grid += `<text x="${padL - 8}" y="${(gy + 4).toFixed(1)}" text-anchor="end" font-size="10" fill="#999">${gv.toFixed(0)}</text>`;
+  }
+  el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-height:220px">${grid}<path d="${area}" fill="#f59e0b" opacity="0.12"/>${line ? `<path d="${line}" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/>` : ''}${dots}${labels}</svg>`;
+}
+
+// ---- 漏斗 ----
+function renderFunnel(funnel) {
+  const box = document.getElementById('funnelBox');
+  if (!funnel || !funnel.length) { box.innerHTML = '<div class="empty-note">暂无数据</div>'; return; }
+  const max = Math.max(...funnel.map(f => f.count), 1);
+  const names = { leads: '线索', opportunities: '商机', orders: '订单' };
+  const colors = ['f-leads', 'f-opps', 'f-orders'];
+  box.innerHTML = funnel.map((f, i) => `
+    <div class="funnel-step ${colors[i] || ''}">
+      <div class="f-label"><span>${names[f.stage] || f.stage}</span><span>${f.count} 条${i > 0 ? ' · 转化率 ' + ((funnel[i - 1].count ? f.count / funnel[i - 1].count * 100 : 0)).toFixed(0) + '%' : ''}</span></div>
+      <div class="f-track"><div class="f-fill" style="width:${Math.max(f.count / max * 100, 2)}%">${f.count}</div></div>
+    </div>`).join('');
+}
+
+// ---- 插件 Top10 ----
+function renderTop(plugins) {
+  const box = document.getElementById('topPlugins');
+  if (!plugins || !plugins.length) { box.innerHTML = '<div class="empty-note">暂无使用数据（有用量后自动显示）</div>'; return; }
+  const max = Math.max(...plugins.map(p => p.count), 1);
+  box.innerHTML = plugins.map(p => `
+    <div class="bar-row">
+      <span class="b-name" title="${p.event_type}">${p.event_type}</span>
+      <span class="b-track"><span class="b-fill" style="width:${Math.max(p.count / max * 100, 2)}%"></span></span>
+      <span class="b-val">${p.count}</span>
+    </div>`).join('');
+}
+
+async function load() {
+  const [summary, mrr, wau, top] = await Promise.all([
+    apiFetch('/plugins/ddw-business-metrics/summary'),
+    apiFetch('/plugins/ddw-business-metrics/mrr?months=6'),
+    apiFetch('/plugins/ddw-business-metrics/wau?weeks=8'),
+    apiFetch('/plugins/ddw-business-metrics/plugins-top?limit=10'),
+  ]);
+  if (!summary) return;
+
+  document.getElementById('asOf').textContent = '数据截止：' + (summary.as_of || '').replace('T', ' ').slice(0, 16);
+
+  // KPI
+  document.getElementById('kpiMrr').textContent = fmtMoney(summary.mrr_cents);
+  document.getElementById('kpiMrrSub').innerHTML = trendHtml(summary.mrr_cents, (summary.mrr_trend || [])[1]?.value);
+  document.getElementById('kpiWau').textContent = fmtInt(summary.wau);
+  document.getElementById('kpiWauSub').innerHTML = trendHtml(summary.wau, (summary.wau_trend || [])[1]?.value);
+  document.getElementById('kpiToken').textContent = fmtInt(summary.token_usage_7d);
+  const funnel = summary.funnel || [];
+  const conv = funnel.length === 3 && funnel[0].count ? (funnel[2].count / funnel[0].count * 100).toFixed(1) : '—';
+  document.getElementById('kpiConv').textContent = conv === '—' ? '—' : conv + '%';
+  document.getElementById('kpiConvSub').textContent = funnel.length === 3 ? `${funnel[0].count} 线索 → ${funnel[2].count} 订单` : '暂无漏斗数据';
+
+  // 图表
+  barChart(document.getElementById('mrrChart'), mrr || [], '¥');
+  lineChart(document.getElementById('wauChart'), wau || []);
+  renderFunnel(funnel);
+  renderTop(top || []);
+}
+
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="问渠学生端 — 登录">
+<title>问渠 · 学生登录</title>
+<link rel="icon" href="assets/favicon.png">
+<style>
+:root {
+  --cinnabar: #B03A2E;
+  --cinnabar-light: #D4574A;
+  --cinnabar-deep: #8C2E24;
+  --paper: #F7F1E3;
+  --paper-2: #EDE5D3;
+  --ink: #3A3A3A;
+  --ink-2: #6B6B6B;
+  --ink-3: #999;
+  --gold: #E8C46B;
+  --white: #FFFFFF;
+  --shadow: 0 2px 12px rgba(0,0,0,.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,.12);
+  --radius: 10px;
+  --font: -apple-system,"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",sans-serif;
+  --font-kai: "KaiTi","STKaiti","楷体",serif;
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:var(--font);background:var(--paper);color:var(--ink);display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased}
+
+.login-container{width:100%;max-width:400px;padding:20px}
+
+.login-card{background:var(--white);border-radius:16px;padding:40px 36px;box-shadow:var(--shadow-lg);text-align:center}
+
+.login-logo{width:80px;height:80px;margin:0 auto 20px;border-radius:50%;border:3px solid var(--cinnabar);box-shadow:0 4px 16px rgba(176,58,46,.25)}
+.login-title{font-family:var(--font-kai);font-size:28px;font-weight:700;color:var(--cinnabar);margin-bottom:4px;letter-spacing:.05em}
+.login-subtitle{font-size:13px;color:var(--ink-2);margin-bottom:32px}
+
+.form-group{margin-bottom:20px;text-align:left}
+.form-group label{display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.form-group input,.form-group select{width:100%;padding:10px 14px;border:1px solid var(--paper-2);border-radius:var(--radius);font-size:14px;background:var(--paper);color:var(--ink);transition:border-color .2s;font-family:var(--font)}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--cinnabar)}
+.form-group input::placeholder{color:var(--ink-3)}
+
+.btn-login{width:100%;padding:12px;background:var(--cinnabar);color:var(--white);border:none;border-radius:var(--radius);font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 4px 12px rgba(176,58,46,.3)}
+.btn-login:hover{background:var(--cinnabar-deep);transform:translateY(-1px)}
+.btn-login:active{transform:translateY(0)}
+
+.login-footer{margin-top:20px;font-size:12px;color:var(--ink-3)}
+
+.error-msg{color:var(--cinnabar);font-size:12px;margin-top:8px;display:none}
+</style>
+</head>
+<body>
+
+<div class="login-container">
+  <div class="login-card">
+    <img src="assets/favicon.png" alt="问渠" class="login-logo">
+    <div class="login-title">问渠</div>
+    <div class="login-subtitle">AI 教练苏格拉底式学习工作台</div>
+
+    <form id="loginForm" onsubmit="return handleLogin(event)">
+      <div class="form-group">
+        <label for="studentName">学生姓名</label>
+        <input type="text" id="studentName" placeholder="输入你的名字" required autocomplete="name">
+      </div>
+
+      <div class="form-group">
+        <label for="subject">学科选择</label>
+        <select id="subject">
+          <option value="physics">物理</option>
+          <option value="chemistry">化学</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn-login">开始学习</button>
+      <div class="error-msg" id="errorMsg"></div>
+    </form>
+
+    <!-- 社会化登录区 -->
+    <div id="social-section" style="margin-top:24px;text-align:center;display:none">
+      <div style="position:relative;margin-bottom:16px">
+        <hr style="border:none;border-top:1px solid var(--paper-2)">
+        <span style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--white);padding:0 12px;font-size:12px;color:var(--ink-3)">其他登录方式</span>
+      </div>
+      <div id="social-btns" style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap"></div>
+    </div>
+
+    <div class="login-footer">问渠 · DDW 底座平台</div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+function handleLogin(e) {
+  e.preventDefault();
+
+  const name = document.getElementById('studentName').value.trim();
+  const subject = document.getElementById('subject').value;
+
+  if (!name) {
+    showError('请输入姓名');
+    return false;
+  }
+
+  if (name.length > 20) {
+    showError('姓名不能超过 20 个字符');
+    return false;
+  }
+
+  // 保存到 localStorage
+  localStorage.setItem('wenqu_student_name', name);
+  localStorage.setItem('wenqu_student_subject', subject);
+
+  // 跳转到工作台
+  window.location.href = `student.html?name=${encodeURIComponent(name)}&subject=${subject}`;
+  return false;
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3000);
+}
+
+// 自动填充上次登录
+document.addEventListener('DOMContentLoaded', () => {
+  const lastName = localStorage.getItem('wenqu_student_name');
+  if (lastName) document.getElementById('studentName').value = lastName;
+
+  const lastSubject = localStorage.getItem('wenqu_student_subject');
+  if (lastSubject) document.getElementById('subject').value = lastSubject;
+
+  // 加载社会化登录按钮
+  loadSocialLogin();
+});
+
+// 加载社会化登录按钮
+async function loadSocialLogin() {
+  try {
+    const r = await fetch('/api/v1/plugins/ddw-social-login/channels');
+    if (!r.ok) return;
+    const channels = await r.json();
+    const enabled = channels.filter(c => c.enabled);
+    if (!enabled.length) return;
+
+    document.getElementById('social-section').style.display = 'block';
+    const box = document.getElementById('social-btns');
+    const icons = {
+      wechat_open: { name: '微信', icon: '💬' },
+      qq: { name: 'QQ', icon: '🐧' },
+      dingtalk: { name: '钉钉', icon: '📱' },
+      feishu: { name: '飞书', icon: '🐦' },
+    };
+
+    enabled.forEach(ch => {
+      const info = icons[ch.provider] || { name: ch.display_name, icon: '🔗' };
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-social';
+      btn.innerHTML = `${info.icon} ${info.name}`;
+      btn.style.cssText = `
+        padding: 10px 24px;
+        border: 1px solid var(--paper-2);
+        border-radius: var(--radius);
+        background: var(--white);
+        cursor: pointer;
+        font-size: 14px;
+        font-family: var(--font);
+        color: var(--ink);
+        transition: all .2s;
+      `;
+      btn.onmouseenter = () => {
+        btn.style.borderColor = 'var(--cinnabar)';
+        btn.style.color = 'var(--cinnabar)';
+      };
+      btn.onmouseleave = () => {
+        btn.style.borderColor = 'var(--paper-2)';
+        btn.style.color = 'var(--ink)';
+      };
+      // next 参数指向问渠学生页
+      btn.onclick = () => {
+        location.href = `/api/v1/plugins/ddw-social-login/auth/${ch.provider}?next=/wenqu/student.html`;
+      };
+      box.appendChild(btn);
+    });
+  } catch (e) {
+    // 社会化登录不可用，静默忽略
+  }
+}
+</script>
+</body>
+</html>

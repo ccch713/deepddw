@@ -1,0 +1,42 @@
+name: ddw-quotation
+license: free
+tier: core
+version: 1.0.0
+display_name: DDW 报价单管理
+description: 销售端报价单全生命周期管理。主表 + 明细子表结构；自动生成单号 QT-YYYYMMDD-NNN；自动计算总金额与折后金额；状态机 draft→sent→accepted/rejected/expired；与商机、客户、联系人关联。
+engine: plugin_base
+isolation: inline
+
+permissions:
+  - database.read
+  - database.write
+
+dependencies:
+  plugins: []
+
+config_schema:
+  type: object
+  properties:
+    default_tenant_id:
+      type: integer
+      default: 1
+    default_page_size:
+      type: integer
+      default: 20
+    default_discount_rate:
+      type: number
+      default: 100
+      description: 默认折扣率（百分比，100 = 不打折）
+    default_currency:
+      type: string
+      default: CNY
+    statuses:
+      type: array
+      default: [draft, sent, accepted, rejected, expired]
+      description: 报价单状态枚举
+    product_types:
+      type: array
+      default: [product, plugin, service, token]
+      description: 明细产品类型枚举
+
+router_prefix: /api/v1/plugins/ddw-quotation

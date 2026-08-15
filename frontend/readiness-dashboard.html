@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>就绪度商机看板 | DDW AI HUB</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --paper:#FAF6EE;--paper-2:#F4EEE1;--ink:#2B2A26;--ink-2:#5D5A50;--ink-3:#98917F;
+  --cinnabar:#C43D2C;--cinnabar-deep:#9E2F22;--gold:#C9A063;--gold-deep:#A87F3F;
+  --daiblue:#3E5C76;--line:#E4DCCB;--line-strong:#C9BFA8;--ink-band:#262B33;
+  --shadow:0 8px 30px rgba(43,42,38,.10);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--paper);color:var(--ink);line-height:1.6}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 60px}
+header{display:flex;align-items:center;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:20px}
+.seal{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#D1492F,#9E2F22);display:flex;align-items:center;justify-content:center;color:#FFF7EC;font-weight:900;font-size:19px;transform:rotate(-3deg);box-shadow:0 3px 10px rgba(196,61,44,.35)}
+.hd-t{font-size:16px;font-weight:800;letter-spacing:.5px}
+.hd-s{font-size:11px;color:var(--ink-3);letter-spacing:2px}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.toolbar input{flex:1;min-width:220px;background:var(--paper-2);border:1px solid var(--line-strong);border-radius:10px;padding:10px 13px;font-size:13px;color:var(--ink);font-family:inherit;outline:none}
+.toolbar input:focus{border-color:var(--cinnabar)}
+.btn{padding:10px 20px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:inherit}
+.btn-p{background:var(--cinnabar);color:#FFF7EC;box-shadow:0 4px 14px rgba(196,61,44,.3)}
+.btn-s{background:var(--paper-2);color:var(--ink-2);border:1px solid var(--line-strong)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+@media(max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--paper-2);border:1px solid var(--line-strong);border-radius:14px;padding:16px}
+.kpi .l{font-size:12px;color:var(--ink-3)}
+.kpi .v{font-size:26px;font-weight:900;margin-top:4px}
+.kpi .v.a{color:#2E8B57}.kpi .v.b{color:#C9A063}.kpi .v.c{color:#8A93A6}.kpi .v.t{color:var(--cinnabar)}
+.card{background:var(--paper-2);border:1px solid var(--line-strong);border-radius:14px;padding:18px;margin-bottom:18px}
+.card h2{font-size:15px;font-weight:800;margin-bottom:14px;padding-left:10px;border-left:3px solid var(--cinnabar)}
+.dist{display:flex;height:14px;border-radius:99px;overflow:hidden;background:var(--paper);margin-bottom:8px}
+.dist i{display:block;height:100%;transition:width .4s}
+.dist-legend{display:flex;gap:16px;font-size:12px;color:var(--ink-2);flex-wrap:wrap}
+.dist-legend .d{display:flex;align-items:center;gap:5px}
+.dot{width:10px;height:10px;border-radius:3px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:9px 10px;text-align:left;color:var(--ink-3);font-size:12px;font-weight:600;border-bottom:1px solid var(--line-strong)}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:hover td{background:rgba(196,61,44,.03)}
+.tag{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:700}
+.tag.A{background:rgba(46,139,87,.14);color:#2E8B57}
+.tag.B{background:rgba(201,160,99,.16);color:#8A6A2F}
+.tag.C{background:rgba(138,147,166,.18);color:#5A6270}
+.row-detail{display:none;background:var(--paper);border-radius:10px;padding:12px;margin-top:6px;font-size:12px;color:var(--ink-2);white-space:pre-wrap}
+.empty{text-align:center;color:var(--ink-3);padding:30px 0;font-size:13px}
+.msg{font-size:12px;color:var(--gold-deep);margin-left:4px}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="seal">评</div>
+    <div>
+      <div class="hd-t">AI 就绪度 · 商机看板</div>
+      <div class="hd-s">DDW AI HUB · 客户自评数据实时汇总</div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <input id="token" type="password" placeholder="管理令牌（登录 admin 后获取，填一次自动保存）">
+    <button class="btn btn-p" onclick="loadAll()">刷新数据</button>
+    <button class="btn btn-s" onclick="saveToken()">保存令牌</button>
+    <span class="msg" id="msg"></span>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="l">测评总数</div><div class="v t" id="kTotal">-</div></div>
+    <div class="kpi"><div class="l">A 级商机</div><div class="v a" id="kA">-</div></div>
+    <div class="kpi"><div class="l">B 级商机</div><div class="v b" id="kB">-</div></div>
+    <div class="kpi"><div class="l">C 级商机</div><div class="v c" id="kC">-</div></div>
+  </div>
+
+  <div class="card">
+    <h2>商机分级分布</h2>
+    <div class="dist" id="dist"></div>
+    <div class="dist-legend" id="distLegend"></div>
+  </div>
+
+  <div class="card">
+    <h2>测评列表（按时间倒序）</h2>
+    <div id="listWrap"><div class="empty">输入管理令牌后点击「刷新数据」查看测评详情</div></div>
+  </div>
+</div>
+
+<script>
+var API="https://ddw.9cio.com/api/v1/plugins/ddw_ai_readiness";
+function $(id){return document.getElementById(id)}
+function msg(t){var m=$("msg");m.textContent=t;setTimeout(function(){m.textContent=""},3000)}
+
+(function(){
+  var t=localStorage.getItem("ddw_token");
+  if(t)$("token").value=t;
+})();
+
+function saveToken(){
+  var t=$("token").value.trim();
+  if(t)localStorage.setItem("ddw_token",t);
+  msg("令牌已保存");
+  loadAll();
+}
+
+function loadAll(){
+  loadStats();
+  loadList();
+}
+
+function loadStats(){
+  var t=$("token").value.trim();
+  if(!t){$("kTotal").textContent="-";$("kA").textContent="-";$("kB").textContent="-";$("kC").textContent="-";return}
+  fetch(API+"/stats",{headers:{Authorization:"Bearer "+t}}).then(function(r){return r.json()}).then(function(d){
+    $("kTotal").textContent=d.total;
+    $("kA").textContent=d.grade_a;
+    $("kB").textContent=d.grade_b;
+    $("kC").textContent=d.grade_c;
+    var total=Math.max(d.total,1);
+    var pA=Math.round(d.grade_a/total*100),pB=Math.round(d.grade_b/total*100),pC=Math.round(d.grade_c/total*100);
+    $("dist").innerHTML=
+      '<i style="width:'+pA+'%;background:#2E8B57"></i>'+
+      '<i style="width:'+pB+'%;background:#C9A063"></i>'+
+      '<i style="width:'+pC+'%;background:#8A93A6"></i>';
+    $("distLegend").innerHTML=
+      '<span class="d"><span class="dot" style="background:#2E8B57"></span>A级 '+d.grade_a+'</span>'+
+      '<span class="d"><span class="dot" style="background:#C9A063"></span>B级 '+d.grade_b+'</span>'+
+      '<span class="d"><span class="dot" style="background:#8A93A6"></span>C级 '+d.grade_c+'</span>'+
+      '<span class="d">就绪度 A/B/C：'+d.grade1_a+' / '+d.grade1_b+' / '+d.grade1_c+'</span>';
+  }).catch(function(){msg("stats 加载失败")});
+}
+
+function loadList(){
+  var t=$("token").value.trim();
+  if(!t){$("listWrap").innerHTML='<div class="empty">输入管理令牌后点击「刷新数据」查看测评详情</div>';return}
+  fetch(API+"/submissions?limit=100",{headers:{Authorization:"Bearer "+t}})
+    .then(function(r){if(r.status===401)throw new Error("token 无效");return r.json()})
+    .then(function(rows){
+      if(!rows.length){$("listWrap").innerHTML='<div class="empty">暂无测评记录</div>';return}
+      var h='<table><thead><tr><th>#</th><th>公司</th><th>联系人</th><th>电话</th><th>就绪度</th><th>商机</th><th>评分</th><th>提交时间</th><th></th></tr></thead><tbody>';
+      rows.forEach(function(r){
+        var dcat="";
+        try{
+          var d=typeof r.d==="string"?JSON.parse(r.d):r.d;
+          var names={D1:"客户销售",D2:"文档知识",D3:"流程表单",D4:"业务过程"};
+          var best=Object.keys(d||{}).sort(function(a,b){return (d[b].a+d[b].b+d[b].c)-(d[a].a+d[a].b+d[a].c)})[0];
+          dcat=best?names[best]:"-";
+        }catch(e){}
+        h+='<tr>'+
+          '<td style="color:var(--ink-3)">'+r.id+'</td>'+
+          '<td><b>'+(r.company||"匿名")+'</b>'+(dcat!=="-"?'<br><span style="font-size:11px;color:var(--ink-3)">画像:'+dcat+'</span>':"")+'</td>'+
+          '<td>'+(r.name||"-")+'</td>'+
+          '<td>'+(r.phone||"-")+'</td>'+
+          '<td><span class="tag '+r.grade1+'">'+r.grade1+'</span></td>'+
+          '<td><span class="tag '+r.grade.charAt(0)+'">'+r.grade+'</span></td>'+
+          '<td>'+r.grade_points+'/9</td>'+
+          '<td style="color:var(--ink-3);font-size:12px">'+((r.created_at||"").replace("T"," ").slice(0,16))+'</td>'+
+          '<td><button class="btn btn-s" style="padding:5px 12px;font-size:12px" onclick="toggleDetail('+r.id+',this)">详情</button></td>'+
+          '</tr>'+
+          '<tr class="row-detail" id="detail-'+r.id+'"><td colspan="9">'+JSON.stringify(r,null,2).replace(/</g,"&lt;")+'</td></tr>';
+      });
+      h+='</tbody></table>';
+      $("listWrap").innerHTML=h;
+    })
+    .catch(function(e){$("listWrap").innerHTML='<div class="empty">列表加载失败：'+e.message+'</div>'});
+}
+
+function toggleDetail(id,btn){
+  var row=$( "detail-"+id);
+  if(!row)return;
+  var show=row.style.display==="table-row";
+  row.style.display=show?"none":"table-row";
+  btn.textContent=show?"详情":"收起";
+}
+</script>
+</body>
+</html>

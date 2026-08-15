@@ -1,0 +1,26 @@
+name: ddw_commission
+tier: beta
+version: "0.1.0"
+description: "医生提成核算（基于 ddw_offline_pos 收费数据）"
+author: "DDW Team"
+license: commercial
+type: plugin
+entry: plugin:Plugin
+dependencies:
+  plugins:
+    ddw_offline_pos: ">=0.1.0"
+endpoints:
+  - path: /api/v1/plugins/ddw_commission/health
+    method: GET
+  - path: /api/v1/plugins/ddw_commission/rules
+    method: POST
+  - path: /api/v1/plugins/ddw_commission/rules
+    method: GET
+  - path: /api/v1/plugins/ddw_commission/rules/{id}
+    method: PATCH
+  - path: /api/v1/plugins/ddw_commission/calculate
+    method: POST
+  - path: /api/v1/plugins/ddw_commission/records
+    method: GET
+  - path: /api/v1/plugins/ddw_commission/records/{id}/confirm
+    method: POST

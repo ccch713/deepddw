@@ -1,0 +1,73 @@
+from __future__ import annotations
+"""DDW 拜访与沟通记录插件 ORM 模型。
+
+继承 DDW 平台核心：
+- core.database.session.Base: DeclarativeBase 根
+- core.database.models.TenantMixin: 自动注入 tenant_id + 标记租户感知
+- core.database.models.TimestampMixin: 自动注入 created_at / updated_at
+"""
+
+from datetime import datetime
+from typing import Optional
+
+from sqlalchemy import JSON, BigInteger, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
+
+from core.database.models import Base, TenantMixin, TimestampMixin
+
+# BigInteger 在 SQLite 不支持 -> 退化到 Integer
+BigInt = BigInteger().with_variant(Integer(), "sqlite")
+
+
+class SalesNote(Base, TenantMixin, TimestampMixin):
+    """拜访 / 沟通记录主表。
+
+    设计要点：
+    - 与企业/联系人/商机均使用外键关联，但全部可空 + ON DELETE SET NULL：
+      当上游实体删除时，记录本身保留，仅清空关联指针（审计价值）。
+    - ``note_type`` 枚举：visit / call / meeting / email / wechat
+    - ``visit_date`` 用于按沟通发生时间检索（区别于 created_at 入库时间）
+    - ``tags`` / ``attachments`` 用 JSON 列表，便于灵活扩展
+    """
+
+    __tablename__ = "crm_sales_notes"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[int] = mapped_column(BigInt, primary_key=True, autoincrement=True)
+
+    # ---- 关联 ----
+    user_id: Mapped[Optional[int]] = mapped_column(BigInt, nullable=False)
+    company_id: Mapped[Optional[int]] = mapped_column(BigInt, nullable=True)
+        ForeignKey("crm_companies.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    contact_id: Mapped[Optional[int]] = mapped_column(        BigInt,
+        ForeignKey("crm_contacts.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    opportunity_id: Mapped[Optional[int]] = mapped_column(        BigInt,
+        ForeignKey("crm_opportunities.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+
+    # ---- 沟通分类 ----
+    note_type: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
+    # visit / call / meeting / email / wechat
+
+    # ---- 内容 ----
+    title: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    visit_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, index=True)
+
+    # ---- 扩展 ----
+    tags: Mapped[Optional[list]] = mapped_column(JSON, default=list)
+    attachments: Mapped[Optional[list]] = mapped_column(JSON, default=list)  # 附件 URL 列表
+
+    # ---- 审计 ----
+    created_by: Mapped[Optional[int]] = mapped_column(BigInt, nullable=True)
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<SalesNote id={self.id} type={self.note_type!r} title={self.title!r}>"
+
+
+__all__ = ["SalesNote"]

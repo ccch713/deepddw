@@ -1,0 +1,36 @@
+name: ddw_clinical_asr
+tier: beta
+version: "0.1.0"
+description: "LLM 医疗实体抽取（9 类口腔诊疗）"
+author: "DDW Team"
+license: commercial
+type: plugin
+entry: plugin:Plugin
+dependencies:
+  sdk: ">=2.0.0"
+  plugins:
+    ddw_talk_a1_asr: ">=0.1.0"
+config:
+  optional:
+    default_model:
+      default: "MiniMax-M3"
+      description: "默认 LLM 模型"
+    fallback_models:
+      default: "deepseek-chat"
+      description: "Fallback 模型列表（逗号分隔）"
+endpoints:
+  - path: /api/v1/plugins/ddw_clinical_asr/health
+    method: GET
+    summary: 健康检查
+  - path: /api/v1/plugins/ddw_clinical_asr/extract
+    method: POST
+    summary: 抽取结构化实体
+  - path: /api/v1/plugins/ddw_clinical_asr/classify
+    method: POST
+    summary: 纯分类
+  - path: /api/v1/plugins/ddw_clinical_asr/prompts
+    method: GET
+    summary: 列出 prompt 文件
+  - path: /api/v1/plugins/ddw_clinical_asr/prompts/reload
+    method: POST
+    summary: 重新加载 prompt

@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="format-detection" content="telephone=no">
+<title>个人中心 - DDW AI Hub</title>
+<link rel="icon" type="image/svg+xml" href="assets/logo-ju.svg">
+<style>
+  /* ===== 基础重置 ===== */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: #333; background: #F0F2F5; -webkit-font-smoothing: antialiased; }
+  a { color: #1890FF; text-decoration: none; }
+  a:hover { color: #40A9FF; }
+  input, select { font-family: inherit; }
+
+  /* ===== 顶部条 ===== */
+  .topbar { background: #001529; color: #FFF; height: 56px; display: flex; align-items: center; padding: 0 24px; position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+  .header-logo { display: flex; align-items: center; }
+  .logo-char { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: #000; color: #FFF; font-size: 20px; font-weight: bold; font-family: "PingFang SC", "Microsoft YaHei", serif; border-radius: 2px; margin-right: 10px; }
+  .header-title { color: #FFF; font-size: 16px; font-weight: 500; }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+  .topbar-user { color: rgba(255,255,255,0.85); font-size: 14px; }
+  .btn-logout { background: none; border: 1px solid rgba(255,255,255,0.3); color: rgba(255,255,255,0.85); padding: 4px 12px; border-radius: 2px; font-size: 13px; cursor: pointer; }
+  .btn-logout:hover { border-color: #FFF; color: #FFF; }
+
+  /* ===== 布局 ===== */
+  .layout { display: flex; padding-top: 56px; min-height: 100vh; }
+
+  /* ===== 左侧导航 ===== */
+  .sider { width: 200px; background: #FFF; border-right: 1px solid #E8E8E8; padding-top: 16px; position: fixed; top: 56px; bottom: 0; left: 0; overflow-y: auto; }
+  .sider-title { padding: 0 20px 12px; font-size: 14px; color: #999; font-weight: 500; }
+  .sider-menu { list-style: none; }
+  .sider-menu li { padding: 12px 20px; font-size: 14px; color: #333; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s; }
+  .sider-menu li:hover { background: #F0F2F5; }
+  .sider-menu li.active { color: #1890FF; border-left-color: #1890FF; background: #E6F7FF; }
+
+  /* ===== 内容区 ===== */
+  .content { flex: 1; margin-left: 200px; padding: 24px; }
+  .content-panel { display: none; }
+  .content-panel.active { display: block; }
+
+  /* ===== 卡片 ===== */
+  .card { background: #FFF; border: 1px solid #E8E8E8; border-radius: 2px; padding: 24px; margin-bottom: 16px; }
+  .card-title { font-size: 16px; color: #333; font-weight: 500; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #E8E8E8; }
+
+  /* ===== 表单 ===== */
+  .form-item { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 13px; color: #333; margin-bottom: 6px; }
+  .form-input { width: 100%; max-width: 400px; height: 38px; padding: 6px 12px; border: 1px solid #D9D9D9; border-radius: 2px; background: #FFF; font-size: 14px; color: #333; outline: none; transition: border-color 0.2s; }
+  .form-input:focus { border-color: #1890FF; }
+  .form-input::placeholder { color: #BFBFBF; }
+  .form-input[readonly] { background: #F5F5F5; color: #999; }
+  .btn-primary { display: inline-block; height: 38px; padding: 0 24px; background: #1890FF; color: #FFF; border: none; border-radius: 2px; font-size: 14px; cursor: pointer; }
+  .btn-primary:hover { background: #40A9FF; }
+  .btn-primary:disabled { background: #BFBFBF; cursor: not-allowed; }
+  .btn-default { display: inline-block; height: 38px; padding: 0 24px; background: #FFF; color: #333; border: 1px solid #D9D9D9; border-radius: 2px; font-size: 14px; cursor: pointer; }
+  .btn-default:hover { border-color: #1890FF; color: #1890FF; }
+
+  /* ===== 用户信息 ===== */
+  .user-info-row { display: flex; align-items: center; margin-bottom: 20px; }
+  .avatar-placeholder { width: 64px; height: 64px; background: #E6F7FF; border: 1px solid #91D5FF; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #1890FF; margin-right: 20px; }
+  .user-meta { flex: 1; }
+  .user-meta h3 { font-size: 18px; color: #333; margin-bottom: 4px; }
+  .user-meta p { font-size: 13px; color: #999; }
+
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .info-item { padding: 12px 0; border-bottom: 1px solid #F0F0F0; }
+  .info-item .label { font-size: 13px; color: #999; margin-bottom: 4px; }
+  .info-item .value { font-size: 14px; color: #333; }
+
+  /* ===== 绑定列表 ===== */
+  .binding-list { list-style: none; }
+  .binding-item { display: flex; align-items: center; padding: 16px 0; border-bottom: 1px solid #F0F0F0; }
+  .binding-item:last-child { border-bottom: none; }
+  .binding-icon { width: 40px; height: 40px; border-radius: 2px; display: flex; align-items: center; justify-content: center; margin-right: 16px; font-size: 20px; }
+  .binding-icon.wechat { background: #F6FFED; color: #52C41A; }
+  .binding-icon.dingtalk { background: #E6F7FF; color: #1890FF; }
+  .binding-icon.feishu { background: #F5F5F5; color: #999; }
+  .binding-info { flex: 1; }
+  .binding-info h4 { font-size: 14px; color: #333; margin-bottom: 4px; }
+  .binding-info p { font-size: 12px; color: #999; }
+  .binding-status { text-align: right; }
+  .status-badge { display: inline-block; padding: 2px 8px; font-size: 12px; border-radius: 2px; }
+  .status-badge.bound { background: #F6FFED; color: #52C41A; border: 1px solid #B7EB8F; }
+  .status-badge.unbound { background: #FFF1F0; color: #F5222D; border: 1px solid #FFA39E; }
+  .status-badge.disabled { background: #F5F5F5; color: #999; border: 1px solid #D9D9D9; }
+  .btn-unbind { background: none; border: none; color: #F5222D; font-size: 13px; cursor: pointer; padding: 4px 8px; }
+  .btn-unbind:hover { color: #FF4D4F; }
+
+  /* ===== 安全设置 ===== */
+  .security-section { margin-bottom: 24px; }
+  .security-section h4 { font-size: 14px; color: #333; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #F0F0F0; }
+
+  /* ===== 日志表格 ===== */
+  .log-table { width: 100%; border-collapse: collapse; }
+  .log-table th, .log-table td { padding: 12px; text-align: left; border-bottom: 1px solid #F0F0F0; font-size: 13px; }
+  .log-table th { background: #FAFAFA; color: #666; font-weight: 500; }
+  .log-table td { color: #333; }
+  .log-status { display: inline-block; padding: 2px 8px; font-size: 12px; border-radius: 2px; }
+  .log-status.success { background: #F6FFED; color: #52C41A; }
+  .log-status.fail { background: #FFF1F0; color: #F5222D; }
+
+  /* ===== 提示 ===== */
+  .msg { padding: 10px 12px; background: #FFF1F0; border: 1px solid #FFA39E; color: #F5222D; font-size: 13px; border-radius: 2px; margin-bottom: 16px; display: none; }
+  .msg.ok { background: #F6FFED; border-color: #B7EB8F; color: #52C41A; }
+
+  /* ===== Footer ===== */
+  .app-footer { text-align: center; padding: 16px 0; color: #999; font-size: 12px; border-top: 1px solid #E8E8E8; background: #FFF; margin-top: 24px; }
+  .app-footer a { color: #999; text-decoration: none; }
+  .app-footer a:hover { color: #1890FF; }
+  .footer-sep { margin: 0 8px; color: #D9D9D9; }
+
+  @media (max-width: 768px) {
+    .sider { display: none; }
+    .content { margin-left: 0; }
+    .info-grid { grid-template-columns: 1fr; }
+  }
+</style>
+    <link rel="stylesheet" href="/css/ddw-themes.css">
+    <script src="/js/ddw-theme-switcher.js"></script>
+  </head>
+<body>
+
+<header class="topbar">
+  <div class="header-logo">
+    <span class="logo-char">钜</span>
+    <span class="header-title">DDW AI Hub</span>
+  </div>
+  <div class="topbar-right">
+    <a class="btn-logout" href="/docs.html" style="text-decoration:none">📚 文档中心</a>
+    <span class="topbar-user" id="topbarUser">-</span>
+    <button class="btn-logout" id="btnLogout">退出登录</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sider">
+    <div class="sider-title">个人中心</div>
+    <ul class="sider-menu">
+      <li class="active" data-panel="profile">基本信息</li>
+      <li data-panel="bindings">第三方绑定</li>
+      <li data-panel="security">安全设置</li>
+      <li data-panel="loginlog">登录日志</li>
+    </ul>
+  </aside>
+
+  <main class="content">
+    <!-- Tab 1: 基本信息 -->
+    <div id="panel-profile" class="content-panel active">
+      <div class="card">
+        <div class="card-title">基本信息</div>
+        <div class="user-info-row">
+          <div class="avatar-placeholder" id="avatarPlaceholder">U</div>
+          <div class="user-meta">
+            <h3 id="userName">-</h3>
+            <p id="userRole">-</p>
+          </div>
+        </div>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="label">姓名</div>
+            <div class="value" id="infoName">-</div>
+          </div>
+          <div class="info-item">
+            <div class="label">手机号</div>
+            <div class="value" id="infoPhone">-</div>
+          </div>
+          <div class="info-item">
+            <div class="label">角色</div>
+            <div class="value" id="infoRole">-</div>
+          </div>
+          <div class="info-item">
+            <div class="label">企业名称</div>
+            <div class="value" id="infoCompany">-</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: 第三方绑定 -->
+    <div id="panel-bindings" class="content-panel">
+      <div class="card">
+        <div class="card-title">第三方绑定</div>
+        <div id="msgBindings" class="msg"></div>
+        <ul class="binding-list">
+          <li class="binding-item">
+            <div class="binding-icon wechat">W</div>
+            <div class="binding-info">
+              <h4>微信</h4>
+              <p id="wechatStatus">未绑定</p>
+            </div>
+            <div class="binding-status" id="wechatAction">
+              <button class="btn-primary" onclick="bindProvider('wechat')">绑定微信</button>
+            </div>
+          </li>
+          <li class="binding-item">
+            <div class="binding-icon dingtalk">D</div>
+            <div class="binding-info">
+              <h4>钉钉</h4>
+              <p id="dingtalkStatus">未绑定</p>
+            </div>
+            <div class="binding-status" id="dingtalkAction">
+              <button class="btn-primary" onclick="bindProvider('dingtalk')">绑定钉钉</button>
+            </div>
+          </li>
+          <li class="binding-item">
+            <div class="binding-icon feishu">F</div>
+            <div class="binding-info">
+              <h4>飞书</h4>
+              <p>即将上线</p>
+            </div>
+            <div class="binding-status">
+              <span class="status-badge disabled">即将上线</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Tab 3: 安全设置 -->
+    <div id="panel-security" class="content-panel">
+      <div class="card">
+        <div class="card-title">安全设置</div>
+        <div id="msgSecurity" class="msg"></div>
+
+        <div class="security-section">
+          <h4>修改密码</h4>
+          <form id="changePwdForm" autocomplete="off">
+            <div class="form-item">
+              <label class="form-label">旧密码</label>
+              <input class="form-input" type="password" id="oldPwd" placeholder="请输入旧密码" required>
+            </div>
+            <div class="form-item">
+              <label class="form-label">新密码</label>
+              <input class="form-input" type="password" id="newPwd" placeholder="请输入新密码（至少 6 位）" required>
+            </div>
+            <div class="form-item">
+              <label class="form-label">确认新密码</label>
+              <input class="form-input" type="password" id="confirmPwd" placeholder="请再次输入新密码" required>
+            </div>
+            <button type="submit" class="btn-primary">保存密码</button>
+          </form>
+        </div>
+
+        <div class="security-section">
+          <h4>设备信息</h4>
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="label">当前设备状态</div>
+              <div class="value" id="deviceStatus">检测中…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: 登录日志 -->
+    <div id="panel-loginlog" class="content-panel">
+      <div class="card">
+        <div class="card-title">登录日志</div>
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>时间</th>
+              <th>IP 地址</th>
+              <th>设备</th>
+              <th>状态</th>
+            </tr>
+          </thead>
+          <tbody id="logBody">
+            <tr><td colspan="4" style="text-align:center;color:#999;">加载中…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<footer class="app-footer">
+  <span>&copy; 2026 武汉锐果互动信息技术有限公司</span>
+  <span class="footer-sep">|</span>
+  <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">鄂ICP备2026024883号-1</a>
+  <span class="footer-sep">|</span>
+  <a href="https://beian.mps.gov.cn/#/query/webSearch?code=42011102006255" target="_blank" rel="noopener">鄂公网安备42011102006255号</a>
+</footer>
+
+<script>
+  const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:8500' : '';
+
+  // ===== 工具函数 =====
+  function getToken() { return localStorage.getItem('ddw_token'); }
+  function authHeaders() { return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' }; }
+
+  function showMsg(id, text, ok) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text;
+    el.className = 'msg' + (ok ? ' ok' : '');
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 3000);
+  }
+
+  // ===== 未登录跳转 =====
+  if (!getToken()) {
+    location.href = 'saas-register.html';
+  }
+
+  // ===== 侧边栏导航 =====
+  document.querySelectorAll('.sider-menu li').forEach(li => {
+    li.addEventListener('click', () => {
+      document.querySelectorAll('.sider-menu li').forEach(i => i.classList.remove('active'));
+      document.querySelectorAll('.content-panel').forEach(p => p.classList.remove('active'));
+      li.classList.add('active');
+      const panel = li.dataset.panel;
+      document.getElementById('panel-' + panel).classList.add('active');
+      if (panel === 'bindings') loadBindings();
+      if (panel === 'loginlog') loadLoginLog();
+    });
+  });
+
+  // ===== 退出登录 =====
+  document.getElementById('btnLogout').addEventListener('click', () => {
+    localStorage.removeItem('ddw_token');
+    localStorage.removeItem('ddw_user');
+    localStorage.removeItem('ddw_tenant');
+    location.href = 'saas-register.html';
+  });
+
+  // ===== 加载用户信息 =====
+  async function loadUserInfo() {
+    try {
+      const r = await fetch(API_BASE + '/api/v1/auth/me', { headers: authHeaders() });
+      if (!r.ok) throw new Error('获取用户信息失败');
+      const d = await r.json();
+      const user = d.user || {};
+      const tenant = d.tenant || {};
+
+      document.getElementById('topbarUser').textContent = user.name || user.phone || '-';
+      document.getElementById('userName').textContent = user.name || user.phone || '-';
+      document.getElementById('userRole').textContent = user.role === 'owner' ? '管理员' : '成员';
+      document.getElementById('avatarPlaceholder').textContent = (user.name || 'U').charAt(0);
+      document.getElementById('infoName').textContent = user.name || '-';
+      document.getElementById('infoPhone').textContent = user.phone || '-';
+      document.getElementById('infoRole').textContent = user.role === 'owner' ? '管理员' : '成员';
+      document.getElementById('infoCompany').textContent = tenant.name || '-';
+    } catch (e) {
+      console.error('loadUserInfo:', e);
+    }
+  }
+
+  // ===== 第三方绑定 =====
+  let bindingsData = [];
+
+  async function loadBindings() {
+    try {
+      const r = await fetch(API_BASE + '/api/v1/user/bindings', { headers: authHeaders() });
+      if (!r.ok) throw new Error('获取绑定信息失败');
+      bindingsData = await r.json();
+      renderBindings();
+    } catch (e) {
+      console.error('loadBindings:', e);
+    }
+  }
+
+  function renderBindings() {
+    const providers = ['wechat', 'dingtalk'];
+    providers.forEach(p => {
+      const binding = bindingsData.find(b => b.provider === p);
+      const statusEl = document.getElementById(p + 'Status');
+      const actionEl = document.getElementById(p + 'Action');
+      if (binding) {
+        const time = binding.bound_at ? new Date(binding.bound_at).toLocaleString('zh-CN') : '-';
+        statusEl.textContent = '已绑定：' + (binding.nickname || '-') + '，绑定时间：' + time;
+        actionEl.innerHTML = '<button class="btn-unbind" onclick="unbindProvider(\'' + binding.id + '\')">解绑</button>';
+      } else {
+        statusEl.textContent = '未绑定';
+        const label = p === 'wechat' ? '绑定微信' : '绑定钉钉';
+        actionEl.innerHTML = '<button class="btn-primary" onclick="bindProvider(\'' + p + '\')">' + label + '</button>';
+      }
+    });
+  }
+
+  async function bindProvider(provider) {
+    try {
+      const r = await fetch(API_BASE + '/api/v1/user/bindings/' + provider, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ code: 'mock_code_' + Date.now() })
+      });
+      if (!r.ok) throw new Error('绑定失败');
+      showMsg('msgBindings', '绑定成功', true);
+      loadBindings();
+    } catch (e) {
+      showMsg('msgBindings', e.message || '绑定失败');
+    }
+  }
+
+  async function unbindProvider(id) {
+    if (!confirm('确定要解绑吗？')) return;
+    try {
+      const r = await fetch(API_BASE + '/api/v1/user/bindings/' + id, {
+        method: 'DELETE',
+        headers: authHeaders()
+      });
+      if (!r.ok) throw new Error('解绑失败');
+      showMsg('msgBindings', '解绑成功', true);
+      loadBindings();
+    } catch (e) {
+      showMsg('msgBindings', e.message || '解绑失败');
+    }
+  }
+
+  // ===== 修改密码 =====
+  document.getElementById('changePwdForm').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const oldPwd = document.getElementById('oldPwd').value;
+    const newPwd = document.getElementById('newPwd').value;
+    const confirmPwd = document.getElementById('confirmPwd').value;
+    if (newPwd.length < 6) { showMsg('msgSecurity', '新密码至少 6 位'); return; }
+    if (newPwd !== confirmPwd) { showMsg('msgSecurity', '两次输入的密码不一致'); return; }
+
+    try {
+      const r = await fetch(API_BASE + '/api/v1/auth/change-password', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ old_password: oldPwd, new_password: newPwd })
+      });
+      if (!r.ok) {
+        const d = await r.json();
+        throw new Error(d.detail || '修改失败');
+      }
+      showMsg('msgSecurity', '密码修改成功', true);
+      document.getElementById('changePwdForm').reset();
+    } catch (e) {
+      showMsg('msgSecurity', e.message || '修改失败');
+    }
+  });
+
+  // ===== 登录日志（Mock 数据） =====
+  function loadLoginLog() {
+    const mockLogs = [
+      { time: '2026-08-03 09:15:22', ip: '192.168.1.100', device: 'Chrome 128 / macOS', status: 'success' },
+      { time: '2026-08-02 14:30:05', ip: '192.168.1.100', device: 'Chrome 128 / macOS', status: 'success' },
+      { time: '2026-08-01 10:22:18', ip: '10.0.0.55', device: 'Safari 18 / iOS', status: 'success' },
+      { time: '2026-07-31 16:45:33', ip: '192.168.1.100', device: 'Chrome 128 / macOS', status: 'success' },
+      { time: '2026-07-30 08:10:11', ip: '172.16.0.8', device: 'Edge 128 / Windows', status: 'fail' },
+      { time: '2026-07-29 11:20:44', ip: '192.168.1.100', device: 'Chrome 128 / macOS', status: 'success' },
+      { time: '2026-07-28 15:05:29', ip: '192.168.1.100', device: 'Chrome 128 / macOS', status: 'success' },
+      { time: '2026-07-27 09:30:17', ip: '10.0.0.55', device: 'Safari 18 / iOS', status: 'success' },
+      { time: '2026-07-26 14:15:02', ip: '192.168.1.100', device: 'Chrome 128 / macOS', status: 'success' },
+      { time: '2026-07-25 08:45:38', ip: '172.16.0.8', device: 'Edge 128 / Windows', status: 'fail' },
+    ];
+
+    const tbody = document.getElementById('logBody');
+    tbody.innerHTML = mockLogs.map(log => `
+      <tr>
+        <td>${log.time}</td>
+        <td>${log.ip}</td>
+        <td>${log.device}</td>
+        <td><span class="log-status ${log.status}">${log.status === 'success' ? '成功' : '失败'}</span></td>
+      </tr>
+    `).join('');
+  }
+
+  // ===== 初始化 =====
+  loadUserInfo();
+</script>
+</body>
+</html>

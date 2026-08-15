@@ -1,0 +1,25 @@
+name: ddw_payment
+version: "0.1.0"
+description: "收费与支付（多支付方式 + 日结汇总）"
+author: "DDW Team"
+license: commercial
+status: locked  # 已由 ddw_wallet / ddw_esg_payment 取代，仅入库锁死，不部署
+type: plugin
+entry: plugin:Plugin
+endpoints:
+  - path: /api/v1/plugins/ddw_payment/health
+    method: GET
+  - path: /api/v1/plugins/ddw_payment/records
+    method: POST
+  - path: /api/v1/plugins/ddw_payment/records
+    method: GET
+  - path: /api/v1/plugins/ddw_payment/records/{id}
+    method: GET
+  - path: /api/v1/plugins/ddw_payment/records/{id}
+    method: PATCH
+  - path: /api/v1/plugins/ddw_payment/records/{id}/pay
+    method: POST
+  - path: /api/v1/plugins/ddw_payment/records/{id}/refund
+    method: POST
+  - path: /api/v1/plugins/ddw_payment/daily-summary
+    method: GET

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unlimited-OCR 快速部署指南 · FDE 手册</title>
+<style>
+:root{
+  --bg-base:#050816;--bg-page:#0a0f24;--bg-card:#111a3a;--bg-elevated:#16204a;
+  --text-primary:#e8ecf8;--text-secondary:#a8b3d0;--text-muted:#6b7899;
+  --brand:#00e5ff;--brand-hover:#33ecff;--brand-glow:rgba(0,229,255,.25);
+  --accent-green:#00ff9d;--accent-blue:#4f9eff;--accent-purple:#b388ff;--accent-orange:#ffab40;
+  --border:#233052;--border-hover:#00e5ff;
+  --success:#00ff9d;--warning:#ffab40;--danger:#ff6b6b;--info:#4f9eff;
+  --shadow:0 4px 24px rgba(0,0,0,.35);--shadow-glow:0 0 24px var(--brand-glow);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg-base);color:var(--text-primary);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.75}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+.nav{position:sticky;top:0;z-index:50;background:rgba(5,8,22,.85);backdrop-filter:blur(18px);border-bottom:1px solid var(--border)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+.nav-brand{font-weight:700;font-size:17px}.nav-brand b{color:var(--brand)}
+.nav-links a{color:var(--text-secondary);text-decoration:none;margin-left:26px;font-size:14px}
+.nav-links a:hover{color:var(--brand)}
+.hero{padding:60px 0 40px;text-align:center;background:radial-gradient(ellipse 70% 60% at 50% 0%,rgba(0,229,255,.10),transparent)}
+.hero .tag{display:inline-block;padding:5px 16px;border:1px solid var(--border-hover);border-radius:999px;color:var(--brand);font-size:13px;margin-bottom:18px;background:rgba(0,229,255,.06)}
+.hero h1{font-size:34px;font-weight:800;margin-bottom:10px}
+.hero p{color:var(--text-muted);font-size:15px}
+section{padding:46px 0;border-top:1px solid var(--border)}
+.section-title{font-size:24px;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.section-title .no{color:var(--brand);background:rgba(0,229,255,.08);border:1px solid var(--border-hover);border-radius:8px;padding:2px 12px;font-size:16px}
+.section-sub{color:var(--text-muted);font-size:14px;margin-bottom:26px}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:16px}
+.card h4{font-size:16px;margin-bottom:12px}
+pre{background:#060a1c;border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow-x:auto;font-size:13px;line-height:1.7;color:#9fe8ff;font-family:"SF Mono",Menlo,Consolas,monospace;margin:10px 0}
+pre .c{color:var(--text-muted)}
+pre .ok{color:var(--accent-green)}
+ul,ol{margin-left:22px}
+li{margin-bottom:8px;color:var(--text-secondary);font-size:14.5px}
+li b{color:var(--text-primary)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.req-item{background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+.req-item .k{font-size:13px;color:var(--text-muted);margin-bottom:6px}
+.req-item .v{font-size:17px;font-weight:700;color:var(--text-primary)}
+.req-item .v.ok{color:var(--accent-green)}
+.req-item .v.warn{color:var(--warning)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--border)}
+th{color:var(--text-muted);font-weight:600;font-size:13px}
+.badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600}
+.badge-green{background:rgba(0,255,157,.12);color:var(--accent-green);border:1px solid rgba(0,255,157,.3)}
+.badge-red{background:rgba(255,107,107,.12);color:var(--danger);border:1px solid rgba(255,107,107,.3)}
+footer{border-top:1px solid var(--border);padding:30px 0;text-align:center;color:var(--text-muted);font-size:13px}
+@media(max-width:800px){.grid2,.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav class="nav"><div class="wrap">
+  <div class="nav-brand">锐果互动 · <b>文档智能</b></div>
+  <div class="nav-links">
+    <a href="unlimited-ocr-intro.html">能力介绍</a>
+    <a href="unlimited-ocr-demo-sop.html">现场演示 SOP</a>
+    <a href="unlimited-ocr-deploy.html">快速部署指南</a>
+  </div>
+</div></nav>
+
+<div class="hero"><div class="wrap">
+  <span class="tag">FDE 现场部署标准流程 · 标准环境 2 小时内完成</span>
+  <h1>Unlimited-OCR 快速部署指南</h1>
+  <p>Ubuntu + NVIDIA GPU 环境：环境检查 → 模型就位 → 服务启动 → 功能验证 → 批量解析</p>
+</div></div>
+
+<section><div class="wrap">
+  <h2 class="section-title"><span class="no">1</span>环境要求</h2>
+  <p class="section-sub">部署前逐项核对，全部满足再继续</p>
+  <div class="grid3">
+    <div class="req-item"><div class="k">GPU（必备）</div><div class="v">NVIDIA 16GB+</div></div>
+    <div class="req-item"><div class="k">推荐显存</div><div class="v ok">24GB（RTX 4090 / A10）</div></div>
+    <div class="req-item"><div class="k">驱动</div><div class="v">535+</div></div>
+    <div class="req-item"><div class="k">CUDA</div><div class="v">12.1+</div></div>
+    <div class="req-item"><div class="k">系统</div><div class="v">Ubuntu 22.04+</div></div>
+    <div class="req-item"><div class="k">Python</div><div class="v">3.10+</div></div>
+    <div class="req-item"><div class="k">内存</div><div class="v">32GB+</div></div>
+    <div class="req-item"><div class="k">磁盘</div><div class="v">20GB+ 空闲</div></div>
+    <div class="req-item"><div class="k">模型权重</div><div class="v">6.3GB（随行 U 盘）</div></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="section-title"><span class="no">2</span>环境检查（5 分钟）</h2>
+  <p class="section-sub">一条命令确认 GPU 可用；有问题先解决再往下走</p>
+  <pre><span class="c"># GPU 是否可见（必须有输出，显示显卡型号与显存）</span>
+nvidia-smi
+
+<span class="c"># Python 版本（需 3.10+）</span>
+python3 --version
+
+<span class="c"># 磁盘空间</span>
+df -h / | tail -1
+
+<span class="c"># 预期输出示例</span>
+<span class="ok">+-----------------------------------------------------------------------------+
+| NVIDIA-SMI 535.154.05   Driver Version: 535.154.05   CUDA Version: 12.2   |
+|    0  NVIDIA GeForce RTX 4090      24GB     On  |  ...                     |
++-----------------------------------------------------------------------------+</span></pre>
+  <div class="card" style="border-color:var(--danger)">
+    <h4>⚠️ 环境不满足时</h4>
+    <ul>
+      <li><b>无 NVIDIA 显卡</b> → 停止部署，现场说明硬件需求（推荐 24GB 显存，最低 16GB），安排硬件到位后二次上门或远程部署</li>
+      <li><b>驱动版本低</b> → <code>sudo apt install -y nvidia-driver-535</code> 后重启；或使用客户环境已有的新版驱动</li>
+      <li><b>Python < 3.10</b> → <code>sudo apt install -y python3.11 python3.11-venv</code></li>
+    </ul>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="section-title"><span class="no">3</span>模型就位（10 分钟）</h2>
+  <p class="section-sub">从随行 U 盘拷贝完整模型目录（6.3GB，含权重与代码）</p>
+  <pre><span class="c"># 1. 创建目录并拷贝（U 盘路径按实际调整）</span>
+sudo mkdir -p /opt/uocr &amp;&amp; sudo chown $USER /opt/uocr
+cp -r /media/$USER/USB/Unlimited-OCR /opt/uocr/
+
+<span class="c"># 2. 核对权重完整性（必须约 6.67GB）</span>
+ls -lh /opt/uocr/Unlimited-OCR/model-00001-of-000001.safetensors
+<span class="c"># 预期：6672547120 字节 ≈ 6.3GB（6.67GB 二进制）</span>
+
+<span class="c"># 3. 离线可用确认：模型目录包含以下文件即完整</span>
+<span class="c"># config.json / tokenizer.json / modeling_unlimitedocr.py / deepencoder.py / processor_config.json ...</span></pre>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="section-title"><span class="no">4</span>环境安装（15-20 分钟）</h2>
+  <p class="section-sub">SGLang 为推荐后端（吞吐最高）；首次安装含依赖编译，需联网</p>
+  <pre><span class="c"># 创建虚拟环境</span>
+python3.11 -m venv /opt/uocr/venv
+source /opt/uocr/venv/bin/activate
+
+<span class="c"># 安装依赖（网络良好约 10 分钟）</span>
+pip install -U pip
+pip install "sglang[all]&gt;=0.4.4.post3" transformers torch
+
+<span class="c"># 验证安装</span>
+python -c "import sglang; print('sglang OK')"</pre>
+  <div class="card">
+    <h4>💡 离线/内网环境</h4>
+    <p style="color:var(--text-secondary);font-size:14px">客户网络无法访问 PyPI 时：提前在可联网机器执行 <code>pip download "sglang[all]&gt;=0.4.4.post3" -d /opt/uocr/wheels</code>，将 wheels 目录随行携带，现场 <code>pip install --no-index --find-links=/opt/uocr/wheels ...</code> 安装。</p>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="section-title"><span class="no">5</span>启动服务（10 分钟，含模型加载）</h2>
+  <p class="section-sub">启动后约 60-90 秒完成模型加载；此命令建议保存为 start.sh 脚本</p>
+  <pre><span class="c"># start.sh</span>
+<span class="c">#!/bin/bash</span>
+source /opt/uocr/venv/bin/activate
+cd /opt/uocr/Unlimited-OCR
+python -m sglang.launch_server \
+  --model ./ \
+  --served-model-name Unlimited-OCR \
+  --attention-backend triton \
+  --page-size 1 \
+  --mem-fraction-static 0.7 \
+  --context-length 32768 \
+  --trust-remote-code \
+  --enable-custom-logit-processor \
+  --host 0.0.0.0 --port 8000</pre>
+  <div class="grid2">
+    <div class="card">
+      <h4>✅ 健康检查</h4>
+      <pre><span class="c"># 模型列表</span>
+curl http://localhost:8000/v1/models
+<span class="c"># 预期返回包含 "Unlimited-OCR"</span></pre>
+    </div>
+    <div class="card">
+      <h4>🧠 推理模式选择</h4>
+      <ul>
+        <li><b>base（1024px）</b>：多页 PDF 全保真，生产推荐</li>
+        <li><b>gundam（640px）</b>：高并发单图，吞吐优先</li>
+        <li>默认 base；高负载场景可切换</li>
+      </ul>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="section-title"><span class="no">6</span>功能验证（5 分钟）</h2>
+  <p class="section-sub">用客户文档做端到端验证——这一步通过才算部署完成</p>
+  <pre><span class="c"># 单页图片解析验证（Python）</span>
+import base64, requests
+
+img = base64.b64encode(open("sample.png","rb").read()).decode()
+r = requests.post("http://localhost:8000/v1/chat/completions", json={
+    "model": "Unlimited-OCR",
+    "messages": [{"role":"user","content":[
+        {"type":"image_url","image_url":{"url":f"data:image/png;base64,{img}"}},
+        {"type":"text","text":"OCR the image to Markdown"}
+    ]}],
+    "max_tokens": 4096
+})
+print(r.json()["choices"][0]["message"]["content"])</pre>
+  <div class="card" style="border-color:var(--success)">
+    <h4>✅ 验收标准</h4>
+    <ul>
+      <li>单页解析 ≤ 30 秒返回（24GB 显卡）</li>
+      <li>输出为正确 Markdown，中文/英文/数字无误</li>
+      <li>多页 PDF（PyMuPDF 转页 + 一次请求）能完整返回</li>
+      <li>表格、公式样例正确还原</li>
+    </ul>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="section-title"><span class="no">7</span>批量解析脚本（客户交付模板）</h2>
+  <p class="section-sub">现场交付时可提供此模板，客户 IT 稍作修改即可投产</p>
+  <pre><span class="c"># batch_ocr.py —— 多页 PDF 批量解析 → Markdown 文件</span>
+import fitz, base64, requests, pathlib
+
+API = "http://localhost:8000/v1/chat/completions"
+def pdf_to_markdown(pdf_path: str) -&gt; str:
+    doc = fitz.open(pdf_path)
+    pages = []
+    for page in doc:
+        pix = page.get_pixmap(dpi=300)   # 300 DPI 高清
+        pages.append(base64.b64encode(pix.tobytes("png")).decode())
+    r = requests.post(API, json={
+        "model": "Unlimited-OCR",
+        "messages": [{"role":"user","content":[
+            {"type":"image_url","image_url":{"url":f"data:image/png;base64,{p}"}} for p in pages
+        ] + [{"type":"text","text":"将以上多页文档整体解析为 Markdown，保持原文结构和阅读顺序"}]}],
+        "max_tokens": 32768, "timeout": 600,
+    })
+    return r.json()["choices"][0]["message"]["content"]
+
+<span class="c"># 用法：python batch_ocr.py 合同.pdf 输出.md</span>
+if __name__ == "__main__":
+    import sys
+    src, dst = sys.argv[1], sys.argv[2]
+    pathlib.Path(dst).write_text(pdf_to_markdown(src), encoding="utf-8")
+    print(f"完成：{src} -> {dst}")</pre>
+  <div class="card"><h4>📌 批量处理建议</h4>
+    <ul>
+      <li>单批 ≤ 40 页（模型上下文 32K 上限），超长文档分段处理</li>
+      <li>扫描件建议 300 DPI；清晰电子 PDF 可用 200 DPI 提速</li>
+      <li>高并发场景用 gundam 模式 + 多线程请求</li>
+    </ul>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="section-title"><span class="no">8</span>常见错误速查</h2>
+  <p class="section-sub">部署与运行中 90% 的问题都在这里</p>
+  <table>
+    <tr><th>现象</th><th>原因</th><th>处理</th></tr>
+    <tr><td>nvidia-smi 无输出</td><td>驱动未装/未加载</td><td>装驱动 535+ 并重启</td></tr>
+    <tr><td>启动报 CUDA out of memory</td><td>显存不足或有进程占用</td><td>nvidia-smi 查占用；降低并发；确认 16GB+</td></tr>
+    <tr><td>输出无限重复</td><td>使用了 llama.cpp 后端（已知 bug）</td><td>改用 SGLang 后端</td></tr>
+    <tr><td>vLLM 下数字循环</td><td>vLLM 兼容问题（官方 issue #87）</td><td>改用 SGLang 后端</td></tr>
+    <tr><td>解析超时</td><td>文档页数过多</td><td>单批 ≤ 40 页；增大 timeout</td></tr>
+    <tr><td>手写/票据乱码</td><td>模型弱项（手写体）</td><td>诚实说明 + 建议双通道（PaddleOCR 兜底）</td></tr>
+    <tr><td>加载很慢（数分钟）</td><td>正常（6.3GB 权重 mmap）</td><td>提前启动预热，勿现场首次加载</td></tr>
+  </table>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="section-title"><span class="no">9</span>性能参考基准</h2>
+  <p class="section-sub">实测数据（2026-08），用于向客户说明产能</p>
+  <table>
+    <tr><th>配置</th><th>单页解析</th><th>40 页文档</th><th>日产能（估算）</th></tr>
+    <tr><td>RTX 4070 Ti Super 16G（实测）</td><td>约 10-20 秒</td><td>数分钟级</td><td>约 3000-5000 页</td></tr>
+    <tr><td>RTX 4090 24G（推荐）</td><td>约 5-10 秒</td><td>分钟级</td><td>约 8000-12000 页</td></tr>
+    <tr><td>A100 40G（高吞吐）</td><td>更快（多并发）</td><td>亚分钟级</td><td>万页以上</td></tr>
+  </table>
+  <p style="color:var(--text-muted);font-size:13px;margin-top:10px">* 数据为估算区间，实际受文档复杂度与并发影响；同规模对比：6000 token 输出比 DeepSeek-OCR 快约 35%，文档越长优势越大。</p>
+</div></section>
+
+<footer>
+  <div class="wrap">
+    <p>锐果互动 · 文档智能 FDE 部署手册 · 内部使用，请勿外传</p>
+    <p style="margin-top:8px">武汉锐果互动信息技术有限公司</p>
+  </div>
+</footer>
+
+</body>
+</html>

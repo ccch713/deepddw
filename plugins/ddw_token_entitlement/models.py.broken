@@ -1,0 +1,79 @@
+from __future__ import annotations
+"""DDW Token 额度管理插件 ORM 模型。
+
+继承 DDW 平台核心：
+- core.database.models.Base: DeclarativeBase 根
+- core.database.models.TenantMixin: 自动注入 tenant_id + 标记租户感知
+- core.database.models.TimestampMixin: 自动注入 created_at / updated_at
+
+业务说明：
+- 销售端为客户企业（company_id） 或 客户的安装实例（instance_id）
+  分配 token 额度，跟踪实际使用量。
+- entitlement_type：
+    * platform     — 平台共享 Key（DDW 兜底）
+    * custom-key   — 客户自带 Key（api_key_masked 字段脱敏存储）
+    * local-llm    — 客户本地 LLM（llm_endpoint 字段存访问地址）
+- overage_allowed：超量时是否允许继续消耗（True=允许；False=拒绝并抛 ValueError）
+- api_key_masked 入参必须已是脱敏形式（如 ``sk-****1234``），不接受明文。
+"""
+
+from typing import Optional
+
+from sqlalchemy import BigInteger, Boolean, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
+
+from core.database.models import Base, TenantMixin, TimestampMixin
+
+# BigInteger 在 SQLite 不支持 -> 退化到 Integer
+BigInt = BigInteger().with_variant(Integer(), "sqlite")
+
+
+class TokenEntitlement(Base, TenantMixin, TimestampMixin):
+    """Token 额度分配主表。
+
+    - 与企业/实例的关联均为可空 + ON DELETE SET NULL（保留审计价值）
+    - 使用 BigInt 存 token 数量（单次任务可能消耗数十万 token）
+    - 没有 status 字段，删除走硬删除（DELETE 端点 = 物理删除）
+    """
+
+    __tablename__ = "crm_token_entitlements"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[int] = mapped_column(BigInt, primary_key=True, autoincrement=True)
+
+    # ---- 业务关联 ----
+    company_id: Mapped[Optional[int]] = mapped_column(        BigInt,
+        ForeignKey("crm_companies.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    instance_id: Mapped[Optional[int]] = mapped_column(        BigInt,
+        ForeignKey("crm_instances.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+
+    # ---- 额度类型 ----
+    entitlement_type: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    # platform / custom-key / local-llm
+
+    # ---- 容量与使用 ----
+    allocated_tokens: Mapped[Optional[int]] = mapped_column(BigInt, default=0, nullable=False)
+    used_tokens: Mapped[Optional[int]] = mapped_column(BigInt, default=0, nullable=False)
+    overage_allowed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # ---- 凭据 / 端点（按类型可选） ----
+    api_key_masked: Mapped[Optional[str]] = mapped_column(        String(50), nullable=True
+    )  # 客户自带 Key（脱敏形式，如 sk-****1234）
+    llm_endpoint: Mapped[Optional[str]] = mapped_column(        String(500), nullable=True
+    )  # 本地 LLM 访问地址
+
+    # ---- 备注 / 审计 ----
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_by: Mapped[Optional[int]] = mapped_column(BigInt, nullable=True)
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return (
+            f"<TokenEntitlement id={self.id} type={self.entitlement_type!r} "
+            f"allocated={self.allocated_tokens} used={self.used_tokens}>"
+
+
+__all__ = ["TokenEntitlement"]

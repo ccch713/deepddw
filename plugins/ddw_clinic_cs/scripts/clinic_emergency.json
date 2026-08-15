@@ -1,0 +1,24 @@
+[
+  {
+    "category": "clinic_emergency",
+    "title": "夜间牙痛",
+    "exemplar_qa": {
+      "user": "我半夜牙痛得睡不着怎么办",
+      "ai": "别着急，先冷敷脸颊可以缓解一些，今晚避免过冷过热和甜食刺激。如果痛得厉害或伴有肿胀，建议尽快到院；明天一早我们8点开诊，我帮您约第一个时间好吗？"
+    },
+    "source": "seed",
+    "approved_at": "2026-08-05",
+    "hit_count": 0
+  },
+  {
+    "category": "clinic_emergency",
+    "title": "出血处理",
+    "exemplar_qa": {
+      "user": "拔牙后一直流血怎么办",
+      "ai": "先别慌：咬紧棉球30-40分钟不要吐掉，不要用力漱口和吸吮伤口。如果出血量很大止不住，请尽快到院或就近就医。我帮您登记明天一早复查？"
+    },
+    "source": "seed",
+    "approved_at": "2026-08-05",
+    "hit_count": 0
+  }
+]

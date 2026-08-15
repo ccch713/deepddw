@@ -1,0 +1,12 @@
+name: ddw-authz
+license: free
+tier: core
+version: 1.0.0
+display_name: DDW 权限审计
+description: 权限审计 RBAC + 操作审计日志
+engine: ">=2.0.0"
+dependencies:
+  plugins: {}
+permissions:
+  - storage
+config: {}

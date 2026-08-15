@@ -1,0 +1,36 @@
+name: ddw-personnel-qual
+license: commercial
+tier: beta
+version: 1.0.0
+display_name: DDW 设计人员资质管理
+description: 设计院人员证书（注册结构师/注册建筑师/高级工程师等）全生命周期管理：录入、查询、批量导入导出、到期预警、年检追踪、统计概览。
+engine: plugin_base
+isolation: inline
+
+permissions:
+  - llm.chat
+  - filesystem.read
+  - filesystem.write
+  - database.read
+  - database.write
+
+dependencies:
+  plugins:
+    ddw-llm-gateway: ">=1.0.0"
+
+config_schema:
+  type: object
+  properties:
+    expiry_warn_days:
+      type: integer
+      default: 90
+      minimum: 1
+      maximum: 365
+      description: 到期预警提前天数（默认 90，可分档 30/60/90）
+    default_tenant_id:
+      type: integer
+      default: 1
+      description: 单租户模式下的默认 tenant_id
+
+# 路由前缀
+router_prefix: /api/v1/plugins/ddw-personnel-qual

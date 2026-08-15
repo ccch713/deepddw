@@ -1,0 +1,38 @@
+name: ddw-order
+license: commercial
+tier: core
+version: 1.0.0
+display_name: DDW 订单管理
+description: 销售端订单全生命周期管理。明细用 JSON 列存储（与报价单子表不同的规范选择）；自动生成单号 ORD-YYYYMMDD-NNN；自动按 items 计算总金额；状态机 pending→confirmed→delivered→completed，任意非终态可 cancelled；与客户企业、合同关联；取消必须填写原因。
+engine: plugin_base
+isolation: inline
+
+permissions:
+  - database.read
+  - database.write
+
+dependencies:
+  plugins: []
+
+config_schema:
+  type: object
+  properties:
+    default_tenant_id:
+      type: integer
+      default: 1
+    default_page_size:
+      type: integer
+      default: 20
+    default_currency:
+      type: string
+      default: CNY
+    statuses:
+      type: array
+      default: [pending, confirmed, delivered, completed, cancelled]
+      description: 订单状态枚举
+    terminal_statuses:
+      type: array
+      default: [completed, cancelled]
+      description: 终态（不可再迁移）
+
+router_prefix: /api/v1/plugins/ddw-order

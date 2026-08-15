@@ -1,0 +1,41 @@
+name: ddw-social-login
+license: free
+tier: core
+version: 1.0.0
+display_name: DDW 社会化登录
+description: 微信/QQ/钉钉/飞书扫码登录插件，基于 senweaver-oauth 统一 OAuth2 接口
+engine: ">=2.0.0"
+isolation: inline
+
+permissions:
+  - database.read
+  - database.write
+
+dependencies:
+  plugins: {}
+
+config_schema:
+  type: object
+  properties:
+    enabled_channels:
+      type: array
+      default: []
+      description: "启用的登录通道枚举: wechat_open / qq / dingtalk / feishu"
+    auto_register:
+      type: boolean
+      default: true
+      description: 首次扫码自动注册本地账号
+    allowed_callback_domains:
+      type: array
+      default: ["ddw.9cio.com"]
+      description: 回调 URL 白名单域名
+    default_tenant_id:
+      type: integer
+      default: 1
+      description: 自动注册用户的默认租户 ID
+    default_role:
+      type: string
+      default: "member"
+      description: "自动注册用户的默认角色。问渠部署时设为 student"
+
+router_prefix: /api/v1/plugins/ddw-social-login

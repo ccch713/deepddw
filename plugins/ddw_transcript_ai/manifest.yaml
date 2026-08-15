@@ -1,0 +1,35 @@
+name: ddw-transcript-ai
+license: commercial
+tier: beta
+version: 1.0.0
+display_name: DDW 转写与结构化
+description: 销售端录音/文本的 AI 处理插件。基于 DDW 内置 LLM Gateway 提供转写（模拟 ASR）、摘要、待办提取、关键实体抽取能力。无持久化、纯聚合 AI 能力。
+engine: plugin_base
+isolation: inline
+
+permissions:
+  - llm.invoke
+
+dependencies:
+  plugins: []
+
+config_schema:
+  type: object
+  properties:
+    default_tenant_id:
+      type: integer
+      default: 1
+    default_language:
+      type: string
+      default: zh-CN
+      description: 默认转写语言
+    default_summary_max_length:
+      type: integer
+      default: 200
+      description: 默认摘要最大长度（字符数）
+    max_input_length:
+      type: integer
+      default: 32000
+      description: 单次请求文本最大长度（字符数），超出后端 400
+
+router_prefix: /api/v1/plugins/ddw-transcript-ai

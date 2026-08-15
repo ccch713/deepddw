@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>DDW AI Hub v5.3 · 12 项生产就绪补充</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#020617;color:#e2e8f0;min-height:100vh;padding:24px}
+  .container{max-width:1180px;margin:0 auto}
+  .header{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #1e293b}
+  .header h1{font-size:17px;color:#f1f5f9;font-weight:700}
+  .ver{background:rgba(251,146,60,0.1);color:#fb923c;border:1px solid #fb923c;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700}
+  .sub{margin-left:auto;font-size:11px;color:#94a3b8}
+  .sect{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:14px;margin-bottom:12px}
+  .shdr{display:flex;align-items:baseline;gap:12px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #1e293b}
+  .sid{background:rgba(34,211,238,0.1);color:#22d3ee;border:1px solid #22d3ee;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700}
+  .st{font-size:13px;color:#f1f5f9;font-weight:700}
+  .sl{margin-left:auto;font-size:9px;color:#64748b}
+  .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .fl{background:rgba(15,23,42,0.6);border:1px solid #1e293b;border-radius:6px;padding:9px 10px}
+  .fl-l{font-size:8.5px;color:#94a3b8;font-weight:700;margin-bottom:5px;letter-spacing:0.5px}
+  .fl-c{font-size:10px;color:#cbd5e1;line-height:1.6}
+  .hl{color:#fb923c;font-weight:700}
+  .footer{text-align:center;font-size:9px;color:#475569;padding:12px 0 4px}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>DDW AI Hub · 第十八篇 12 项架构补充</h1>
+    <span class="ver">v5.3</span>
+    <span class="sub">生产就绪 · 纯平台设计</span>
+  </div>
+
+  <div class="sect">
+    <div class="shdr"><span class="sid">§18.1</span><span class="st">租户隔离中间件</span><span class="sl">core/middleware/tenant.py</span></div>
+    <div class="g3">
+      <div class="fl"><div class="fl-l">问题</div><div class="fl-c">单租户架构无法多企业共用实例</div></div>
+      <div class="fl"><div class="fl-l">设计</div><div class="fl-c">JWT → TenantMiddleware → contextvars → ORM TenantMixin → 自动过滤 tenant_id</div></div>
+      <div class="fl"><div class="fl-l">关键</div><div class="fl-c">家庭版 tenant_id="default"；SME 启用多租户后 ORM 自动隔离</div></div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <div class="shdr"><span class="sid">§18.2</span><span class="st">EventBus 插件间通信</span><span class="sl">core/events/event_bus.py</span></div>
+    <div class="g3">
+      <div class="fl"><div class="fl-l">问题</div><div class="fl-c">插件互相不知道对方存在，无法通信</div></div>
+      <div class="fl"><div class="fl-l">设计</div><div class="fl-c">进程内 Pub/Sub（单 Worker）→ 多 Worker 降级 Redis Pub/Sub；manifest 声明 events</div></div>
+      <div class="fl"><div class="fl-l">关键</div><div class="fl-c">异常隔离 · 优先级排序 · 通配符 record.* · 最近 N 条追踪</div></div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <div class="shdr"><span class="sid">§18.3</span><span class="st">版本依赖冲突检测</span><span class="sl">core/plugin_manager/dependency_resolver.py</span></div>
+    <div class="g3">
+      <div class="fl"><div class="fl-l">问题</div><div class="fl-c">插件 A 依赖 kb≥2.0，B 依赖 kb&lt;2.0，冲突</div></div>
+      <div class="fl"><div class="fl-l">设计</div><div class="fl-c">SemVer 约束求解 + 有向图拓扑排序检测循环依赖 + 管理后台告警</div></div>
+      <div class="fl"><div class="fl-l">关键</div><div class="fl-c">安装时自动检测；支持 ~= / != 等运算符</div></div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <div class="shdr"><span class="sid">§18.4</span><span class="st">水平扩展方案</span><span class="sl">core/scaling/worker_config.py</span></div>
+    <div class="g3">
+      <div class="fl"><div class="fl-l">问题</div><div class="fl-c">50+ 用户时单 Worker 变瓶颈</div></div>
+      <div class="fl"><div class="fl-l">设计</div><div class="fl-c">Caddy/Nginx 反代 → 多 FastAPI Worker → Redis Pub/Sub 替代 EventBus → 共享 PG/Cache</div></div>
+      <div class="fl"><div class="fl-l">关键</div><div class="fl-c">DDW_WORKERS=N 启用；sticky session 保 SSE；家庭版保持单 Worker</div></div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <div class="shdr"><span class="sid">§18.5</span><span class="st">配置热更新</span><span class="sl">core/reload/hot_reload.py</span></div>
+    <div class="g3">
+      <div class="fl"><div class="fl-l">问题</div><div class="fl-c">切换 SQLite ↔ PG / 缓存 ↔ Redis 需重启</div></div>
+      <div class="fl"><div class="fl-l">设计</div><div class="fl-c">POST /admin/reload → EngineFactory 原子替换连接池 → 旧请求用旧引擎，新请求用新引擎</div></div>
+      <div class="fl"><div class="fl-l">关键</div><div class="fl-c">asyncio.Lock 防并发；连接失败回滚</div></div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <div class="shdr"><span class="sid">§18.6</span><span class="st">API 版本化</span><span class="sl">core/api_versioning/version_router.py</span></div>
+    <div class="g3">
+      <div class="fl"><div class="fl-l">问题</div><div class="fl-c">破坏性 API 变更导致客户端故障</div></div>
+      <div class="fl"><div class="fl-l">设计</div><div class="fl-c">/api/v1/ /api/v2/ 前缀；废弃 API 返回 Deprecation 头；6 个月保留期</div></div>
+      <div class="fl"><div class="fl-l">关键</div><div class="fl-c">API_VERSIONS 元数据；版本信息端点</div></div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <div class="shdr"><span class="sid">§18.7</span><span class="st">插件进程沙箱</span><span class="sl">core/plugin_manager/sandbox.py</span></div>
+    <div class="g3">
+      <div class="fl"><div class="fl-l">问题</div><div class="fl-c">第三方插件 bug/恶意代码影响主进程</div></div>
+      <div class="fl"><div class="fl-l">设计</div><div class="fl-c">manifest isolation: process → 子进程 JSON-RPC 2.0；资源限制（内存/CPU/超时）</div></div>
+      <div class="fl"><div class="fl-l">关键</div><div class="fl-c">受信任插件不隔离；第三方插件必须在沙箱里跑</div></div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <div class="shdr"><span class="sid">§18.8</span><span class="st">插件级配置</span><span class="sl">manifest.yaml config · sdk/config_manager.py</span></div>
+    <div class="g3">
+      <div class="fl"><div class="fl-l">问题</div><div class="fl-c">每个插件配置项硬编码不可维护</div></div>
+      <div class="fl"><div class="fl-l">设计</div><div class="fl-c">manifest config.groups + config.items 声明 schema；管理后台自动生成表单；system_configs 表</div></div>
+      <div class="fl"><div class="fl-l">关键</div><div class="fl-c">get_config("key") 读取；支持 int/str/bool/enum；变更回调</div></div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <div class="shdr"><span class="sid">§18.9</span><span class="st">插件市场协议</span><span class="sl">core/marketplace/registry.py</span></div>
+    <div class="g3">
+      <div class="fl"><div class="fl-l">问题</div><div class="fl-c">第三方插件缺少标准化发布安装流程</div></div>
+      <div class="fl"><div class="fl-l">设计</div><div class="fl-c">.ddwplugin 包（tar.gz + manifest + 代码 + 签名）；注册表 API；SHA256 校验</div></div>
+      <div class="fl"><div class="fl-l">关键</div><div class="fl-c">本地模式（文件系统注册表）；远程模式（REST API）</div></div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <div class="shdr"><span class="sid">§18.10</span><span class="st">插件付费许可</span><span class="sl">core/licensing/license_manager.py</span></div>
+    <div class="g3">
+      <div class="fl"><div class="fl-l">问题</div><div class="fl-c">第三方插件需要定价授权模型</div></div>
+      <div class="fl"><div class="fl-l">设计</div><div class="fl-c">manifest pricing 段（free/one_time/subscription）；底座加载时校验 License</div></div>
+      <div class="fl"><div class="fl-l">关键</div><div class="fl-c">License 与 tenant_id 绑定；支持试用期</div></div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <div class="shdr"><span class="sid">§18.11</span><span class="st">国际化 i18n</span><span class="sl">sdk/i18n.py · locales/*.json</span></div>
+    <div class="g3">
+      <div class="fl"><div class="fl-l">问题</div><div class="fl-c">插件面向不同语言用户</div></div>
+      <div class="fl"><div class="fl-l">设计</div><div class="fl-c">locales/zh-CN.json / en-US.json；t() 函数；语言从 JWT 或浏览器获取</div></div>
+      <div class="fl"><div class="fl-l">关键</div><div class="fl-c">支持 {date} {time} 占位符；回退至默认语言</div></div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <div class="shdr"><span class="sid">§18.12</span><span class="st">插件测试框架</span><span class="sl">sdk/testing/fixtures.py</span></div>
+    <div class="g3">
+      <div class="fl"><div class="fl-l">问题</div><div class="fl-c">插件开发者缺少标准化测试工具</div></div>
+      <div class="fl"><div class="fl-l">设计</div><div class="fl-c">ddw_test_app fixture：内存 SQLite + Mock LLM/EventBus/IM + AsyncClient；多 Fixture（db_user/plugin_token）</div></div>
+      <div class="fl"><div class="fl-l">关键</div><div class="fl-c">pytest.ini 配置；覆盖率支持；CI 友好</div></div>
+    </div>
+  </div>
+
+  <div class="footer">DDW AI Hub Platform v5.3 · 18.13 小节总结：12 项全部嵌入 Core Platform · 写代码时前 7 项优先（租户/Bus/依赖/扩展/热更新/版本/沙箱）</div>
+</div>
+</body>
+</html>

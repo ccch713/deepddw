@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="format-detection" content="telephone=no">
+<title>数字员工 - DDW AI Hub</title>
+<link rel="icon" type="image/svg+xml" href="assets/logo-ju.svg">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: #333; background: #F0F2F5; -webkit-font-smoothing: antialiased; }
+  a { color: #1890FF; text-decoration: none; }
+  button, input, select, textarea { font-family: inherit; }
+
+  .app { display: flex; min-height: 100vh; }
+  .sidebar { width: 200px; background: #001529; color: rgba(255,255,255,0.85); flex-shrink: 0; }
+  .sidebar-logo { display: flex; align-items: center; height: 56px; padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .logo-char { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: #000; color: #FFF; font-size: 18px; font-weight: bold; font-family: "PingFang SC", "Microsoft YaHei", serif; border-radius: 2px; margin-right: 8px; }
+  .logo-text { color: #FFF; font-size: 15px; font-weight: 500; }
+  .nav-item { display: flex; align-items: center; height: 40px; padding: 0 16px; color: rgba(255,255,255,0.85); font-size: 14px; cursor: pointer; }
+  .nav-item:hover { color: #FFF; background: rgba(255,255,255,0.04); }
+  .nav-item.active { color: #FFF; background: #1890FF; }
+  .nav-icon { width: 16px; height: 16px; margin-right: 10px; flex-shrink: 0; }
+
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .topbar { background: #FFF; border-bottom: 1px solid #E8E8E8; height: 56px; display: flex; align-items: center; padding: 0 24px; }
+  .crumb { color: #333; font-size: 14px; }
+  .crumb .sep { color: #999; margin: 0 6px; }
+  .topbar-right { margin-left: auto; font-size: 13px; color: #666; }
+  .content { flex: 1; padding: 24px; }
+
+  .agent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .agent-card { background: #FFF; border: 1px solid #E8E8E8; padding: 20px; border-radius: 2px; cursor: pointer; transition: border-color 0.2s; }
+  .agent-card:hover { border-color: #1890FF; }
+  .agent-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .agent-avatar { width: 48px; height: 48px; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #FFF; flex-shrink: 0; }
+  .agent-name { font-size: 16px; color: #333; font-weight: 500; }
+  .agent-role { font-size: 12px; color: #999; margin-top: 2px; }
+  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+  .status-dot.online { background: #52C41A; }
+  .status-dot.busy { background: #FAAD14; }
+  .status-dot.offline { background: #BFBFBF; }
+  .agent-status { font-size: 12px; color: #666; }
+  .agent-desc { font-size: 13px; color: #666; line-height: 1.6; margin-bottom: 12px; }
+  .agent-skills { font-size: 12px; color: #999; }
+  .agent-skills span { display: inline-block; padding: 1px 6px; background: #F5F5F5; margin-right: 4px; border-radius: 2px; }
+
+  /* 详情页 */
+  .detail-layout { display: grid; grid-template-columns: 280px 1fr; gap: 16px; }
+  .detail-side { background: #FFF; border: 1px solid #E8E8E8; padding: 20px; }
+  .detail-side h2 { font-size: 20px; color: #333; margin-bottom: 8px; }
+  .detail-side .meta { color: #666; font-size: 13px; line-height: 1.8; margin-bottom: 16px; }
+  .detail-side .actions button { width: 100%; margin-bottom: 8px; }
+
+  .detail-main { background: #FFF; border: 1px solid #E8E8E8; }
+  .tabs { display: flex; border-bottom: 1px solid #E8E8E8; }
+  .tab { padding: 12px 20px; font-size: 14px; color: #666; cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab:hover { color: #1890FF; }
+  .tab.active { color: #1890FF; border-bottom-color: #1890FF; }
+  .tab-body { padding: 20px; }
+
+  /* 工作流 DAG */
+  .dag-canvas { width: 100%; height: 480px; background: #FAFAFA; border: 1px solid #E8E8E8; position: relative; overflow: auto; }
+  .dag-svg { width: 100%; height: 100%; }
+  .dag-node { fill: #FFF; stroke: #1890FF; stroke-width: 1.5; }
+  .dag-node.active { fill: #E6F7FF; stroke: #1890FF; stroke-width: 2; }
+  .dag-node-text { font-size: 13px; fill: #333; text-anchor: middle; pointer-events: none; }
+  .dag-edge { stroke: #BFBFBF; stroke-width: 1.5; fill: none; }
+  .dag-edge.active { stroke: #1890FF; stroke-width: 2; }
+
+  .metric-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .metric-card { background: #FFF; border: 1px solid #E8E8E8; padding: 12px 16px; }
+  .metric-label { color: #999; font-size: 12px; }
+  .metric-value { font-size: 22px; color: #333; font-weight: 500; margin-top: 4px; }
+  .metric-extra { font-size: 12px; color: #52C41A; margin-top: 4px; }
+
+  .log-list { font-size: 12px; color: #666; line-height: 1.9; font-family: monospace; max-height: 360px; overflow: auto; background: #F5F5F5; padding: 12px; border-radius: 2px; }
+
+  .btn { display: inline-block; height: 30px; line-height: 30px; padding: 0 14px; font-size: 13px; border-radius: 2px; border: 1px solid #D9D9D9; background: #FFF; color: #333; cursor: pointer; }
+  .btn:hover { border-color: #1890FF; color: #1890FF; }
+  .btn.primary { background: #1890FF; color: #FFF; border-color: #1890FF; }
+  .btn.primary:hover { background: #40A9FF; border-color: #40A9FF; color: #FFF; }
+
+  .empty { text-align: center; color: #999; padding: 40px 20px; font-size: 13px; }
+
+  .app-footer { text-align: center; padding: 12px 0; color: #999; font-size: 12px; border-top: 1px solid #E8E8E8; background: #FFF; }
+  .app-footer a { color: #999; }
+  .app-footer a:hover { color: #1890FF; }
+  .footer-sep { margin: 0 8px; color: #D9D9D9; }
+
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.78); color: #FFF; padding: 10px 20px; font-size: 13px; border-radius: 2px; display: none; z-index: 200; }
+  .toast.show { display: block; }
+
+  @media (max-width: 900px) { .row.c4, .row.c3, .row.c2 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .row.c4, .row.c3, .row.c2 { grid-template-columns: 1fr; } }
+  @media (max-width: 768px) {
+    .sidebar { position: fixed; left: -200px; top: 0; bottom: 0; z-index: 50; transition: left 0.2s; }
+    .sidebar.open { left: 0; }
+    .menu-toggle { display: inline-block; }
+    .main { margin-left: 0; }
+  }
+
+</style>
+    <link rel="stylesheet" href="/css/ddw-themes.css">
+    <script src="/js/ddw-theme-switcher.js"></script>
+  </head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-char">钜</span>
+      <span class="logo-text">DDW Hub</span>
+    </div>
+    <a class="nav-item" href="saas-admin.html#/overview">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l7 4v6l-7 4-7-4V5l7-4z"/></svg>
+      控制台
+    </a>
+    <a class="nav-item" href="ddw-training.html">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l7 4-7 4-7-4 7-4z"/></svg>
+      智能培训
+    </a>
+    <a class="nav-item" href="ddw-skills.html">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6"/><path d="M5 8l2 2 4-4" stroke="white" fill="none"/></svg>
+      技能管理
+    </a>
+    <a class="nav-item active" href="ddw-agents.html">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="4" width="10" height="8" rx="1"/><circle cx="6" cy="8" r="1"/><circle cx="10" cy="8" r="1"/></svg>
+      数字员工
+    </a>
+    <a class="nav-item" href="ddw-hris.html">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 3 3 .5-2 2 .5 3-3-1.5L5 9.5l.5-3-2-2 3-.5z"/></svg>
+      HRIS 集成
+    </a>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="crumb"><span>数字员工</span><span class="sep">/</span><span id="crumbSub">全部</span></div>
+      <div class="topbar-right"><a href="saas-admin.html#/overview">返回控制台</a></div>
+    </header>
+
+    <div class="content" id="content">
+      <div class="empty">加载中…</div>
+    </div>
+
+    <footer class="app-footer">
+      <span>&copy; 2026 武汉锐果互动信息技术有限公司</span>
+      <span class="footer-sep">|</span>
+      <a href="https://beian.miit.gov.cn/" target="_blank">鄂ICP备2026024883号-1</a>
+      <span class="footer-sep">|</span>
+      <a href="https://beian.mps.gov.cn/#/query/webSearch?code=42011102006255" target="_blank">鄂公网安备42011102006255号</a>
+    </footer>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const AGENTS = [
+  { id: 'xiaozhi', name: '小智', role: 'AI 助手', desc: '全能型数字员工：能对话、能调度工具、能编排任务。', color: '#1890FF', status: 'online', skills: ['ddw.llm.chat','ddw.kb.search','ddw.email.send'] },
+  { id: 'lvdun', name: '绿盾', role: '合规审查员', desc: '聚焦 ESG/法规/合同条款比对与风险提示。', color: '#52C41A', status: 'online', skills: ['ddw.legal.check','ddw.kb.search'] },
+  { id: 'youling', name: '邮灵', role: '邮件助理', desc: 'IMAP 拉取、自动分类、模板回复与跟进提醒。', color: '#FAAD14', status: 'busy', skills: ['ddw.email.send','ddw.email.classify'] },
+  { id: 'shulu', name: '数录', role: '数据录入员', desc: 'OCR + 表单识别，结构化录入业务系统。', color: '#13C2C2', status: 'online', skills: ['ddw.ocr.invoice','ddw.ocr.contract'] },
+  { id: 'shenpitong', name: '审批通', role: '流程审批', desc: '审批流自动化：节点判断、催办、抄送。', color: '#722ED1', status: 'online', skills: ['ddw.workflow.approve','ddw.email.send'] },
+  { id: 'zhiku', name: '知库', role: '知识管理员', desc: '知识库维护：切片、检索质量监控、增量更新。', color: '#FA541C', status: 'offline', skills: ['ddw.kb.rebuild','ddw.kb.search'] },
+];
+
+const WORKFLOWS = {
+  xiaozhi: [
+    { id: 'n1', label: '接收消息', x: 60, y: 60 },
+    { id: 'n2', label: '意图识别', x: 240, y: 60 },
+    { id: 'n3', label: '路由分发', x: 420, y: 60 },
+    { id: 'n4', label: '知识库检索', x: 420, y: 200 },
+    { id: 'n5', label: '工具调用', x: 420, y: 340 },
+    { id: 'n6', label: 'LLM 生成', x: 600, y: 60 },
+    { id: 'n7', label: '回复用户', x: 780, y: 60 },
+  ],
+  edges: [
+    { from: 'n1', to: 'n2' }, { from: 'n2', to: 'n3' },
+    { from: 'n3', to: 'n4' }, { from: 'n3', to: 'n5' }, { from: 'n3', to: 'n6' },
+    { from: 'n4', to: 'n6' }, { from: 'n5', to: 'n6' }, { from: 'n6', to: 'n7' },
+  ],
+};
+
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
+const toast = (m) => { const t = $('#toast'); t.textContent = m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2000); };
+
+function route() {
+  const hash = location.hash.replace(/^#\/?/, '') || 'list';
+  if (hash === 'list' || !AGENTS.find(a => a.id === hash)) renderList();
+  else renderDetail(hash);
+}
+window.addEventListener('hashchange', route);
+
+function renderList() {
+  $('#crumbSub').textContent = '全部';
+  const html = `<div class="agent-grid">
+    ${AGENTS.map(a => `
+      <div class="agent-card" data-go="${a.id}">
+        <div class="agent-head">
+          <div class="agent-avatar" style="background:${a.color}">${a.name.charAt(0)}</div>
+          <div style="flex:1">
+            <div class="agent-name">${a.name}</div>
+            <div class="agent-role">${a.role}</div>
+          </div>
+          <div class="agent-status"><span class="status-dot ${a.status}"></span>${a.status === 'online' ? '在线' : a.status === 'busy' ? '忙碌' : '离线'}</div>
+        </div>
+        <div class="agent-desc">${a.desc}</div>
+        <div class="agent-skills">${a.skills.map(s => `<span>${s}</span>`).join('')}</div>
+      </div>
+    `).join('')}
+  </div>`;
+  $('#content').innerHTML = html;
+  $$('.agent-card').forEach(c => c.addEventListener('click', () => location.hash = '#/' + c.dataset.go));
+}
+
+function renderDetail(id) {
+  const a = AGENTS.find(x => x.id === id);
+  $('#crumbSub').textContent = a.name;
+  $('#content').innerHTML = `
+    <div class="detail-layout">
+      <div class="detail-side">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div class="agent-avatar" style="background:${a.color}">${a.name.charAt(0)}</div>
+          <div>
+            <h2>${a.name}</h2>
+            <div class="agent-role">${a.role}</div>
+          </div>
+        </div>
+        <div class="meta">
+          状态：<span class="status-dot ${a.status}"></span>${a.status === 'online' ? '在线' : a.status === 'busy' ? '忙碌' : '离线'}<br>
+          技能数：${a.skills.length}<br>
+          会话数：${Math.floor(Math.random()*500+100)}<br>
+          满意度：${(0.85 + Math.random()*0.1).toFixed(2)}
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="btnChat">发起对话</button>
+          <button class="btn" id="btnToggle">${a.status === 'offline' ? '上线' : '下线'}</button>
+          <button class="btn" onclick="location.hash='#/list'">← 返回列表</button>
+        </div>
+      </div>
+      <div class="detail-main">
+        <div class="tabs">
+          <div class="tab active" data-tab="metrics">性能指标</div>
+          <div class="tab" data-tab="skills">技能配置</div>
+          <div class="tab" data-tab="workflow">工作流</div>
+          <div class="tab" data-tab="history">对话历史</div>
+          <div class="tab" data-tab="logs">工作日志</div>
+        </div>
+        <div class="tab-body">
+          <div data-pane="metrics">
+            <div class="metric-row">
+              <div class="metric-card"><div class="metric-label">今日调用</div><div class="metric-value">${Math.floor(Math.random()*1000+200)}</div><div class="metric-extra">+12%</div></div>
+              <div class="metric-card"><div class="metric-label">平均响应</div><div class="metric-value">${(0.5+Math.random()*1.2).toFixed(2)}s</div><div class="metric-extra">-0.1s</div></div>
+              <div class="metric-card"><div class="metric-label">成功率</div><div class="metric-value">${(95+Math.random()*4).toFixed(1)}%</div><div class="metric-extra">+0.5%</div></div>
+              <div class="metric-card"><div class="metric-label">人工接管</div><div class="metric-value">${Math.floor(Math.random()*20+3)}</div><div class="metric-extra" style="color:#FAAD14">占比 1.2%</div></div>
+            </div>
+          </div>
+          <div data-pane="skills" style="display:none">
+            ${a.skills.map(s => `<div style="padding:8px 12px;background:#F5F5F5;margin-bottom:6px;border-radius:2px"><strong style="color:#1890FF">${s}</strong></div>`).join('')}
+            <button class="btn" style="margin-top:8px" id="btnAddSkill">+ 关联技能</button>
+          </div>
+          <div data-pane="workflow" style="display:none">
+            <div style="font-size:13px;color:#666;margin-bottom:8px">工作流 DAG（只读）</div>
+            <div class="dag-canvas" id="dag"></div>
+          </div>
+          <div data-pane="history" style="display:none">
+            <div class="log-list">
+[2026-08-01 12:30] user 问：什么是牛顿第一定律<br>
+[2026-08-01 12:30] 小智 答：在没有外力作用时，物体保持静止或匀速直线运动状态…<br>
+[2026-08-01 12:25] user 问：报销流程怎么走？<br>
+[2026-08-01 12:25] 小智 答：登录财务系统 → 填写报销单 → 上传发票 → 提交审批…<br>
+[2026-08-01 12:20] user 问：HRIS 怎么同步？<br>
+[2026-08-01 12:20] 小智 答：进入"HRIS 集成"页 → 选择适配器 → 配置凭证 → 启动同步…
+            </div>
+          </div>
+          <div data-pane="logs" style="display:none">
+            <div class="log-list">
+[12:30:01] INFO  skill=ddw.llm.chat tokens=120 ok
+[12:28:15] INFO  skill=ddw.kb.search results=3 ok
+[12:25:42] WARN  skill=ddw.email.send retry=1
+[12:22:08] INFO  skill=ddw.llm.chat tokens=98 ok
+[12:18:33] INFO  skill=ddw.smart_cs.handle_message ok
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  bindDetailTabs();
+  if (a.id === 'xiaozhi') drawDag();
+  $('#btnChat').addEventListener('click', () => toast('对话窗口：暂未上线'));
+  $('#btnToggle').addEventListener('click', () => { a.status = a.status === 'offline' ? 'online' : 'offline'; renderDetail(id); });
+  if ($('#btnAddSkill')) $('#btnAddSkill').addEventListener('click', () => toast('技能绑定向导：暂未开放'));
+}
+
+function bindDetailTabs() {
+  $$('.tab').forEach(t => t.addEventListener('click', () => {
+    $$('.tab').forEach(x => x.classList.toggle('active', x === t));
+    const key = t.dataset.tab;
+    ['metrics','skills','workflow','history','logs'].forEach(k => {
+      const p = $(`[data-pane="${k}"]`);
+      if (p) p.style.display = (k === key) ? '' : 'none';
+    });
+  }));
+}
+
+function drawDag() {
+  const wf = WORKFLOWS.xiaozhi;
+  const w = 900, h = 480;
+  let svg = `<svg class="dag-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMinYMin meet">`;
+  // edges first
+  wf.edges.forEach(e => {
+    const a = wf.find(n => n.id === e.from), b = wf.find(n => n.id === e.to);
+    svg += `<path class="dag-edge" d="M${a.x+50},${a.y+25} C${a.x+130},${a.y+25} ${b.x-30},${b.y+25} ${b.x},${b.y+25}" />`;
+  });
+  // nodes
+  wf.forEach(n => {
+    svg += `<g><rect class="dag-node" x="${n.x}" y="${n.y}" width="120" height="50" rx="2"/><text class="dag-node-text" x="${n.x+60}" y="${n.y+30}">${n.label}</text></g>`;
+  });
+  svg += '</svg>';
+  $('#dag').innerHTML = svg;
+}
+
+route();
+</script>
+</body>
+</html>

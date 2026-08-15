@@ -1,0 +1,48 @@
+name: ddw_website_analytics
+tier: beta
+version: "0.2.0"
+description: "网站访问/访客数据报表（v0.2.0：业务页分组 + 反爬虫中间件 + AI 爬虫识别 + 每日洞察报告）"
+author: "DDW Team"
+license: free
+type: plugin
+entry: plugin:Plugin
+permissions:
+  - filesystem   # 读取 /var/log/caddy/*.log + 写 snapshots
+  - compute
+  - middleware   # 反爬虫中间件注入
+dependencies: {}
+endpoints:
+  - path: /api/v1/plugins/ddw_website_analytics/health
+    method: GET
+  - path: /api/v1/plugins/ddw_website_analytics/summary
+    method: GET
+  - path: /api/v1/plugins/ddw_website_analytics/daily
+    method: GET
+  - path: /api/v1/plugins/ddw_website_analytics/pages
+    method: GET
+  - path: /api/v1/plugins/ddw_website_analytics/referrers
+    method: GET
+  - path: /api/v1/plugins/ddw_website_analytics/crawlers
+    method: GET
+  - path: /api/v1/plugins/ddw_website_analytics/ai-crawlers
+    method: GET
+  - path: /api/v1/plugins/ddw_website_analytics/anticrawler/config
+    method: GET
+  - path: /api/v1/plugins/ddw_website_analytics/anticrawler/stats
+    method: GET
+  - path: /api/v1/plugins/ddw_website_analytics/anticrawler/test
+    method: POST
+  - path: /api/v1/plugins/ddw_website_analytics/insights/generate
+    method: POST
+  - path: /api/v1/plugins/ddw_website_analytics/insights/snapshots
+    method: GET
+  - path: /api/v1/plugins/ddw_website_analytics/refresh
+    method: POST
+
+config:
+  log_paths:
+    - "/root/ecs-framework/caddy/logs/*_access.log"
+    - "/var/log/caddy/*_access.log"
+  cache_db: "plugins/ddw_website_analytics/data/analytics.db"
+  cache_ttl_sec: 3600
+  anticrawler_enabled: true

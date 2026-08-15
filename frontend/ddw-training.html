@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="format-detection" content="telephone=no">
+<title>智能培训 - DDW AI Hub</title>
+<link rel="icon" type="image/svg+xml" href="assets/logo-ju.svg">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: #333; background: #F0F2F5; -webkit-font-smoothing: antialiased; }
+  a { color: #1890FF; text-decoration: none; }
+  button, input, select, textarea { font-family: inherit; }
+
+  .app { display: flex; min-height: 100vh; }
+  .sidebar { width: 200px; background: #001529; color: rgba(255,255,255,0.85); flex-shrink: 0; }
+  .sidebar-logo { display: flex; align-items: center; height: 56px; padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .logo-char { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: #000; color: #FFF; font-size: 18px; font-weight: bold; font-family: "PingFang SC", "Microsoft YaHei", serif; border-radius: 2px; margin-right: 8px; }
+  .logo-text { color: #FFF; font-size: 15px; font-weight: 500; }
+  .nav-group { padding: 12px 0; }
+  .nav-title { color: rgba(255,255,255,0.45); font-size: 12px; padding: 0 16px 8px; }
+  .nav-item { display: flex; align-items: center; height: 40px; padding: 0 16px; color: rgba(255,255,255,0.85); font-size: 14px; cursor: pointer; }
+  .nav-item:hover { color: #FFF; background: rgba(255,255,255,0.04); }
+  .nav-item.active { color: #FFF; background: #1890FF; }
+  .nav-icon { width: 16px; height: 16px; margin-right: 10px; flex-shrink: 0; }
+
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .topbar { background: #FFF; border-bottom: 1px solid #E8E8E8; height: 56px; display: flex; align-items: center; padding: 0 24px; }
+  .crumb { color: #333; font-size: 14px; }
+  .crumb .sep { color: #999; margin: 0 6px; }
+  .topbar-right { margin-left: auto; font-size: 13px; color: #666; }
+  .topbar-right a { color: #1890FF; }
+
+  .content { flex: 1; padding: 24px; overflow: auto; }
+  .card { background: #FFF; border: 1px solid #E8E8E8; border-radius: 2px; }
+  .card-head { padding: 14px 20px; border-bottom: 1px solid #E8E8E8; }
+  .card-title { font-size: 15px; color: #333; font-weight: 500; }
+  .card-body { padding: 20px; }
+
+  /* 课程卡片 */
+  .course-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .course-card { background: #FFF; border: 1px solid #E8E8E8; padding: 20px; border-radius: 2px; cursor: pointer; transition: border-color 0.2s; }
+  .course-card:hover { border-color: #1890FF; }
+  .course-subject { font-size: 12px; color: #1890FF; background: #E6F7FF; padding: 2px 8px; display: inline-block; border-radius: 2px; margin-bottom: 12px; }
+  .course-name { font-size: 18px; color: #333; font-weight: 500; margin-bottom: 8px; }
+  .course-meta { font-size: 13px; color: #999; line-height: 1.8; }
+  .course-meta span { margin-right: 16px; }
+  .course-actions { margin-top: 16px; }
+  .btn { display: inline-block; height: 30px; line-height: 30px; padding: 0 14px; font-size: 13px; border-radius: 2px; border: 1px solid #D9D9D9; background: #FFF; color: #333; cursor: pointer; }
+  .btn:hover { border-color: #1890FF; color: #1890FF; }
+  .btn.primary { background: #1890FF; color: #FFF; border-color: #1890FF; }
+  .btn.primary:hover { background: #40A9FF; border-color: #40A9FF; color: #FFF; }
+
+  /* 学习界面三段式 */
+  .learn-layout { display: grid; grid-template-columns: 240px 1fr 320px; gap: 16px; height: calc(100vh - 56px - 48px - 64px); min-height: 600px; }
+  @media (max-width: 1100px) { .learn-layout { grid-template-columns: 200px 1fr; } .learn-side { display: none; } }
+  @media (max-width: 768px) { .learn-layout { grid-template-columns: 1fr; } .learn-tree { display: none; } }
+  .learn-tree, .learn-side, .learn-main { background: #FFF; border: 1px solid #E8E8E8; padding: 16px; overflow: auto; }
+  .learn-tree h3, .learn-side h3 { font-size: 13px; color: #999; margin-bottom: 12px; font-weight: 500; }
+  .tree-node { padding: 8px 12px; font-size: 13px; color: #333; cursor: pointer; border-radius: 2px; }
+  .tree-node:hover { background: #F5F5F5; }
+  .tree-node.active { background: #E6F7FF; color: #1890FF; }
+  .tree-children { padding-left: 16px; }
+  .tree-children .tree-node { font-size: 12px; color: #666; }
+
+  .chat-area { display: flex; flex-direction: column; height: 100%; }
+  .chat-list { flex: 1; overflow: auto; padding: 12px; background: #FAFAFA; }
+  .chat-msg { margin-bottom: 12px; display: flex; gap: 10px; }
+  .chat-msg.user { flex-direction: row-reverse; }
+  .chat-avatar { width: 32px; height: 32px; background: #1890FF; color: #FFF; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+  .chat-msg.user .chat-avatar { background: #52C41A; }
+  .chat-bubble { max-width: 70%; padding: 10px 14px; background: #FFF; border: 1px solid #E8E8E8; border-radius: 2px; font-size: 14px; line-height: 1.6; }
+  .chat-msg.user .chat-bubble { background: #1890FF; color: #FFF; border-color: #1890FF; }
+  .chat-move-tag { display: inline-block; padding: 2px 8px; font-size: 11px; color: #FFF; border-radius: 2px; margin-right: 6px; }
+  .chat-input { display: flex; gap: 8px; padding: 12px; border-top: 1px solid #E8E8E8; background: #FFF; }
+  .chat-input input { flex: 1; height: 36px; padding: 6px 12px; border: 1px solid #D9D9D9; border-radius: 2px; font-size: 14px; }
+  .chat-input input:focus { border-color: #1890FF; outline: none; }
+
+  .learn-side .progress-block { margin-bottom: 16px; }
+  .progress { height: 6px; background: #F5F5F5; border-radius: 2px; overflow: hidden; }
+  .progress-bar { height: 100%; background: #1890FF; }
+  .score-row { display: flex; justify-content: space-between; font-size: 13px; color: #333; margin-bottom: 4px; }
+
+  /* 雷达图（纯 CSS） */
+  .radar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .radar-cell { font-size: 12px; color: #333; }
+  .radar-cell .progress { margin-top: 4px; }
+
+  /* 评估报告 */
+  .assess-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .assess-table th, .assess-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #F0F0F0; }
+  .assess-table th { background: #FAFAFA; color: #333; font-weight: 500; }
+  .grade-tag { display: inline-block; width: 24px; height: 24px; line-height: 24px; text-align: center; font-size: 13px; color: #FFF; border-radius: 2px; }
+  .grade-A { background: #52C41A; }
+  .grade-B { background: #1890FF; }
+  .grade-C { background: #FAAD14; }
+  .grade-D { background: #F5222D; }
+
+  /* 热力图 */
+  .heatmap { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; }
+  .heat-cell { padding: 8px; font-size: 12px; color: #FFF; text-align: center; border-radius: 2px; }
+
+  /* 课件 */
+  .cw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .cw-card { background: #FFF; border: 1px solid #E8E8E8; padding: 14px; border-radius: 2px; }
+  .cw-type { display: inline-block; padding: 1px 6px; font-size: 11px; background: #F0F0F0; color: #666; border-radius: 2px; margin-bottom: 8px; }
+  .cw-title { font-size: 14px; color: #333; margin-bottom: 6px; }
+  .cw-desc { font-size: 12px; color: #999; line-height: 1.5; }
+
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.78); color: #FFF; padding: 10px 20px; font-size: 13px; border-radius: 2px; display: none; z-index: 200; }
+  .toast.show { display: block; }
+
+  .app-footer { text-align: center; padding: 12px 0; color: #999; font-size: 12px; border-top: 1px solid #E8E8E8; background: #FFF; }
+  .app-footer a { color: #999; }
+  .app-footer a:hover { color: #1890FF; }
+  .footer-sep { margin: 0 8px; color: #D9D9D9; }
+
+  .menu-toggle { display: none; background: none; border: none; color: #FFF; font-size: 20px; margin-right: 8px; }
+  @media (max-width: 768px) {
+    .sidebar { position: fixed; left: -200px; top: 0; bottom: 0; z-index: 50; transition: left 0.2s; }
+    .sidebar.open { left: 0; }
+    .menu-toggle { display: inline-block; }
+  }
+
+  .empty { text-align: center; color: #999; padding: 60px 20px; font-size: 14px; }
+</style>
+    <link rel="stylesheet" href="/css/ddw-themes.css">
+    <script src="/js/ddw-theme-switcher.js"></script>
+  </head>
+<body>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-char">钜</span>
+      <span class="logo-text">DDW 培训</span>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">教学</div>
+      <a class="nav-item" data-route="courses">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v10H2zM5 6h6M5 9h6" stroke="white" fill="none"/></svg>
+        课程列表
+      </a>
+      <a class="nav-item" data-route="learn">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l7 4-7 4-7-4 7-4zM2 8l6 3 6-3M2 12l6 3 6-3"/></svg>
+        学习中心
+      </a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">分析</div>
+      <a class="nav-item" data-route="assessment">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M2 13h12M3 11l3-3 3 3 4-6" stroke="white" fill="none"/></svg>
+        评估报告
+      </a>
+      <a class="nav-item" data-route="courseware">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="2" width="12" height="12"/><path d="M5 6h6M5 9h6" stroke="white" fill="none"/></svg>
+        课件管理
+      </a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="menu-toggle" id="menuToggle">☰</button>
+      <div class="crumb">
+        <span>智能培训</span>
+        <span class="sep">/</span>
+        <span id="crumb">课程列表</span>
+      </div>
+      <div class="topbar-right">
+        当前用户：<span id="curUser">加载中…</span> · <a href="saas-admin.html#/overview">控制台</a>
+      </div>
+    </header>
+
+    <div class="content" id="content">
+      <div class="empty">加载中…</div>
+    </div>
+
+    <footer class="app-footer">
+      <span>&copy; 2026 武汉锐果互动信息技术有限公司</span>
+      <span class="footer-sep">|</span>
+      <a href="https://beian.miit.gov.cn/" target="_blank">鄂ICP备2026024883号-1</a>
+      <span class="footer-sep">|</span>
+      <a href="https://beian.mps.gov.cn/#/query/webSearch?code=42011102006255" target="_blank">鄂公网安备42011102006255号</a>
+    </footer>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:8500' : '';
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
+const toast = (m, t=2000) => { const el = $('#toast'); el.textContent = m; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'), t); };
+
+const TOKEN = localStorage.getItem('ddw_token') || '';
+const USER = JSON.parse(localStorage.getItem('ddw_user') || '{}');
+const TENANT = JSON.parse(localStorage.getItem('ddw_tenant') || '{}');
+$('#curUser').textContent = USER.name || USER.phone || '未登录';
+if (!TOKEN) { location.href = '/login.html'; }
+
+async function api(path, opts = {}) {
+  const r = await fetch(API_BASE + path, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN, ...(opts.headers || {}) }
+  });
+  if (!r.ok) {
+    const d = await r.json().catch(() => ({}));
+    throw new Error(d.detail || ('HTTP ' + r.status));
+  }
+  return r.json();
+}
+
+$('#menuToggle').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+
+// ====== Router ======
+const state = { courseId: null, sessionId: null, messages: [], currentMove: 0, currentVignette: '' };
+
+const ROUTES = {
+  courses: { title: '课程列表', render: renderCourses },
+  learn: { title: '学习中心', render: renderLearn },
+  assessment: { title: '评估报告', render: renderAssessment },
+  courseware: { title: '课件管理', render: renderCourseware },
+};
+
+function route() {
+  const hash = location.hash.replace(/^#\/?/, '') || 'courses';
+  const [r, ...rest] = hash.split('/');
+  const route = ROUTES[r] || ROUTES.courses;
+  $('#crumb').textContent = route.title;
+  $$('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.route === (ROUTES[r] ? r : 'courses')));
+  if (r === 'learn' && rest[0]) state.courseId = rest[0];
+  $('#content').innerHTML = '<div class="empty">加载中…</div>';
+  route.render().then(html => { $('#content').innerHTML = html; bindPage(r); });
+  $('#sidebar').classList.remove('open');
+}
+window.addEventListener('hashchange', route);
+
+// ====== Pages ======
+
+async function renderCourses() {
+  let courses;
+  try { courses = await api('/api/v1/plugins/ddw-training/courses'); }
+  catch (e) { return '<div class="card"><div class="empty">加载失败：' + e.message + '</div></div>'; }
+  return `
+    <div style="display:flex;align-items:center;margin-bottom:16px">
+      <h2 style="font-size:18px;color:#333">全部课程</h2>
+      <button class="btn primary" style="margin-left:auto" id="btnCreate">+ 创建新课程</button>
+    </div>
+    <div class="course-grid">
+      ${courses.map(c => `
+        <div class="course-card" data-go="learn/${c.id}">
+          <span class="course-subject">${c.subject === 'physics' ? '物理' : c.subject === 'chemistry' ? '化学' : c.subject}</span>
+          <div class="course-name">${c.display_name}</div>
+          <div class="course-meta">
+            <span>年级：${c.grade}</span>
+            <span>课时：12</span>
+            <span>学生：${Math.floor(Math.random() * 200) + 30}</span>
+          </div>
+          <div class="course-actions">
+            <a class="btn primary" href="#/learn/${c.id}">开始学习</a>
+            <a class="btn" href="#/assessment?course=${c.id}">查看报告</a>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function bindCourses() {
+  $$('.course-card').forEach(c => c.addEventListener('click', e => {
+    if (e.target.tagName === 'A') return;
+    location.hash = '#/' + c.dataset.go;
+  }));
+  if ($('#btnCreate')) $('#btnCreate').addEventListener('click', () => toast('新课程创建向导：暂未开放'));
+}
+
+async function renderLearn() {
+  const cid = state.courseId || 'physics-g9';
+  if (!state.sessionId) {
+    // 自动启动会话
+    try {
+      const r = await api('/api/v1/plugins/ddw-training/sessions/start', {
+        method: 'POST',
+        body: JSON.stringify({ user_id: USER.id || 1, tenant_id: TENANT.id || 1, subject: cid.startsWith('physics') ? 'physics' : 'chemistry', course_id: cid })
+      });
+      state.sessionId = r.session_id;
+    } catch (e) { return '<div class="empty">启动会话失败：' + e.message + '</div>'; }
+  }
+  // 拉课程结构
+  let outline = [];
+  try {
+    outline = await api('/api/v1/plugins/ddw-training/courses');
+  } catch (e) {}
+  // 拉第一个 move 信息
+  let moves = [];
+  try { moves = await api('/api/v1/plugins/ddw-training/pedagogy/moves'); } catch (e) {}
+
+  return `
+    <div class="learn-layout">
+      <div class="learn-tree">
+        <h3>课程大纲</h3>
+        <div class="tree-node active">${cid.startsWith('physics') ? '初三物理' : '初三化学'}</div>
+        <div class="tree-children">
+          ${['第 1 章 走进…', '第 2 章 运动…', '第 3 章 力…', '第 4 章 压强…'].map((c, i) => `<div class="tree-node" data-ch="${i}">${c}</div>`).join('')}
+        </div>
+        <h3 style="margin-top:24px">教学法</h3>
+        <div style="font-size:12px;color:#666;line-height:1.8">
+          苏格拉底 6 思维动作<br>12 教学图景<br>4 维度评估
+        </div>
+      </div>
+      <div class="learn-main">
+        <div class="chat-area">
+          <div class="chat-list" id="chatList">
+            <div class="empty">等待 AI 引导…</div>
+          </div>
+          <div class="chat-input">
+            <input id="chatInput" placeholder="输入你的回答…" autocomplete="off">
+            <button class="btn primary" id="btnSend">发送</button>
+          </div>
+        </div>
+      </div>
+      <div class="learn-side">
+        <h3>学习进度</h3>
+        <div class="progress-block">
+          <div class="score-row"><span>会话</span><span id="sideSession">${state.sessionId?.slice(0,8) || '-'}</span></div>
+          <div class="score-row"><span>当前动作</span><span id="sideMove">- / 6</span></div>
+          <div class="progress"><div class="progress-bar" id="sideBar" style="width:0%"></div></div>
+        </div>
+        <h3>4 维评估</h3>
+        <div class="radar" id="radar">
+          <div class="radar-cell"><div>概念清晰度</div><div class="progress"><div class="progress-bar" id="r1" style="width:0%"></div></div></div>
+          <div class="radar-cell"><div>推理深度</div><div class="progress"><div class="progress-bar" id="r2" style="width:0%"></div></div></div>
+          <div class="radar-cell"><div>参与质量</div><div class="progress"><div class="progress-bar" id="r3" style="width:0%"></div></div></div>
+          <div class="radar-cell"><div>教学对齐</div><div class="progress"><div class="progress-bar" id="r4" style="width:0%"></div></div></div>
+        </div>
+        <h3 style="margin-top:20px">思维动作</h3>
+        <div style="font-size:12px;color:#666;line-height:1.9" id="movesList">
+          ${moves.map(m => `<div>${m.id}. ${m.display} <span style="color:#999">（${m.level}）</span></div>`).join('') || '-'}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function bindLearn() {
+  const list = $('#chatList');
+  function append(role, content, move) {
+    if (list.querySelector('.empty')) list.innerHTML = '';
+    const div = document.createElement('div');
+    div.className = 'chat-msg ' + role;
+    let html = '<div class="chat-avatar">' + (role === 'user' ? '我' : 'AI') + '</div><div class="chat-bubble">';
+    if (move) html += `<span class="chat-move-tag" style="background:#1890FF">${move}</span>`;
+    html += content + '</div>';
+    div.innerHTML = html;
+    list.appendChild(div);
+    list.scrollTop = list.scrollHeight;
+  }
+
+  async function send() {
+    const input = $('#chatInput');
+    const msg = input.value.trim();
+    if (!msg) return;
+    input.value = '';
+    append('user', msg);
+    $('#btnSend').disabled = true; $('#btnSend').textContent = 'AI 思考中…';
+    try {
+      const r = await api('/api/v1/plugins/ddw-training/sessions/chat', {
+        method: 'POST', body: JSON.stringify({ session_id: state.sessionId, message: msg })
+      });
+      append('assistant', r.content, r.move);
+      state.currentMove = r.move;
+      if (r.completed) {
+        toast('本节完成！');
+      }
+      if (r.scores) {
+        const s = r.scores;
+        $('#r1').style.width = (s.conceptual_clarity * 100) + '%';
+        $('#r2').style.width = (s.reasoning_depth * 100) + '%';
+        $('#r3').style.width = (s.engagement_quality * 100) + '%';
+        $('#r4').style.width = (s.pedagogical_alignment * 100) + '%';
+        $('#sideMove').textContent = r.move + ' / 6';
+        $('#sideBar').style.width = (r.move / 6 * 100) + '%';
+      }
+    } catch (e) { toast('发送失败：' + e.message); }
+    finally { $('#btnSend').disabled = false; $('#btnSend').textContent = '发送'; }
+  }
+
+  $('#btnSend').addEventListener('click', send);
+  $('#chatInput').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+
+  // 触发第一次引导
+  (async () => {
+    try {
+      const r = await api('/api/v1/plugins/ddw-training/sessions/chat', {
+        method: 'POST', body: JSON.stringify({ session_id: state.sessionId, message: '__init__' })
+      });
+      append('assistant', r.content, r.move);
+      state.currentMove = r.move;
+      $('#sideMove').textContent = r.move + ' / 6';
+      $('#sideBar').style.width = (r.move / 6 * 100) + '%';
+    } catch (e) {}
+  })();
+}
+
+async function renderAssessment() {
+  let radar = {};
+  try { radar = await api('/api/v1/plugins/ddw-training/class/radar'); } catch (e) {}
+  let mastery = [];
+  try { mastery = await api('/api/v1/plugins/ddw-training/class/mastery'); } catch (e) {}
+
+  // mock 学生列表
+  const students = Array.from({length: 8}, (_, i) => ({
+    id: i + 1, name: `学生 ${i+1}`,
+    conceptual_clarity: 0.5 + Math.random() * 0.4,
+    reasoning_depth: 0.5 + Math.random() * 0.4,
+    engagement_quality: 0.5 + Math.random() * 0.4,
+    pedagogical_alignment: 0.5 + Math.random() * 0.4,
+    total: 0, grade: 'B'
+  }));
+  students.forEach(s => {
+    s.total = (s.conceptual_clarity + s.reasoning_depth + s.engagement_quality + s.pedagogical_alignment) / 4;
+    s.grade = s.total >= 0.85 ? 'A' : s.total >= 0.7 ? 'B' : s.total >= 0.55 ? 'C' : 'D';
+  });
+
+  return `
+    <div class="row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card">
+        <div class="card-head"><div class="card-title">班级 4 维雷达</div></div>
+        <div class="card-body">
+          <div class="radar">
+            ${['conceptual_clarity', 'reasoning_depth', 'engagement_quality', 'pedagogical_alignment'].map((k, i) => {
+              const names = ['概念清晰度', '推理深度', '参与质量', '教学对齐'];
+              const v = radar[k] || 0;
+              return `<div class="radar-cell"><div>${names[i]}</div><div class="progress"><div class="progress-bar" style="width:${v*100}%"></div></div><div style="color:#999;font-size:11px;margin-top:2px">${(v*100).toFixed(0)}%</div></div>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">知识点掌握热力图</div></div>
+        <div class="card-body">
+          <div class="heatmap">
+            ${mastery.length ? mastery.map(m => {
+              const score = m.score;
+              const color = score >= 0.85 ? '#52C41A' : score >= 0.7 ? '#1890FF' : score >= 0.55 ? '#FAAD14' : '#F5222D';
+              return `<div class="heat-cell" style="background:${color}">${m.concept}<br>${(score*100).toFixed(0)}%</div>`;
+            }).join('') : '<div class="empty">暂无数据</div>'}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">学生评估明细</div></div>
+      <div class="card-body" style="padding:0">
+        <table class="assess-table">
+          <thead><tr><th>学生</th><th>概念</th><th>推理</th><th>参与</th><th>对齐</th><th>总分</th><th>评级</th></tr></thead>
+          <tbody>
+            ${students.map(s => `
+              <tr>
+                <td>${s.name}</td>
+                <td>${(s.conceptual_clarity*100).toFixed(0)}%</td>
+                <td>${(s.reasoning_depth*100).toFixed(0)}%</td>
+                <td>${(s.engagement_quality*100).toFixed(0)}%</td>
+                <td>${(s.pedagogical_alignment*100).toFixed(0)}%</td>
+                <td>${(s.total*100).toFixed(0)}%</td>
+                <td><span class="grade-tag grade-${s.grade}">${s.grade}</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function bindAssessment() {}
+
+async function renderCourseware() {
+  let cws = [];
+  try { cws = await api('/api/v1/plugins/ddw-training/coursewares'); } catch (e) {}
+  return `
+    <div style="display:flex;align-items:center;margin-bottom:16px">
+      <h2 style="font-size:18px;color:#333">课件库（${cws.length}）</h2>
+      <button class="btn primary" style="margin-left:auto" id="btnUpload">+ 上传 PDF/教材</button>
+    </div>
+    <div class="cw-grid">
+      ${cws.map(c => `
+        <div class="cw-card">
+          <span class="cw-type">${c.type}</span>
+          <div class="cw-title">${c.title}</div>
+          <div class="cw-desc">${c.description || '-'}</div>
+          <div style="margin-top:10px"><a class="btn sm" href="#/learn/${c.course_id}">用于课程</a></div>
+        </div>
+      `).join('') || '<div class="empty">课件库为空</div>'}
+    </div>
+  `;
+}
+
+function bindCourseware() {
+  if ($('#btnUpload')) $('#btnUpload').addEventListener('click', () => toast('PDF 上传向导：暂未开放'));
+}
+
+function bindPage(name) {
+  if (name === 'courses') bindCourses();
+  else if (name === 'learn') bindLearn();
+  else if (name === 'assessment') bindAssessment();
+  else if (name === 'courseware') bindCourseware();
+}
+
+route();
+</script>
+</body>
+</html>

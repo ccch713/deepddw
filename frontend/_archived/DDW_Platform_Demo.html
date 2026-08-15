@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DDW AI Hub · 平台管理后台 · 演示</title>
+<style>
+/* ============================================================
+   DDW AI Hub Platform Demo — 设计系统
+   ============================================================ */
+:root {
+  --bg: #f8f9fa; --bg-alt: #ffffff; --bg-dark: #1a1a2e; --bg-dark-2: #232347;
+  --text: #1a1a2e; --text-muted: #6c757d; --text-inv: #ffffff;
+  --accent: #e8b86d; --accent-dk: #c89548;
+  --success: #28a745; --danger: #dc3545; --warn: #ffc107; --info: #17a2b8;
+  --border: #e0e3e8; --radius: 10px; --radius-sm: 6px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.06); --shadow: 0 4px 12px rgba(26,26,46,.08);
+  --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "SF Mono", Menlo, Monaco, Consolas, monospace;
+  --sidebar-w: 240px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.6; height: 100%; overflow: hidden; }
+a { color: var(--accent-dk); text-decoration: none; }
+
+/* Demo Banner */
+.demo-banner {
+  background: linear-gradient(90deg, #e8b86d 0%, #c89548 100%);
+  color: #1a1a2e; text-align: center; padding: 8px 16px; font-size: 13px; font-weight: 600;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+}
+.demo-banner span { opacity: .7; font-weight: 400; margin-left: 8px; }
+
+/* Top Nav */
+.top-nav {
+  position: fixed; top: 36px; left: 0; right: 0; z-index: 100;
+  background: var(--bg-dark); color: var(--text-inv);
+  padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid rgba(232,184,109,.2);
+}
+.top-nav .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+.top-nav .logo-icon {
+  width: 32px; height: 32px; border-radius: 8px; background: var(--accent);
+  display: grid; place-items: center; color: var(--bg-dark); font-weight: 800; font-size: 16px;
+}
+.top-nav .nav-links { display: flex; gap: 24px; }
+.top-nav .nav-links a { color: rgba(255,255,255,.75); font-size: 14px; transition: color .2s; }
+.top-nav .nav-links a:hover, .top-nav .nav-links a.active { color: var(--accent); }
+.top-nav .nav-right { display: flex; align-items: center; gap: 16px; }
+.top-nav .nav-right .avatar {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--accent);
+  display: grid; place-items: center; color: var(--bg-dark); font-size: 13px; font-weight: 700;
+}
+
+/* Layout */
+.layout { display: flex; height: calc(100vh - 92px); margin-top: 92px; }
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-w); min-width: var(--sidebar-w);
+  background: var(--bg-dark); color: var(--text-inv); padding: 20px 0; overflow-y: auto;
+}
+.sidebar h4 {
+  padding: 0 20px; font-size: 11px; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--accent); margin: 18px 0 6px; font-weight: 600;
+}
+.sidebar h4:first-child { margin-top: 0; }
+.sidebar a {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 20px; color: rgba(255,255,255,.7); font-size: 14px;
+  border-left: 3px solid transparent; transition: all .15s; cursor: pointer;
+}
+.sidebar a:hover { background: rgba(255,255,255,.05); color: #fff; }
+.sidebar a.active { background: rgba(255,255,255,.05); color: var(--accent); border-left-color: var(--accent); }
+.sidebar .icon { width: 20px; text-align: center; font-size: 16px; }
+
+/* Main Content */
+.main { flex: 1; overflow-y: auto; padding: 28px 32px; }
+.page { display: none; }
+.page.active { display: block; animation: fadeIn .2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Page Header */
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.page-header h2 { font-size: 22px; font-weight: 700; }
+.page-header .subtitle { color: var(--text-muted); font-size: 14px; margin-top: 2px; }
+
+/* Stat Cards */
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 28px; }
+.stat-card {
+  background: var(--bg-alt); padding: 22px; border-radius: var(--radius);
+  box-shadow: var(--shadow-sm); border-top: 3px solid var(--accent); transition: transform .15s;
+}
+.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.stat-card .label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+.stat-card .value { font-size: 30px; font-weight: 800; color: var(--bg-dark); margin-top: 6px; }
+.stat-card .delta { font-size: 12px; color: var(--success); margin-top: 4px; }
+.stat-card .delta.warn { color: var(--warn); }
+
+/* Cards */
+.card {
+  background: var(--bg-alt); border-radius: var(--radius); padding: 24px;
+  box-shadow: var(--shadow-sm); transition: transform .15s, box-shadow .15s;
+}
+.card:hover { box-shadow: var(--shadow); }
+.card h3 { font-size: 16px; font-weight: 600; margin-bottom: 14px; color: var(--bg-dark); }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 24px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 24px; }
+
+/* Badges */
+.badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.badge-on { background: rgba(40,167,69,.12); color: var(--success); }
+.badge-off { background: rgba(108,117,125,.12); color: var(--text-muted); }
+.badge-warn { background: rgba(255,193,7,.15); color: #b48400; }
+.badge-gold { background: rgba(232,184,109,.15); color: var(--accent-dk); }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: var(--radius-sm); font-weight: 600; font-size: 13px; border: 0; cursor: pointer; transition: all .15s; }
+.btn-primary { background: var(--accent); color: var(--bg-dark); }
+.btn-primary:hover { background: var(--accent-dk); color: #fff; }
+.btn-outline { background: transparent; color: var(--bg-dark); border: 1.5px solid var(--border); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent-dk); }
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+.btn-success { background: var(--success); color: #fff; }
+.btn-danger { background: var(--danger); color: #fff; }
+
+/* Activity Feed */
+.activity-list { list-style: none; }
+.activity-item {
+  display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.activity-item:last-child { border-bottom: none; }
+.activity-icon {
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.activity-icon.green { background: rgba(40,167,69,.1); }
+.activity-icon.blue { background: rgba(23,162,184,.1); }
+.activity-icon.gold { background: rgba(232,184,109,.1); }
+.activity-icon.purple { background: rgba(111,66,193,.1); }
+.activity-text { flex: 1; }
+.activity-text .main-text { color: var(--text); }
+.activity-text .sub-text { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+.activity-time { color: var(--text-muted); font-size: 12px; white-space: nowrap; }
+
+/* Health Status */
+.health-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.health-item:last-child { border-bottom: none; }
+.health-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; display: inline-block; }
+.health-dot.ok { background: var(--success); }
+.health-dot.warn { background: var(--warn); }
+.health-dot.off { background: var(--text-muted); }
+
+/* Plugin Grid */
+.plugin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.plugin-card {
+  background: var(--bg-alt); border-radius: var(--radius); box-shadow: var(--shadow-sm);
+  overflow: hidden; display: flex; flex-direction: column; transition: all .15s; cursor: pointer;
+}
+.plugin-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.plugin-thumb {
+  height: 100px; display: grid; place-items: center; font-size: 36px; position: relative;
+}
+.plugin-thumb.core { background: linear-gradient(135deg, #1a1a2e, #2d2d52); }
+.plugin-thumb.cs { background: linear-gradient(135deg, #0c3547, #1a4a5e); }
+.plugin-thumb.ops { background: linear-gradient(135deg, #2d2d3a, #3a3a52); }
+.plugin-thumb.data { background: linear-gradient(135deg, #2a1a4a, #3d2a6a); }
+.plugin-thumb.esg { background: linear-gradient(135deg, #3a2a0a, #5a4a1a); }
+.plugin-thumb.industry { background: linear-gradient(135deg, #4a2a0a, #6a3a1a); }
+.plugin-cat-tag {
+  position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,.5); color: var(--accent);
+  padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 600;
+}
+.plugin-body { padding: 16px; flex: 1; display: flex; flex-direction: column; }
+.plugin-body h4 { font-size: 15px; font-weight: 600; margin-bottom: 6px; color: var(--bg-dark); }
+.plugin-body .desc { font-size: 12px; color: var(--text-muted); flex: 1; line-height: 1.5; margin-bottom: 12px; }
+.plugin-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-muted); }
+
+/* Search & Filter */
+.toolbar { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; }
+.toolbar input[type=search] {
+  flex: 1; min-width: 200px; padding: 10px 14px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 14px; background: var(--bg-alt); outline: none;
+}
+.toolbar input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232,184,109,.15); }
+.chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.chip {
+  padding: 6px 14px; border-radius: 999px; background: var(--bg-alt); border: 1px solid var(--border);
+  font-size: 13px; cursor: pointer; transition: all .15s;
+}
+.chip:hover, .chip.active { background: var(--bg-dark); color: var(--accent); border-color: var(--bg-dark); }
+
+/* Integration Cards */
+.integ-card {
+  background: var(--bg-alt); border-radius: var(--radius); padding: 24px;
+  box-shadow: var(--shadow-sm); border-left: 4px solid var(--text-muted); transition: all .2s;
+}
+.integ-card.connected { border-left-color: var(--success); }
+.integ-card.warning { border-left-color: var(--warn); }
+.integ-card.disconnected { border-left-color: var(--text-muted); }
+.integ-card:hover { box-shadow: var(--shadow); }
+.integ-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.integ-logo { font-size: 28px; }
+.integ-name { font-size: 17px; font-weight: 600; color: var(--bg-dark); margin-bottom: 4px; }
+.integ-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+.integ-stats { display: flex; gap: 20px; font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+.integ-stats strong { color: var(--text); }
+.integ-actions { display: flex; gap: 8px; }
+
+/* Chat */
+.chat-layout { display: flex; height: calc(100vh - 148px); gap: 0; }
+.chat-sidebar {
+  width: 260px; min-width: 260px; background: var(--bg-alt); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+}
+.chat-sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+.chat-sidebar-header h4 { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+.chat-plugin-list { flex: 1; overflow-y: auto; padding: 8px; }
+.chat-plugin-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border-radius: var(--radius-sm); cursor: pointer; transition: background .15s; font-size: 13px;
+}
+.chat-plugin-item:hover { background: var(--bg); }
+.chat-plugin-item.active { background: rgba(232,184,109,.1); color: var(--accent-dk); font-weight: 600; }
+.chat-plugin-item .emoji { font-size: 20px; }
+
+.chat-main { flex: 1; display: flex; flex-direction: column; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 20px 24px; }
+.chat-msg { display: flex; gap: 12px; margin-bottom: 20px; max-width: 80%; }
+.chat-msg.user { margin-left: auto; flex-direction: row-reverse; }
+.chat-msg .avatar {
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 14px; font-weight: 700; flex-shrink: 0;
+}
+.chat-msg.ai .avatar { background: var(--accent); color: var(--bg-dark); }
+.chat-msg.user .avatar { background: var(--bg-dark); color: var(--accent); }
+.chat-msg .bubble {
+  padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.6;
+}
+.chat-msg.ai .bubble { background: var(--bg-alt); border: 1px solid var(--border); border-top-left-radius: 4px; }
+.chat-msg.user .bubble { background: var(--bg-dark); color: var(--text-inv); border-top-right-radius: 4px; }
+.chat-input-bar {
+  padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 12px;
+  background: var(--bg-alt);
+}
+.chat-input-bar input {
+  flex: 1; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 14px; outline: none; font-family: var(--font);
+}
+.chat-input-bar input:focus { border-color: var(--accent); }
+.chat-input-bar button {
+  padding: 12px 24px; background: var(--accent); color: var(--bg-dark);
+  border: none; border-radius: var(--radius); font-weight: 600; cursor: pointer; font-size: 14px;
+}
+
+/* Settings */
+.settings-section { margin-bottom: 32px; }
+.settings-section h3 { font-size: 17px; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 14px; font-family: var(--font); background: var(--bg-alt);
+}
+.form-group input:focus, .form-group select:focus { outline: 0; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232,184,109,.15); }
+.form-help { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* Toggle Switch */
+.toggle { position: relative; width: 44px; height: 24px; display: inline-block; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle .slider {
+  position: absolute; inset: 0; background: var(--border); border-radius: 24px; cursor: pointer; transition: .2s;
+}
+.toggle .slider::before {
+  content: ""; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px;
+  background: white; border-radius: 50%; transition: .2s;
+}
+.toggle input:checked + .slider { background: var(--accent); }
+.toggle input:checked + .slider::before { transform: translateX(20px); }
+
+/* Table */
+.table { width: 100%; border-collapse: collapse; background: var(--bg-alt); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm); }
+.table th, .table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); font-size: 14px; }
+.table th { background: #f3f4f8; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--text-muted); }
+.table tr:last-child td { border-bottom: 0; }
+
+/* Responsive */
+@media (max-width: 960px) {
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .sidebar { width: 60px; min-width: 60px; }
+  .sidebar h4 { display: none; }
+  .sidebar a span:not(.icon) { display: none; }
+  .sidebar a { justify-content: center; padding: 12px; }
+  .plugin-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+  .chat-sidebar { width: 60px; min-width: 60px; }
+  .chat-plugin-item span:not(.emoji) { display: none; }
+}
+@media (max-width: 640px) {
+  .stat-grid { grid-template-columns: 1fr; }
+  .plugin-grid { grid-template-columns: 1fr; }
+  .main { padding: 16px; }
+  .top-nav .nav-links { display: none; }
+  .chat-layout { flex-direction: column; }
+  .chat-sidebar { width: 100%; min-width: 100%; height: 60px; flex-direction: row; overflow-x: auto; }
+  .chat-plugin-list { display: flex; flex-direction: row; }
+  .chat-msg { max-width: 95%; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 3px; }
+</style>
+    <link rel="stylesheet" href="/css/ddw-themes.css">
+    <script src="/js/ddw-theme-switcher.js"></script>
+  </head>
+<body>
+
+<!-- Demo Banner -->
+<div class="demo-banner">
+  🟡 演示模式 · 数据为模拟数据 · 实际系统需部署 DDW AI Hub
+  <span>本演示不构成任何商业承诺</span>
+</div>
+
+<!-- Top Navigation -->
+<nav class="top-nav">
+  <div class="logo">
+    <div class="logo-icon">D</div>
+    <span>DDW <span style="font-weight:400;opacity:.7;">AI Hub</span></span>
+  </div>
+  <div class="nav-links">
+    <a href="#">首页</a>
+    <a href="#">插件市场</a>
+    <a href="#">文档</a>
+    <a href="#">GitHub</a>
+    <a href="#" class="active">管理后台</a>
+  </div>
+  <div class="nav-right">
+    <div class="avatar">管</div>
+  </div>
+</nav>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <h4>主导航</h4>
+    <a class="active" data-page="dashboard"><span class="icon">📊</span><span>仪表盘</span></a>
+    <a data-page="plugins"><span class="icon">🧩</span><span>插件管理</span></a>
+    <a data-page="integrations"><span class="icon">🔗</span><span>企业集成</span></a>
+    <a data-page="chat"><span class="icon">💬</span><span>AI 对话</span></a>
+    <a data-page="users"><span class="icon">👥</span><span>用户管理</span></a>
+    <h4>系统</h4>
+    <a data-page="llm"><span class="icon">🤖</span><span>LLM 配置</span></a>
+    <a data-page="settings"><span class="icon">⚙️</span><span>系统设置</span></a>
+    <a><span class="icon">📋</span><span>审计日志</span></a>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+
+    <!-- ===== Dashboard ===== -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div>
+          <h2>仪表盘</h2>
+          <div class="subtitle">DDW AI Hub 平台运行概览 · [Mock] 演示数据</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline btn-sm">📥 导出报告</button>
+          <button class="btn btn-primary btn-sm">🔄 刷新</button>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="label">已安装插件</div>
+          <div class="value">12</div>
+          <div class="delta">↑ 3 本月新增</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">活跃用户</div>
+          <div class="value">847</div>
+          <div class="delta">↑ 12.3% 较上周</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">今日 API 调用</div>
+          <div class="value">2,341</div>
+          <div class="delta">↑ 8.7% 较昨日</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">系统运行时间</div>
+          <div class="value">99.9%</div>
+          <div class="delta">最近 30 天</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Recent Activity -->
+        <div class="card">
+          <h3>📋 近期活动</h3>
+          <ul class="activity-list">
+            <li class="activity-item">
+              <div class="activity-icon green">✅</div>
+              <div class="activity-text">
+                <div class="main-text"><strong>飞书适配器</strong> 连接成功</div>
+                <div class="sub-text">组织架构已同步 · 236 名员工</div>
+              </div>
+              <div class="activity-time">5 分钟前</div>
+            </li>
+            <li class="activity-item">
+              <div class="activity-icon gold">🧩</div>
+              <div class="activity-text">
+                <div class="main-text"><strong>ESG 评估引擎</strong> 已启用</div>
+                <div class="sub-text">由管理员 激活 · v2.1.0</div>
+              </div>
+              <div class="activity-time">18 分钟前</div>
+            </li>
+            <li class="activity-item">
+              <div class="activity-icon blue">💬</div>
+              <div class="activity-text">
+                <div class="main-text"><strong>智能客服</strong> 处理 47 条会话</div>
+                <div class="sub-text">解决率 89% · 平均响应 1.2s</div>
+              </div>
+              <div class="activity-time">1 小时前</div>
+            </li>
+            <li class="activity-item">
+              <div class="activity-icon purple">📊</div>
+              <div class="activity-text">
+                <div class="main-text"><strong>Token 额度</strong> 月度报告生成</div>
+                <div class="sub-text">本月消耗 ¥128.50 / 预算 ¥500</div>
+              </div>
+              <div class="activity-time">3 小时前</div>
+            </li>
+            <li class="activity-item">
+              <div class="activity-icon green">🔄</div>
+              <div class="activity-text">
+                <div class="main-text"><strong>系统</strong> 自动备份完成</div>
+                <div class="sub-text">PostgreSQL · 2.3GB · 上传至 NAS</div>
+              </div>
+              <div class="activity-time">6 小时前</div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- System Health -->
+        <div class="card">
+          <h3>🏥 系统健康</h3>
+          <div class="health-item"><span><span class="health-dot ok"></span>DDW Core 引擎</span><span class="badge badge-on">运行中</span></div>
+          <div class="health-item"><span><span class="health-dot ok"></span>PostgreSQL 数据库</span><span class="badge badge-on">连接正常</span></div>
+          <div class="health-item"><span><span class="health-dot ok"></span>Redis 缓存</span><span class="badge badge-on">命中率 94%</span></div>
+          <div class="health-item"><span><span class="health-dot ok"></span>LLM Gateway</span><span class="badge badge-on">3 Provider 在线</span></div>
+          <div class="health-item"><span><span class="health-dot warn"></span>飞书 Webhook</span><span class="badge badge-warn">延迟 2.1s</span></div>
+          <div class="health-item"><span><span class="health-dot ok"></span>钉钉 Stream</span><span class="badge badge-on">已连接</span></div>
+          <div class="health-item"><span><span class="health-dot off"></span>企微机器人</span><span class="badge badge-off">未配置</span></div>
+          <div class="health-item"><span><span class="health-dot off"></span>泛微 OA</span><span class="badge badge-off">未配置</span></div>
+
+          <h3 style="margin-top:24px;">💰 LLM 用量（本月）</h3>
+          <div style="font-size:14px;line-height:2;">
+            <div style="display:flex;justify-content:space-between;"><span>MiniMax M3</span><span style="color:var(--success);">¥45.20 / ¥200</span></div>
+            <div style="background:var(--border);border-radius:4px;height:6px;margin-bottom:8px;"><div style="background:var(--accent);width:22.6%;height:100%;border-radius:4px;"></div></div>
+            <div style="display:flex;justify-content:space-between;"><span>DeepSeek V4 Pro</span><span style="color:var(--success);">¥62.30 / ¥200</span></div>
+            <div style="background:var(--border);border-radius:4px;height:6px;margin-bottom:8px;"><div style="background:var(--info);width:31.1%;height:100%;border-radius:4px;"></div></div>
+            <div style="display:flex;justify-content:space-between;"><span>Ollama (本地)</span><span style="color:var(--text-muted);">¥0.00 / 免费</span></div>
+            <div style="background:var(--border);border-radius:4px;height:6px;"><div style="background:var(--success);width:15%;height:100%;border-radius:4px;"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Plugins ===== -->
+    <div class="page" id="page-plugins">
+      <div class="page-header">
+        <div>
+          <h2>插件管理</h2>
+          <div class="subtitle">管理已安装插件 · 启用 / 禁用 / 配置</div>
+        </div>
+        <button class="btn btn-primary btn-sm">🛒 前往市场</button>
+      </div>
+
+      <div class="toolbar">
+        <input type="search" placeholder="搜索插件名称、功能..." id="pluginSearch" oninput="filterPlugins()">
+      </div>
+      <div class="chip-row" id="pluginChips">
+        <span class="chip active" onclick="filterPluginCat('all',this)">全部</span>
+        <span class="chip" onclick="filterPluginCat('core',this)">核心平台</span>
+        <span class="chip" onclick="filterPluginCat('cs',this)">客服沟通</span>
+        <span class="chip" onclick="filterPluginCat('ops',this)">运维质量</span>
+        <span class="chip" onclick="filterPluginCat('data',this)">数据知识</span>
+        <span class="chip" onclick="filterPluginCat('esg',this)">ESG 合规</span>
+        <span class="chip" onclick="filterPluginCat('industry',this)">行业方案</span>
+      </div>
+      <div class="plugin-grid" id="pluginGrid"></div>
+    </div>
+
+    <!-- ===== Integrations ===== -->
+    <div class="page" id="page-integrations">
+      <div class="page-header">
+        <div>
+          <h2>企业集成</h2>
+          <div class="subtitle">连接飞书 / 钉钉 / 企业微信 / 泛微OA · 让 AI 融入现有工作流</div>
+        </div>
+        <button class="btn btn-primary btn-sm">+ 添加集成</button>
+      </div>
+
+      <!-- Architecture Overview -->
+      <div class="card" style="margin-bottom:24px;background:var(--bg-dark);color:var(--text-inv);">
+        <h3 style="color:var(--accent);">🏗️ 集成架构</h3>
+        <div style="display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;padding:20px 0;font-size:14px;">
+          <div style="text-align:center;padding:12px 16px;background:rgba(232,184,109,.15);border-radius:8px;border:1px solid rgba(232,184,109,.3);">
+            <div style="font-size:24px;">💬</div>
+            <div style="font-size:12px;margin-top:4px;">企业 IM</div>
+            <div style="font-size:11px;color:var(--accent);">飞书 / 钉钉 / 企微</div>
+          </div>
+          <div style="color:var(--accent);font-size:20px;">→</div>
+          <div style="text-align:center;padding:12px 16px;background:rgba(232,184,109,.15);border-radius:8px;border:1px solid rgba(232,184,109,.3);">
+            <div style="font-size:24px;">🔌</div>
+            <div style="font-size:12px;margin-top:4px;">适配器层</div>
+            <div style="font-size:11px;color:var(--accent);">OAuth / Webhook</div>
+          </div>
+          <div style="color:var(--accent);font-size:20px;">→</div>
+          <div style="text-align:center;padding:16px 20px;background:rgba(232,184,109,.25);border-radius:8px;border:2px solid var(--accent);">
+            <div style="font-size:28px;">⚡</div>
+            <div style="font-size:13px;margin-top:4px;font-weight:600;">DDW AI Hub</div>
+            <div style="font-size:11px;color:var(--accent);">核心引擎 + 插件</div>
+          </div>
+          <div style="color:var(--accent);font-size:20px;">→</div>
+          <div style="text-align:center;padding:12px 16px;background:rgba(232,184,109,.15);border-radius:8px;border:1px solid rgba(232,184,109,.3);">
+            <div style="font-size:24px;">🏢</div>
+            <div style="font-size:12px;margin-top:4px;">OA / ERP</div>
+            <div style="font-size:11px;color:var(--accent);">泛微 / 用友 / 金蝶</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- 飞书 -->
+        <div class="integ-card connected">
+          <div class="integ-header">
+            <div class="integ-logo">🔵</div>
+            <span class="badge badge-on">已连接</span>
+          </div>
+          <div class="integ-name">飞书 Feishu</div>
+          <div class="integ-desc">通过飞书机器人和工作台网页应用集成 DDW AI 能力。支持消息卡片、多轮对话、知识问答。</div>
+          <div class="integ-stats">
+            <span>同步用户 <strong>236</strong></span>
+            <span>今日消息 <strong>1,247</strong></span>
+            <span>响应 <strong>0.8s</strong></span>
+          </div>
+          <div class="integ-actions">
+            <button class="btn btn-outline btn-sm">⚙️ 配置</button>
+            <button class="btn btn-outline btn-sm">📊 详情</button>
+            <button class="btn btn-sm" style="background:var(--danger);color:#fff;">断开</button>
+          </div>
+        </div>
+
+        <!-- 钉钉 -->
+        <div class="integ-card connected">
+          <div class="integ-header">
+            <div class="integ-logo">🔷</div>
+            <span class="badge badge-on">已连接</span>
+          </div>
+          <div class="integ-name">钉钉 DingTalk</div>
+          <div class="integ-desc">通过钉钉 Stream 模式（WebSocket）实现实时消息交互。支持工作台微应用、审批流AI辅助。</div>
+          <div class="integ-stats">
+            <span>同步用户 <strong>189</strong></span>
+            <span>今日消息 <strong>892</strong></span>
+            <span>响应 <strong>1.1s</strong></span>
+          </div>
+          <div class="integ-actions">
+            <button class="btn btn-outline btn-sm">⚙️ 配置</button>
+            <button class="btn btn-outline btn-sm">📊 详情</button>
+            <button class="btn btn-sm" style="background:var(--danger);color:#fff;">断开</button>
+          </div>
+        </div>
+
+        <!-- 企业微信 -->
+        <div class="integ-card disconnected">
+          <div class="integ-header">
+            <div class="integ-logo">🟢</div>
+            <span class="badge badge-off">未连接</span>
+          </div>
+          <div class="integ-name">企业微信 WeCom</div>
+          <div class="integ-desc">通过企微机器人 Webhook 和工作台网页应用接入。支持消息回调、通讯录同步。</div>
+          <div class="integ-stats">
+            <span>同步用户 <strong>—</strong></span>
+            <span>今日消息 <strong>—</strong></span>
+            <span>响应 <strong>—</strong></span>
+          </div>
+          <div class="integ-actions">
+            <button class="btn btn-primary btn-sm">🔗 开始连接</button>
+            <button class="btn btn-outline btn-sm">📖 文档</button>
+          </div>
+        </div>
+
+        <!-- 泛微OA -->
+        <div class="integ-card disconnected">
+          <div class="integ-header">
+            <div class="integ-logo">🟠</div>
+            <span class="badge badge-off">未连接</span>
+          </div>
+          <div class="integ-name">泛微 OA Weaver E-Cology</div>
+          <div class="integ-desc">通过 iframe 嵌入 DDW 页面到 OA 门户。支持 SSO 单点登录、流程审批 AI 辅助、文档知识检索。</div>
+          <div class="integ-stats">
+            <span>同步用户 <strong>—</strong></span>
+            <span>今日消息 <strong>—</strong></span>
+            <span>响应 <strong>—</strong></span>
+          </div>
+          <div class="integ-actions">
+            <button class="btn btn-primary btn-sm">🔗 开始连接</button>
+            <button class="btn btn-outline btn-sm">📖 文档</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Integration Data Flow -->
+      <div class="card" style="margin-top:8px;">
+        <h3>📈 集成数据流（本月）</h3>
+        <table class="table" style="margin-top:12px;">
+          <thead><tr><th>平台</th><th>消息总量</th><th>AI 处理</th><th>解决率</th><th>平均延迟</th><th>状态</th></tr></thead>
+          <tbody>
+            <tr><td>🔵 飞书</td><td>32,450</td><td>28,100</td><td>89.2%</td><td>0.8s</td><td><span class="badge badge-on">正常</span></td></tr>
+            <tr><td>🔷 钉钉</td><td>18,920</td><td>16,340</td><td>86.5%</td><td>1.1s</td><td><span class="badge badge-on">正常</span></td></tr>
+            <tr><td>🟢 企微</td><td>—</td><td>—</td><td>—</td><td>—</td><td><span class="badge badge-off">未连接</span></td></tr>
+            <tr><td>🟠 泛微OA</td><td>—</td><td>—</td><td>—</td><td>—</td><td><span class="badge badge-off">未连接</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== Chat ===== -->
+    <div class="page" id="page-chat">
+      <div class="chat-layout">
+        <!-- Plugin Selector -->
+        <div class="chat-sidebar">
+          <div class="chat-sidebar-header">
+            <h4>选择 AI 助手</h4>
+          </div>
+          <div class="chat-plugin-list">
+            <div class="chat-plugin-item active"><span class="emoji">💬</span><span>智能客服</span></div>
+            <div class="chat-plugin-item"><span class="emoji">🔍</span><span>知识问答</span></div>
+            <div class="chat-plugin-item"><span class="emoji">📧</span><span>邮件助手</span></div>
+            <div class="chat-plugin-item"><span class="emoji">📝</span><span>ESG 评估</span></div>
+            <div class="chat-plugin-item"><span class="emoji">📋</span><span>SOP 编排</span></div>
+            <div class="chat-plugin-item"><span class="emoji">🎭</span><span>人设引擎</span></div>
+            <div class="chat-plugin-item"><span class="emoji">🏭</span><span>工业数据</span></div>
+          </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-main">
+          <div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--bg-alt);">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:20px;">💬</span>
+              <div>
+                <div style="font-size:14px;font-weight:600;">智能客服</div>
+                <div style="font-size:11px;color:var(--text-muted);">Powered by DDW AI Hub · MiniMax M3</div>
+              </div>
+            </div>
+            <span class="badge badge-on">在线</span>
+          </div>
+
+          <div class="chat-messages">
+            <div class="chat-msg ai">
+              <div class="avatar">AI</div>
+              <div class="bubble">
+                👋 你好！我是 DDW 智能客服助手。我可以帮你：<br><br>
+                🔹 产品功能咨询<br>
+                🔹 技术问题排查<br>
+                🔹 插件安装指导<br>
+                🔹 账单与授权查询<br><br>
+                请问有什么可以帮你的？
+              </div>
+            </div>
+            <div class="chat-msg user">
+              <div class="avatar">用</div>
+              <div class="bubble">我想了解一下 ESG 评估插件怎么用，我们是光通讯模块出口企业</div>
+            </div>
+            <div class="chat-msg ai">
+              <div class="avatar">AI</div>
+              <div class="bubble">
+                很好！DDW 的 <strong>ESG 评估引擎</strong> 非常适合光通讯模块出口企业。让我为你介绍一下：<br><br>
+                <strong>📋 核心功能：</strong><br>
+                • 100+ 行业标准题库（覆盖 EcoVadis / CDP / SBTi）<br>
+                • 自动评分 + 差距分析<br>
+                • 合规报告自动生成（GRI / SASB / TCFD 框架）<br>
+                • AI 驱动的改进建议<br><br>
+                <strong>🚀 快速开始：</strong><br>
+                <code style="background:var(--bg);padding:2px 6px;border-radius:4px;font-size:12px;">ddw plugin install ddw-esg-assessment</code><br><br>
+                要我帮你启动一个评估流程吗？
+              </div>
+            </div>
+            <div class="chat-msg user">
+              <div class="avatar">用</div>
+              <div class="bubble">好的，请帮我启动评估</div>
+            </div>
+            <div class="chat-msg ai">
+              <div class="avatar">AI</div>
+              <div class="bubble">
+                ⏳ 正在为你初始化 ESG 评估流程...<br><br>
+                <div style="background:var(--bg);padding:12px;border-radius:6px;margin:8px 0;font-size:13px;">
+                  <div style="margin-bottom:6px;">✅ 步骤 1/5 · 企业基本信息 — 已完成</div>
+                  <div style="margin-bottom:6px;">✅ 步骤 2/5 · 环境数据 — 已完成</div>
+                  <div style="margin-bottom:6px;color:var(--accent);font-weight:600;">▶️ 步骤 3/5 · 社会责任 — 进行中</div>
+                  <div style="margin-bottom:6px;color:var(--text-muted);">⬜ 步骤 4/5 · 公司治理</div>
+                  <div style="color:var(--text-muted);">⬜ 步骤 5/5 · 报告生成</div>
+                </div>
+                <br>当前评分：<strong style="color:var(--accent);">72/100</strong>（Silver 级别）<br>
+                继续填写社会责任部分的问题，我会实时给出评分和改进建议。
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-input-bar">
+            <input type="text" placeholder="输入消息... (演示模式)" disabled>
+            <button disabled>发送</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Users ===== -->
+    <div class="page" id="page-users">
+      <div class="page-header">
+        <div>
+          <h2>用户管理</h2>
+          <div class="subtitle">管理平台用户 · 角色分配 · 白名单</div>
+        </div>
+        <button class="btn btn-primary btn-sm">+ 添加用户</button>
+      </div>
+      <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="stat-card"><div class="label">总用户数</div><div class="value">425</div><div class="delta">3 个租户</div></div>
+        <div class="stat-card"><div class="label">活跃用户</div><div class="value">312</div><div class="delta">73.4% 活跃率</div></div>
+        <div class="stat-card"><div class="label">管理员</div><div class="value">5</div><div class="delta">RBAC 权限</div></div>
+      </div>
+      <table class="table">
+        <thead><tr><th>用户</th><th>部门</th><th>角色</th><th>来源</th><th>最后活跃</th><th>状态</th></tr></thead>
+        <tbody>
+          <tr><td><strong>张工</strong><br><span style="font-size:11px;color:var(--text-muted);">zhang@company.com</span></td><td>研发部</td><td><span class="badge badge-gold">管理员</span></td><td>🔵 飞书</td><td>刚刚</td><td><span class="badge badge-on">在线</span></td></tr>
+          <tr><td><strong>李经理</strong><br><span style="font-size:11px;color:var(--text-muted);">li@company.com</span></td><td>市场部</td><td><span class="badge" style="background:rgba(23,162,184,.1);color:var(--info);">普通用户</span></td><td>🔷 钉钉</td><td>10 分钟前</td><td><span class="badge badge-on">在线</span></td></tr>
+          <tr><td><strong>王主管</strong><br><span style="font-size:11px;color:var(--text-muted);">wang@company.com</span></td><td>质量部</td><td><span class="badge" style="background:rgba(23,162,184,.1);color:var(--info);">普通用户</span></td><td>🔵 飞书</td><td>2 小时前</td><td><span class="badge badge-off">离线</span></td></tr>
+          <tr><td><strong>赵总监</strong><br><span style="font-size:11px;color:var(--text-muted);">zhao@company.com</span></td><td>ESG 委员会</td><td><span class="badge badge-gold">管理员</span></td><td>🔷 钉钉</td><td>1 小时前</td><td><span class="badge badge-on">在线</span></td></tr>
+          <tr><td><strong>刘工</strong><br><span style="font-size:11px;color:var(--text-muted);">liu@company.com</span></td><td>IT 部</td><td><span class="badge" style="background:rgba(111,66,193,.1);color:#6f42c1;">开发者</span></td><td>🌐 Web</td><td>30 分钟前</td><td><span class="badge badge-on">在线</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ===== LLM Config ===== -->
+    <div class="page" id="page-llm">
+      <div class="page-header">
+        <div>
+          <h2>LLM 配置</h2>
+          <div class="subtitle">管理 AI 模型提供商 · 配额 · 降级策略</div>
+        </div>
+      </div>
+
+      <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="stat-card" style="border-top-color:var(--success);"><div class="label">在线 Provider</div><div class="value">3</div><div class="delta">1 本地 + 2 云端</div></div>
+        <div class="stat-card" style="border-top-color:var(--info);"><div class="label">本月 Token 消耗</div><div class="value">4.2M</div><div class="delta">¥107.50 总成本</div></div>
+        <div class="stat-card" style="border-top-color:var(--accent);"><div class="label">平均响应时间</div><div class="value">1.3s</div><div class="delta">P95: 2.8s</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:24px;">
+        <h3>🤖 Provider 列表</h3>
+        <table class="table" style="margin-top:12px;">
+          <thead><tr><th>Provider</th><th>模型</th><th>角色</th><th>月配额</th><th>已用</th><th>延迟</th><th>状态</th></tr></thead>
+          <tbody>
+            <tr><td><strong>MiniMax</strong></td><td>M3</td><td><span class="badge badge-gold">主力</span></td><td>¥200</td><td>¥45.20 (22.6%)</td><td>0.6s</td><td><span class="badge badge-on">在线</span></td></tr>
+            <tr><td><strong>DeepSeek</strong></td><td>V4 Pro</td><td><span class="badge" style="background:rgba(23,162,184,.1);color:var(--info);">审计</span></td><td>¥200</td><td>¥62.30 (31.1%)</td><td>1.2s</td><td><span class="badge badge-on">在线</span></td></tr>
+            <tr><td><strong>Ollama</strong></td><td>ds4-flash-q4</td><td><span class="badge" style="background:rgba(108,117,125,.1);color:var(--text-muted);">兜底</span></td><td>免费</td><td>—</td><td>2.1s</td><td><span class="badge badge-on">在线</span></td></tr>
+            <tr><td><strong>MiMo</strong></td><td>V2.5 Pro</td><td><span class="badge" style="background:rgba(111,66,193,.1);color:#6f42c1;">代码</span></td><td>¥329</td><td>¥128.50 (39.1%)</td><td>0.8s</td><td><span class="badge badge-on">在线</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>⚡ 降级策略</h3>
+        <div style="padding:16px 0;font-size:14px;line-height:2;">
+          <div>1️⃣ <strong>主力层</strong>：MiniMax M3 → 日常对话、知识问答、邮件分类</div>
+          <div>2️⃣ <strong>审计层</strong>：DeepSeek V4 Pro → 复杂分析、代码审计、报告生成</div>
+          <div>3️⃣ <strong>代码层</strong>：MiMo V2.5 Pro → 代码生成、插件开发</div>
+          <div>4️⃣ <strong>本地层</strong>：Ollama ds4-flash → 断网兜底、低延迟场景</div>
+          <div style="margin-top:8px;color:var(--text-muted);font-size:13px;">降级触发条件：主力层 429 / 超时 5s / 配额耗尽 → 自动切换下一层</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Settings ===== -->
+    <div class="page" id="page-settings">
+      <div class="page-header">
+        <div>
+          <h2>系统设置</h2>
+          <div class="subtitle">平台配置 · 安全 · 备份</div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>🏢 租户信息</h3>
+        <div class="form-row">
+          <div class="form-group"><label>企业名称</label><input type="text" value="武汉锐光交互科技有限公司" disabled></div>
+          <div class="form-group"><label>租户 ID</label><input type="text" value="tenant_ddw_001" disabled style="font-family:var(--font-mono);"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>授权类型</label><input type="text" value="企业版 · 一次性授权" disabled></div>
+          <div class="form-group"><label>授权到期</label><input type="text" value="永久有效" disabled></div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>🔐 安全设置</h3>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);">
+          <div><div style="font-size:14px;font-weight:600;">双因素认证 (2FA)</div><div style="font-size:12px;color:var(--text-muted);">管理员登录需短信验证码</div></div>
+          <label class="toggle"><input type="checkbox" checked><span class="slider"></span></label>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);">
+          <div><div style="font-size:14px;font-weight:600;">IP 白名单</div><div style="font-size:12px;color:var(--text-muted);">仅允许指定 IP 访问管理后台</div></div>
+          <label class="toggle"><input type="checkbox"><span class="slider"></span></label>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);">
+          <div><div style="font-size:14px;font-weight:600;">审计日志</div><div style="font-size:12px;color:var(--text-muted);">记录所有关键操作</div></div>
+          <label class="toggle"><input type="checkbox" checked><span class="slider"></span></label>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;">
+          <div><div style="font-size:14px;font-weight:600;">API Key 轮换</div><div style="font-size:12px;color:var(--text-muted);">每 90 天自动更换 API Key</div></div>
+          <label class="toggle"><input type="checkbox" checked><span class="slider"></span></label>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>💾 备份与恢复</h3>
+        <div class="grid-3">
+          <div class="card" style="text-align:center;">
+            <div style="font-size:28px;margin-bottom:8px;">🔄</div>
+            <div style="font-weight:600;margin-bottom:4px;">自动备份</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">每日 03:00 · 保留 30 天</div>
+            <button class="btn btn-outline btn-sm">立即备份</button>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div style="font-size:28px;margin-bottom:8px;">📥</div>
+            <div style="font-weight:600;margin-bottom:4px;">导出数据</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">JSON / SQL 格式</div>
+            <button class="btn btn-outline btn-sm">导出</button>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div style="font-size:28px;margin-bottom:8px;">📤</div>
+            <div style="font-weight:600;margin-bottom:4px;">恢复数据</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">从备份文件恢复</div>
+            <button class="btn btn-outline btn-sm">选择文件</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ===== Page Navigation =====
+document.querySelectorAll('.sidebar a[data-page]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const page = a.dataset.page;
+    document.querySelectorAll('.sidebar a').forEach(x => x.classList.remove('active'));
+    a.classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const target = document.getElementById('page-' + page);
+    if (target) target.classList.add('active');
+  });
+});
+
+// ===== Plugin Data =====
+const PLUGINS = [
+  { name: "ddw-llm-gateway", icon: "🌐", title: "LLM 统一网关", cat: "core", desc: "51 种渠道适配 + 负载均衡 + 断路器 + 流式 SSE", endpoints: 18, tests: 42, status: "enabled" },
+  { name: "ddw-token-manager", icon: "💰", title: "Token 额度管理", cat: "core", desc: "预消费/后消费双模式 + K 系数校准反算", endpoints: 12, tests: 28, status: "enabled" },
+  { name: "ddw-smart-cs", icon: "💬", title: "智能客服", cat: "cs", desc: "多渠道 AI 客服 + Casbin RBAC + 知识库", endpoints: 12, tests: 18, status: "enabled" },
+  { name: "ddw-email-assistant", icon: "📧", title: "邮件助手", cat: "cs", desc: "IMAP/SMTP 多协议 + AI 分类 + 自动草稿", endpoints: 14, tests: 34, status: "enabled" },
+  { name: "ddw-adapter-registry", icon: "🔗", title: "适配器注册中心", cat: "cs", desc: "飞书/钉钉/企微身份适配器统一注册", endpoints: 6, tests: 6, status: "enabled" },
+  { name: "ddw-sop-engine", icon: "📋", title: "SOP 编排引擎", cat: "ops", desc: "DAG 标准作业流程 + 条件分支 + 并行执行", endpoints: 9, tests: 6, status: "disabled" },
+  { name: "ddw-persona-engine", icon: "🎭", title: "人设引擎", cat: "ops", desc: "AI 角色管理 + 人设模板 + 情感参数", endpoints: 9, tests: 6, status: "disabled" },
+  { name: "ddw-feedback-loop", icon: "🔄", title: "反馈闭环", cat: "ops", desc: "用户反馈 + 人工干预 + 质量评估", endpoints: 9, tests: 6, status: "disabled" },
+  { name: "ddw-trace-panel", icon: "📊", title: "Trace 追踪面板", cat: "ops", desc: "OpenTelemetry 分布式追踪 + 性能分析", endpoints: 6, tests: 6, status: "disabled" },
+  { name: "ddw-knowledge-hierarchy", icon: "🔍", title: "知识层级检索", cat: "data", desc: "三阶段层级检索 + 向量 + 倒排混合召回", endpoints: 8, tests: 6, status: "enabled" },
+  { name: "ddw-industrial-data", icon: "🏭", title: "工业数据接入", cat: "data", desc: "MQTT/OPC-UA/Modbus 6种协议适配", endpoints: 8, tests: 6, status: "disabled" },
+  { name: "ddw-iot-dc3", icon: "📡", title: "IoT DC3 连接器", cat: "data", desc: "AGPL-3.0 合规连接器 · IoT DC3 平台对接", endpoints: 12, tests: 36, status: "disabled" },
+  { name: "ddw-esg-assessment", icon: "📝", title: "ESG 评估引擎", cat: "esg", desc: "100+ 行业标准题库 + 自动评分 + 差距分析", endpoints: 6, tests: 12, status: "enabled" },
+  { name: "ddw-esg-report", icon: "📄", title: "ESG 报告生成", cat: "esg", desc: "GRI/SASB/TCFD 多框架合规报告", endpoints: 5, tests: 8, status: "enabled" },
+  { name: "ddw-esg-question-bank", icon: "❓", title: "ESG 题库管理", cat: "esg", desc: "结构化题库 + 难度分级 + 版本管理", endpoints: 6, tests: 10, status: "disabled" },
+  { name: "ddw-esg-knowledge", icon: "📚", title: "ESG 知识库", cat: "esg", desc: "法规/标准/案例全文索引 + AI 问答", endpoints: 5, tests: 8, status: "disabled" },
+  { name: "ddw-esg-chatbot", icon: "🤖", title: "ESG 智能问答", cat: "esg", desc: "多轮引导式评估对话引擎", endpoints: 4, tests: 6, status: "disabled" },
+  { name: "ddw-esg-payment", icon: "💳", title: "ESG 付费模块", cat: "esg", desc: "一次性购买 + 订阅模式授权管理", endpoints: 5, tests: 8, status: "disabled" },
+  { name: "oral-clinic", icon: "🦷", title: "口腔诊所系统", cat: "industry", desc: "病历管理 + 患者主诉 + 影像归档 + 复诊提醒", endpoints: 20, tests: 24, status: "disabled" },
+  { name: "openmaic", icon: "🎓", title: "在线课程平台", cat: "industry", desc: "AI 驱动课程管理 + 学习路径 + 自动评估", endpoints: 15, tests: 12, status: "disabled" },
+];
+
+let currentCat = 'all';
+
+function renderPlugins(list) {
+  const grid = document.getElementById('pluginGrid');
+  grid.innerHTML = list.map(p => `
+    <div class="plugin-card" data-cat="${p.cat}">
+      <div class="plugin-thumb ${p.cat}">
+        <span class="plugin-cat-tag">${{core:'核心',cs:'客服',ops:'运维',data:'数据',esg:'ESG',industry:'行业'}[p.cat]}</span>
+        ${p.icon}
+      </div>
+      <div class="plugin-body">
+        <h4>${p.title}</h4>
+        <p class="desc">${p.desc}</p>
+        <div class="plugin-footer">
+          <span>🔌 ${p.endpoints} 端点 · ✅ ${p.tests} 测试</span>
+          <span class="badge ${p.status === 'enabled' ? 'badge-on' : 'badge-off'}">${p.status === 'enabled' ? '已启用' : '未启用'}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterPluginCat(cat, el) {
+  currentCat = cat;
+  document.querySelectorAll('#pluginChips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  applyPluginFilter();
+}
+
+function filterPlugins() { applyPluginFilter(); }
+
+function applyPluginFilter() {
+  const q = (document.getElementById('pluginSearch')?.value || '').toLowerCase();
+  let list = currentCat === 'all' ? PLUGINS : PLUGINS.filter(p => p.cat === currentCat);
+  if (q) list = list.filter(p => p.title.toLowerCase().includes(q) || p.name.includes(q) || p.desc.toLowerCase().includes(q));
+  renderPlugins(list);
+}
+
+// Initial render
+renderPlugins(PLUGINS);
+</script>
+</body>
+</html>

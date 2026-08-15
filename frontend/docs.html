@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文档中心 · DDW AI Hub</title>
+<link rel="icon" href="/company/assets/logo/logo-favicon.png">
+<style>
+  :root {
+    /* ===== 对齐全站默认主题（pal / partner 系列：深蓝侧边栏 + 浅色内容区）===== */
+    --bg-page: #f5f7fa; --bg-base: #F0F2F5; --bg-card: #FFFFFF; --bg-elevated: #FAFAFA; --bg-hover: #F5F7FA;
+    --bg-sidebar: #001529;
+    --text-primary: #1f2937; --text-secondary: #6b7280; --text-muted: #9ca3af;
+    --text-placeholder: #BBBBBB; --text-inverse: #FFFFFF;
+    --brand: #1890FF; --brand-hover: #40A9FF; --brand-light: #E6F4FF;
+    --border: #e5e7eb; --border-light: #F0F0F0; --border-input: #D9D9D9; --border-focus: #1890FF;
+    --success: #52C41A; --success-bg: #F6FFED;
+    --warning: #FAAD14; --warning-bg: #FFFBE6;
+    --danger: #F5222D; --danger-bg: #FFF1F0;
+    --shadow-dropdown: 0 8px 24px rgba(0,0,0,0.12);
+    --border-strong: #D9D9D9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--text-primary); background: var(--bg-page); -webkit-font-smoothing: antialiased; }
+  a { color: var(--brand); text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ===== 侧边栏（深蓝 #001529，对齐全站默认）===== */
+  .docs-sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 240px; background: var(--bg-sidebar); padding: 20px 0 0; display: flex; flex-direction: column; z-index: 50; overflow-y: auto; }
+  .docs-sidebar .sb-brand { padding: 0 20px 18px; font-weight: 800; color: #fff; font-size: 15px; letter-spacing: .5px; display: flex; align-items: center; gap: 6px; }
+  .docs-sidebar .sb-link { display: block; padding: 10px 20px; font-size: 14px; color: rgba(255,255,255,.68); text-decoration: none; border-left: 3px solid transparent; }
+  .docs-sidebar .sb-link:hover { color: #fff; background: rgba(255,255,255,.08); }
+  .docs-sidebar .sb-link.active { color: #fff; background: rgba(24,144,255,.25); border-left-color: #1890ff; font-weight: 600; }
+  .docs-sidebar .sb-group { padding: 14px 20px 6px; font-size: 11px; color: rgba(255,255,255,.4); letter-spacing: 1px; }
+  .docs-sidebar .sb-logout { margin-top: auto; padding: 14px 20px; font-size: 13px; color: rgba(255,255,255,.6); cursor: pointer; border-top: 1px solid rgba(255,255,255,.1); }
+  .docs-sidebar .sb-logout:hover { color: #ff4d4f; }
+
+  /* 分类树（深蓝侧边栏内的浅色树） */
+  .cat-tree { padding: 6px 0; }
+  .cat-node { cursor: pointer; }
+  .cat-node .cat-head { display: flex; align-items: center; padding: 8px 20px 8px 16px; font-size: 13.5px; color: rgba(255,255,255,.8); gap: 6px; }
+  .cat-node .cat-head:hover { background: rgba(255,255,255,.08); color: #fff; }
+  .cat-node .cat-head .arrow { font-size: 10px; color: rgba(255,255,255,.45); transition: transform .15s; width: 12px; }
+  .cat-node.open .cat-head .arrow { transform: rotate(90deg); }
+  .cat-node .cat-children { display: none; }
+  .cat-node.open > .cat-children { display: block; }
+  .cat-node .cat-children .cat-head { padding-left: 34px; }
+  .cat-node .cat-children .cat-children .cat-head { padding-left: 48px; }
+  .doc-in-cat { padding: 0 0 4px; }
+  .doc-in-cat a { display: block; padding: 7px 20px 7px 34px; font-size: 13px; color: rgba(255,255,255,.6); border-left: 3px solid transparent; }
+  .doc-in-cat a:hover { color: #fff; background: rgba(255,255,255,.08); }
+  .doc-in-cat a.active { color: #fff; background: rgba(24,144,255,.25); border-left-color: #1890ff; font-weight: 600; }
+  .tree-empty { padding: 12px 20px; font-size: 13px; color: rgba(255,255,255,.45); }
+
+  /* ===== 主区 ===== */
+  .docs-page { margin-left: 240px; min-height: 100vh; display: flex; flex-direction: column; }
+  .docs-topbar { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 40; }
+  .docs-topbar h1 { font-size: 18px; color: var(--text-primary); white-space: nowrap; }
+  .search-box { flex: 1; max-width: 520px; display: flex; align-items: center; background: var(--bg-base); border: 1px solid var(--border-input); border-radius: 8px; padding: 0 12px; }
+  .search-box:focus-within { border-color: var(--border-focus); box-shadow: 0 0 0 2px rgba(24,144,255,.12); }
+  .search-box input { flex: 1; border: none; outline: none; background: transparent; padding: 9px 8px; font-size: 14px; color: var(--text-primary); }
+  .search-box .s-btn { background: none; border: none; color: var(--brand); font-size: 15px; padding: 4px 2px; }
+  .docs-body { flex: 1; padding: 24px 28px; display: flex; justify-content: center; }
+
+  .reader { width: 100%; max-width: 860px; }
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 30px 36px; }
+  .reader-head { margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--border-light); }
+  .reader-head h2 { font-size: 22px; color: var(--text-primary); line-height: 1.4; }
+  .reader-meta { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 12px; background: var(--brand-light); color: var(--brand); }
+  .badge.version { background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border); }
+  .badge.type { background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border); }
+  .meta-time { font-size: 12.5px; color: var(--text-muted); }
+  .doc-summary { background: var(--warning-bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; font-size: 13.5px; color: var(--text-secondary); margin-bottom: 18px; }
+  .doc-content { font-size: 15px; line-height: 1.85; color: var(--text-primary); word-break: break-word; }
+  .doc-content h1, .doc-content h2, .doc-content h3, .doc-content h4 { margin: 22px 0 10px; line-height: 1.4; }
+  .doc-content h1 { font-size: 22px; padding-bottom: 8px; border-bottom: 1px solid var(--border-light); }
+  .doc-content h2 { font-size: 19px; }
+  .doc-content h3 { font-size: 16.5px; }
+  .doc-content p { margin: 10px 0; }
+  .doc-content ul, .doc-content ol { margin: 10px 0; padding-left: 24px; }
+  .doc-content li { margin: 5px 0; }
+  .doc-content code { background: var(--bg-elevated); border: 1px solid var(--border-light); border-radius: 4px; padding: 1px 6px; font-size: 13px; font-family: "SF Mono", Menlo, Consolas, monospace; }
+  .doc-content pre { background: #242526; color: #e3e3e3; border-radius: 10px; padding: 16px 18px; overflow-x: auto; margin: 14px 0; }
+  .doc-content pre code { background: transparent; border: none; color: inherit; padding: 0; font-size: 13px; }
+  .doc-content blockquote { margin: 12px 0; padding: 10px 16px; border-left: 3px solid var(--brand); background: var(--brand-light); border-radius: 0 8px 8px 0; color: var(--text-secondary); }
+  .doc-content table { border-collapse: collapse; margin: 14px 0; width: 100%; }
+  .doc-content th, .doc-content td { border: 1px solid var(--border); padding: 8px 12px; font-size: 14px; }
+  .doc-content th { background: var(--bg-elevated); font-weight: 600; }
+
+  .empty-state { text-align: center; padding: 80px 20px; color: var(--text-muted); }
+  .empty-state .big { font-size: 42px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  .search-results { margin-top: 4px; }
+  .search-result { display: block; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 10px; cursor: pointer; transition: border-color .15s; }
+  .search-result:hover { border-color: var(--brand); }
+  .search-result .sr-title { font-size: 14.5px; font-weight: 600; color: var(--text-primary); }
+  .search-result .sr-meta { font-size: 12px; color: var(--text-muted); margin: 4px 0; }
+  .search-result .sr-snippet { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+  .loading { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
+
+  @media (max-width: 768px) { .docs-sidebar { display: none; } .docs-page { margin-left: 0; } .docs-topbar { padding: 12px 16px; flex-wrap: wrap; } }
+</style>
+<link rel="stylesheet" href="/partner-shared.css">
+</head>
+<body>
+
+<aside class="docs-sidebar">
+  <div class="sb-brand">📚 文档中心</div>
+  <a href="/docs.html" class="sb-link active">全部文档</a>
+  <div class="sb-group">目录</div>
+  <div class="cat-tree" id="catTree"><div class="tree-empty">加载中…</div></div>
+  <div class="sb-group">工作台</div>
+  <a href="/saas-account.html" class="sb-link">← 返回工作台</a>
+  <div class="sb-logout" id="sbLogout">退出登录</div>
+</aside>
+
+<div class="docs-page">
+  <div class="docs-topbar">
+    <h1>产品文档栏目</h1>
+    <div class="search-box">
+      <input id="searchInput" type="text" placeholder="搜索白皮书 / 手册 / 方案…（回车检索）">
+      <button class="s-btn" id="searchBtn">🔍</button>
+    </div>
+  </div>
+  <div class="docs-body">
+    <div class="reader" id="reader">
+      <div class="empty-state"><div class="big">📄</div><p>选择左侧文档开始阅读，或使用上方搜索。</p></div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js?v=20260814a"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.documentElement;
+  root.style.visibility = 'hidden';
+
+  var CATS = [];       // 分类树（服务端返回）
+  var DOCS_BY_CAT = {}; // category_id -> [docs]
+
+  /* ── Markdown → HTML（轻量渲染，无外部依赖，FDE 断网可用）── */
+  function escapeHtml(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function inlineMd(s) {
+    return escapeHtml(s)
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  }
+  function mdToHtml(md) {
+    if (!md) return '<p>（暂无内容）</p>';
+    var lines = String(md).replace(/\r\n/g, '\n').split('\n');
+    var html = '', inCode = false, inList = false, inTable = false, codeBuf = [];
+    function closeList() { if (inList) { html += '</ul>'; inList = false; } }
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      if (line.trim().startsWith('```')) {
+        if (inCode) { html += '<pre><code>' + escapeHtml(codeBuf.join('\n')) + '</code></pre>'; codeBuf = []; inCode = false; }
+        else { closeList(); inCode = true; }
+        continue;
+      }
+      if (inCode) { codeBuf.push(line); continue; }
+      if (!line.trim()) { closeList(); continue; }
+      var h = line.match(/^(#{1,4})\s+(.*)$/);
+      if (h) { closeList(); html += '<h' + h[1].length + '>' + inlineMd(h[2]) + '</h' + h[1].length + '>'; continue; }
+      var li = line.match(/^\s*[-*]\s+(.*)$/) || line.match(/^\s*\d+\.\s+(.*)$/);
+      if (li) { if (!inList) { html += '<ul>'; inList = true; } html += '<li>' + inlineMd(li[1]) + '</li>'; continue; }
+      var bq = line.match(/^>\s?(.*)$/);
+      if (bq) { closeList(); html += '<blockquote>' + inlineMd(bq[1]) + '</blockquote>'; continue; }
+      var tbl = line.match(/^\|(.+)\|$/);
+      if (tbl && /^\|?\s*:?-{2,}/.test(lines[i + 1] || '')) {
+        closeList();
+        var head = tbl[1].split('|').map(function (c) { return inlineMd(c.trim()); });
+        html += '<table><thead><tr><th>' + head.join('</th><th>') + '</th></tr></thead><tbody>';
+        i += 1; // 跳过分隔行
+        while (i + 1 < lines.length && /^\|(.+)\|$/.test(lines[i + 1])) {
+          i += 1;
+          var cells = lines[i].slice(1, -1).split('|').map(function (c) { return inlineMd(c.trim()); });
+          html += '<tr><td>' + cells.join('</td><td>') + '</td></tr>';
+        }
+        html += '</tbody></table>';
+        continue;
+      }
+      closeList();
+      html += '<p>' + inlineMd(line) + '</p>';
+    }
+    closeList();
+    return html;
+  }
+
+  /* ── 目录树渲染 ── */
+  function renderTree() {
+    var el = document.getElementById('catTree');
+    if (!CATS.length) { el.innerHTML = '<div class="tree-empty">暂无分类</div>'; return; }
+    function nodeHtml(cat, depth) {
+      var children = CATS.filter(function (c) { return c.parent_id === cat.id; });
+      var h = '<div class="cat-node" data-id="' + cat.id + '">';
+      h += '<div class="cat-head" data-cat="' + cat.id + '">';
+      h += '<span class="arrow">' + (children.length ? '▶' : '') + '</span>';
+      h += '<span>' + escapeHtml(cat.name) + '</span>';
+      h += '</div>';
+      if (children.length) {
+        h += '<div class="cat-children">';
+        children.forEach(function (c) { h += nodeHtml(c, depth + 1); });
+        h += '</div>';
+      }
+      var docs = DOCS_BY_CAT[cat.id] || [];
+      if (docs.length) {
+        h += '<div class="doc-in-cat">';
+        docs.forEach(function (d) {
+          h += '<a href="javascript:void(0)" data-doc="' + d.id + '" data-slug="' + escapeHtml(d.slug) + '">' + escapeHtml(d.title) + '</a>';
+        });
+        h += '</div>';
+      }
+      h += '</div>';
+      return h;
+    }
+    var roots = CATS.filter(function (c) { return !c.parent_id; });
+    el.innerHTML = roots.map(function (c) { return nodeHtml(c, 0); }).join('');
+    // 默认展开第一层
+    el.querySelectorAll('.cat-node').forEach(function (n) {
+      if (n.dataset.id && !n.parentElement.classList.contains('cat-children')) { n.classList.add('open'); }
+    });
+    bindTreeEvents();
+  }
+  function bindTreeEvents() {
+    document.querySelectorAll('.cat-head[data-cat]').forEach(function (head) {
+      head.addEventListener('click', function () {
+        var node = head.parentElement;
+        var children = node.querySelector(':scope > .cat-children');
+        if (children) node.classList.toggle('open');
+      });
+    });
+    document.querySelectorAll('a[data-doc]').forEach(function (a) {
+      a.addEventListener('click', function () { openDoc(parseInt(a.dataset.doc, 10), a); });
+    });
+  }
+
+  /* ── 数据加载 ── */
+  function loadCatalog() {
+    DDW.api.get('/plugins/ddw-docs-portal/categories').then(function (resp) {
+      CATS = (resp.ok && Array.isArray(resp.data)) ? resp.data : [];
+      return DDW.api.get('/plugins/ddw-docs-portal/docs?page_size=100');
+    }).then(function (resp2) {
+      var items = (resp2.ok && resp2.data && resp2.data.items) ? resp2.data.items : [];
+      DOCS_BY_CAT = {};
+      items.forEach(function (d) {
+        var key = d.category_id || 0;
+        (DOCS_BY_CAT[key] = DOCS_BY_CAT[key] || []).push(d);
+      });
+      renderTree();
+      // 默认打开第一篇文档
+      if (items.length) { openDoc(items[0].id, null); }
+      else { document.querySelector('#reader').innerHTML = '<div class="empty-state"><div class="big">📄</div><p>暂无可见文档</p></div>'; }
+    });
+  }
+
+  function openDoc(id, linkEl) {
+    DDW.api.get('/plugins/ddw-docs-portal/docs/' + id).then(function (resp) {
+      if (!resp.ok) { showError(resp); return; }
+      var d = resp.data;
+      document.querySelectorAll('a[data-doc]').forEach(function (a) { a.classList.remove('active'); });
+      if (linkEl) linkEl.classList.add('active');
+      var typeLabel = { whitepaper: '白皮书', manual: '手册', solution: '方案', regulation: '制度', notice: '公告' }[d.doc_type] || d.doc_type;
+      var summaryHtml = d.summary ? '<div class="doc-summary">📌 ' + escapeHtml(d.summary) + '</div>' : '';
+      var html =
+        '<div class="card">' +
+        '<div class="reader-head">' +
+        '<h2>' + escapeHtml(d.title) + '</h2>' +
+        '<div class="reader-meta">' +
+        '<span class="badge type">' + typeLabel + '</span>' +
+        '<span class="badge version">' + escapeHtml(d.version) + '</span>' +
+        (d.published_at ? '<span class="meta-time">发布于 ' + String(d.published_at).slice(0, 10) + '</span>' : '') +
+        '</div>' +
+        '</div>' +
+        summaryHtml +
+        '<div class="doc-content">' + mdToHtml(d.content) + '</div>' +
+        '</div>';
+      document.getElementById('reader').innerHTML = html;
+    });
+  }
+
+  function doSearch() {
+    var q = document.getElementById('searchInput').value.trim();
+    if (!q) { return; }
+    DDW.api.get('/plugins/ddw-docs-portal/search?q=' + encodeURIComponent(q) + '&top_k=8').then(function (resp) {
+      if (!resp.ok) { showError(resp); return; }
+      var sources = (resp.data && resp.data.sources) || [];
+      var html = '<div class="card"><div class="reader-head"><h2>🔍 搜索结果：' + escapeHtml(q) + '</h2>' +
+        '<div class="reader-meta"><span class="meta-time">命中 ' + sources.length + ' 条</span></div></div>';
+      if (!sources.length) {
+        html += '<div class="empty-state"><p>未找到相关内容，换个关键词试试。</p></div>';
+      } else {
+        html += '<div class="search-results">';
+        sources.forEach(function (s) {
+          html += '<div class="search-result" data-slug="' + escapeHtml(s.slug || '') + '">' +
+            '<div class="sr-title">' + escapeHtml(s.doc_title || '') + '</div>' +
+            '<div class="sr-meta">' + escapeHtml(s.version || '') + ' · 相关度 ' + Math.round((s.score || 0) * 100) / 100 + '</div>' +
+            '<div class="sr-snippet">' + escapeHtml((s.content || '').slice(0, 220)) + '</div>' +
+            '</div>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+      document.getElementById('reader').innerHTML = html;
+      document.querySelectorAll('.search-result').forEach(function (el) {
+        el.addEventListener('click', function () {
+          var slug = el.dataset.slug;
+          var doc = findDocBySlug(slug);
+          if (doc) { openDoc(doc.id, null); } else { window.location.href = '/docs.html?id=' + encodeURIComponent(slug); }
+        });
+      });
+    });
+  }
+  function findDocBySlug(slug) {
+    for (var key in DOCS_BY_CAT) {
+      for (var i = 0; i < DOCS_BY_CAT[key].length; i++) {
+        if (DOCS_BY_CAT[key][i].slug === slug) return DOCS_BY_CAT[key][i];
+      }
+    }
+    return null;
+  }
+
+  function showError(resp) {
+    if (resp.code === 401) { window.location.href = '/login.html'; return; }
+    document.getElementById('reader').innerHTML =
+      '<div class="empty-state"><div class="big">⚠️</div><p>' + escapeHtml((resp.data && resp.data.detail) || resp.message || '加载失败') + '</p></div>';
+  }
+
+  /* ── 鉴权与启动 ── */
+  document.getElementById('sbLogout').addEventListener('click', function () {
+    try { localStorage.removeItem('ddw_token'); } catch (e) {}
+    try { document.cookie = 'ddw_logged_in=; Path=/; Max-Age=0'; } catch (e) {}
+    window.location.href = '/login.html';
+  });
+  document.getElementById('searchBtn').addEventListener('click', doSearch);
+  document.getElementById('searchInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') doSearch(); });
+
+  (async function () {
+    var ok = false;
+    try {
+      var tk = (window.DDW && DDW.api && DDW.api.getToken) ? DDW.api.getToken() : '';
+      if (tk) {
+        var r = await fetch('/api/v1/auth/me', { headers: { 'Authorization': 'Bearer ' + tk } });
+        ok = r.ok;
+      }
+    } catch (e) { ok = false; }
+    if (!ok) { window.location.href = '/login.html'; return; }
+    root.style.visibility = 'visible';
+    loadCatalog();
+    // 支持 ?id=slug 直达
+    var slug = new URLSearchParams(location.search).get('id');
+    if (slug) {
+      DDW.api.get('/plugins/ddw-docs-portal/docs?page_size=100').then(function (resp) {
+        var items = (resp.ok && resp.data && resp.data.items) ? resp.data.items : [];
+        var hit = null;
+        for (var i = 0; i < items.length; i++) { if (items[i].slug === slug) { hit = items[i]; break; } }
+        if (hit) openDoc(hit.id, null);
+      });
+    }
+  })();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+name: ddw_ai_readiness
+tier: beta
+version: 0.1.0
+description: 企业 AI 就绪度自评：问卷答案接收、服务端评分、商机分级（A/B/C）、销售端查询统计
+author: DDW Team
+license: commercial

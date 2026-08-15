@@ -1,0 +1,25 @@
+name: ddw-capa-workflow
+tier: beta
+version: 1.0.0
+description: "DDW CAPA工作流 — 纠正与预防措施全流程闭环管理"
+author: "DDW Team"
+license: commercial
+type: plugin
+adapter:
+  type: "quality"
+  vendor: "ddw"
+  protocol: "internal"
+dependencies:
+  plugins:
+    ddw-core: ">=2.0.0"
+config:
+  optional:
+    auto_escalation_days:
+      default: 30
+      description: "CAPA超期自动升级天数"
+    verification_period_days:
+      default: 90
+      description: "CAPA验证期(天)"
+routes:
+  - prefix: /api/v1/plugins/ddw-capa-workflow
+    router: router:router

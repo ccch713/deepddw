@@ -1,0 +1,12 @@
+special_findings 必须包含：
+- missing_tooth: 缺失牙位
+- edentulous_period: 缺牙时间（月/年）
+- bone_quality: 骨质评估（I/II/III/IV）
+- bone_volume: 骨量评估（sufficient/insufficient）
+- implant_brand: 种植体品牌
+- implant_size: 种植体规格（直径×长度mm）
+- loading_protocol: 负荷方式（immediate/delayed/conventional）
+- stages: 阶段（phase_1/phase_2/prosthetic）
+- cbct_performed: CBCT 是否完成（true/false）
+- bone_graft_needed: 是否需要植骨（true/false）
+- sinus_lift: 是否上颌窦提升（true/false）

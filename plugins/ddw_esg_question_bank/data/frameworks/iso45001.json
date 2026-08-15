@@ -1,0 +1,536 @@
+{
+  "id": "iso45001",
+  "name": "ISO 45001 职业健康安全管理体系",
+  "organization": "ISO",
+  "url": "https://www.iso.org/standard/45001",
+  "description": "国际标准化组织（ISO）发布的职业健康安全管理体系标准，帮助组织预防工伤和健康问题。",
+  "version": "2018",
+  "category": "international",
+  "status": "draft",
+  "standard_code": "ISO 45001:2018",
+  "is_mandatory": false,
+  "issuing_body": "International Organization for Standardization",
+  "issue_date": "2018-03-12",
+  "effective_date": "2018-03-12",
+  "supported_sizes": [
+    "small",
+    "medium",
+    "large",
+    "enterprise"
+  ],
+  "category_color": "#FF3B30",
+  "themes": [
+    {
+      "id": "OHS",
+      "name": "职业健康安全",
+      "category": "social",
+      "weight": 1,
+      "description": "职业健康安全管理要求",
+      "color": "#FF3B30"
+    }
+  ],
+  "indicators": [
+    {
+      "code": "OHS1",
+      "name": "危险源识别",
+      "theme_id": "OHS",
+      "weight": 1,
+      "description": "危险源辨识与风险评估",
+      "questions": [
+        {
+          "id": "OHS1-Q1",
+          "text": "企业是否进行危险源辨识和风险评估？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未辨识"
+            },
+            {
+              "value": 2,
+              "label": "简单识别"
+            },
+            {
+              "value": 3,
+              "label": "系统评估"
+            },
+            {
+              "value": 4,
+              "label": "定量风险评估"
+            },
+            {
+              "value": 5,
+              "label": "全员参与+AI预警"
+            }
+          ]
+        },
+        {
+          "id": "OHS1-Q2",
+          "text": "企业是否制定风险控制措施？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "无措施"
+            },
+            {
+              "value": 2,
+              "label": "基本防护"
+            },
+            {
+              "value": 3,
+              "label": "系统控制"
+            },
+            {
+              "value": 4,
+              "label": "层级控制"
+            },
+            {
+              "value": 5,
+              "label": "消除+工程控制+管理"
+            }
+          ]
+        },
+        {
+          "id": "OHS1-Q3",
+          "text": "企业是否定期审查和更新风险评估？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未更新"
+            },
+            {
+              "value": 2,
+              "label": "偶尔更新"
+            },
+            {
+              "value": 3,
+              "label": "定期更新"
+            },
+            {
+              "value": 4,
+              "label": "事件驱动更新"
+            },
+            {
+              "value": 5,
+              "label": "持续监测+动态更新"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "OHS2",
+      "name": "事故预防",
+      "theme_id": "OHS",
+      "weight": 1,
+      "description": "事故预防与应急管理",
+      "questions": [
+        {
+          "id": "OHS2-Q1",
+          "text": "企业是否建立事故调查和报告机制？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "无机制"
+            },
+            {
+              "value": 2,
+              "label": "基本报告"
+            },
+            {
+              "value": 3,
+              "label": "调查流程"
+            },
+            {
+              "value": 4,
+              "label": "根因分析"
+            },
+            {
+              "value": 5,
+              "label": "学习型组织+预防文化"
+            }
+          ]
+        },
+        {
+          "id": "OHS2-Q2",
+          "text": "企业是否为员工提供安全培训和PPE？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "无培训"
+            },
+            {
+              "value": 2,
+              "label": "入职培训"
+            },
+            {
+              "value": 3,
+              "label": "定期培训+PPE"
+            },
+            {
+              "value": 4,
+              "label": "专项培训+管理"
+            },
+            {
+              "value": 5,
+              "label": "全员安全文化"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "OHS3",
+      "name": "绩效评估",
+      "theme_id": "OHS",
+      "weight": 1,
+      "description": "职业健康安全绩效评估与改进",
+      "questions": [
+        {
+          "id": "OHS3-Q1",
+          "text": "企业是否设定职业健康安全目标？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "无目标"
+            },
+            {
+              "value": 2,
+              "label": "定性目标"
+            },
+            {
+              "value": 3,
+              "label": "量化目标"
+            },
+            {
+              "value": 4,
+              "label": "SMART目标"
+            },
+            {
+              "value": 5,
+              "label": "零伤害目标+路径"
+            }
+          ]
+        },
+        {
+          "id": "OHS3-Q2",
+          "text": "企业是否定期进行管理评审？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未评审"
+            },
+            {
+              "value": 2,
+              "label": "简单回顾"
+            },
+            {
+              "value": 3,
+              "label": "年度评审"
+            },
+            {
+              "value": 4,
+              "label": "季度评审"
+            },
+            {
+              "value": 5,
+              "label": "持续改进+高层参与"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "OHS4",
+      "name": "员工参与",
+      "theme_id": "OHS",
+      "weight": 1,
+      "description": "员工参与职业健康安全管理",
+      "questions": [
+        {
+          "id": "OHS4-Q1",
+          "text": "员工是否参与危险源辨识和风险评估？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未参与"
+            },
+            {
+              "value": 2,
+              "label": "咨询"
+            },
+            {
+              "value": 3,
+              "label": "参与"
+            },
+            {
+              "value": 4,
+              "label": "主导"
+            },
+            {
+              "value": 5,
+              "label": "全员参与+自主管理"
+            }
+          ]
+        },
+        {
+          "id": "OHS4-Q2",
+          "text": "员工是否参与安全改进活动？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未参与"
+            },
+            {
+              "value": 2,
+              "label": "建议渠道"
+            },
+            {
+              "value": 3,
+              "label": "定期参与"
+            },
+            {
+              "value": 4,
+              "label": "主动参与"
+            },
+            {
+              "value": 5,
+              "label": "安全文化+创新"
+            }
+          ]
+        },
+        {
+          "id": "OHS4-Q3",
+          "text": "企业是否建立员工健康监测机制？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "无监测"
+            },
+            {
+              "value": 2,
+              "label": "入职体检"
+            },
+            {
+              "value": 3,
+              "label": "定期体检"
+            },
+            {
+              "value": 4,
+              "label": "健康档案"
+            },
+            {
+              "value": 5,
+              "label": "全面健康管理+预防"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "OHS5",
+      "name": "管理评审",
+      "theme_id": "OHS",
+      "weight": 1,
+      "description": "职业健康安全管理评审与改进",
+      "questions": [
+        {
+          "id": "OHS5-Q1",
+          "text": "企业是否进行职业健康安全管理评审？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未评审"
+            },
+            {
+              "value": 2,
+              "label": "简单回顾"
+            },
+            {
+              "value": 3,
+              "label": "年度评审"
+            },
+            {
+              "value": 4,
+              "label": "季度评审"
+            },
+            {
+              "value": 5,
+              "label": "持续改进+高层参与"
+            }
+          ]
+        },
+        {
+          "id": "OHS5-Q2",
+          "text": "管理评审是否包括利益相关方反馈？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未包括"
+            },
+            {
+              "value": 2,
+              "label": "简单参考"
+            },
+            {
+              "value": 3,
+              "label": "定期收集"
+            },
+            {
+              "value": 4,
+              "label": "系统化反馈"
+            },
+            {
+              "value": 5,
+              "label": "共建机制+持续改进"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "OHS6",
+      "name": "应急准备",
+      "theme_id": "OHS",
+      "weight": 1,
+      "description": "应急准备与响应能力",
+      "questions": [
+        {
+          "id": "OHS6-Q1",
+          "text": "企业是否建立应急响应程序？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "无程序"
+            },
+            {
+              "value": 2,
+              "label": "基本预案"
+            },
+            {
+              "value": 3,
+              "label": "完整程序"
+            },
+            {
+              "value": 4,
+              "label": "定期演练"
+            },
+            {
+              "value": 5,
+              "label": "全员参与+持续改进"
+            }
+          ]
+        },
+        {
+          "id": "OHS6-Q2",
+          "text": "企业是否配备应急资源和设备？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "无配备"
+            },
+            {
+              "value": 2,
+              "label": "基本配备"
+            },
+            {
+              "value": 3,
+              "label": "定期检查"
+            },
+            {
+              "value": 4,
+              "label": "充足配备"
+            },
+            {
+              "value": 5,
+              "label": "智能监测+自动响应"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

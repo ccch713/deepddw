@@ -1,0 +1,17 @@
+name: ddw-esg-question-bank
+license: commercial
+tier: beta
+version: 1.0.0
+description: >
+  ESG question bank engine — 12 frameworks (ISO14001, ISO45001, GRI, CDP, SASB,
+  TCFD, GB/T36000, GB/T24067, Standard ESG, EcoVadis, CSRD, ISSB) with 209+
+  assessment questions. Supports scoring, skip-engine, and recommendation.
+engine: ">=0.1.0"
+dependencies:
+  plugins: {}
+events:
+  produces: []
+  consumes: []
+isolation: inline
+permissions: []
+config: {}

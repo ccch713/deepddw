@@ -1,0 +1,51 @@
+/* ============================================================
+   主题：holiday.css — 节日喜庆风（春节/国庆等）
+   中国红 + 金黄，只定义色值
+   ============================================================ */
+
+:root {
+  --bg-base: #fbf6f2;
+  --bg-page: #fffdfa;
+  --bg-card: #fffdfa;
+  --bg-elevated: #f9ede3;
+  --bg-overlay: #fffdfa;
+  --bg-hover: #fdf8f4;
+
+  --text-primary: #4a2c22;
+  --text-secondary: #7a5c4f;
+  --text-muted: #a48d80;
+  --text-inverse: #ffffff;
+
+  --brand: #c0392b;            /* 中国红 */
+  --brand-hover: #a02c1f;
+  --brand-glow: rgba(192, 57, 43, .18);
+  --accent: #d4a017;           /* 金黄 */
+  --accent-soft: #e8cd8a;
+  --accent-orange: #e67e22;
+
+  --border: #f0e0d2;
+  --border-hover: #dfc3a8;
+  --border-strong: #c0392b;
+
+  --btn-primary-bg: #c0392b;
+  --btn-primary-text: #ffffff;
+  --btn-secondary-bg: #fffdfa;
+  --btn-secondary-text: #4a2c22;
+  --btn-secondary-border: #dfc3a8;
+
+  --bg-hero: #f9ede3;
+  --cta-bg: #8e2318;
+  --cta-text: #ffffff;
+  --cta-sub: #f0d9cf;
+
+  --footer-bg: #f9ede3;
+  --footer-text: #7a5c4f;
+  --footer-heading: #4a2c22;
+  --footer-line: #ecdac6;
+  --footer-muted: #a48d80;
+
+  --shadow-sm: 0 1px 3px rgba(74, 44, 34, .06);
+  --shadow: 0 4px 16px rgba(74, 44, 34, .08);
+  --shadow-lg: 0 12px 32px rgba(74, 44, 34, .12);
+  --shadow-glow: 0 4px 24px rgba(192, 57, 43, .16);
+}

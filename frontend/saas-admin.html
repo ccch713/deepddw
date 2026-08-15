@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="format-detection" content="telephone=no">
+<title>管理控制台 - DDW AI Hub</title>
+<link rel="icon" type="image/svg+xml" href="assets/logo-ju.svg">
+<style>
+  /* === CSS Variables (P0-1: 2026-08-11 主题切换合规) === */
+  :root {
+    --bg-base: #F0F2F5;
+    --bg-card: #FFFFFF;
+    --bg-elevated: #FAFAFA;
+    --bg-hover: #F5F7FA;
+    --bg-sidebar: #001529;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --text-muted: #999999;
+    --text-placeholder: #BBBBBB;
+    --text-inverse: #FFFFFF;
+    --brand: #1890FF;
+    --brand-hover: #40A9FF;
+    --brand-light: #E6F4FF;
+    --border: #E8E8E8;
+    --border-light: #F0F0F0;
+    --border-input: #D9D9D9;
+    --border-focus: #1890FF;
+    --success: #52C41A;
+    --success-bg: #F6FFED;
+    --success-border: #B7EB8F;
+    --warning: #FAAD14;
+    --warning-bg: #FFFBE6;
+    --warning-border: #FFE58F;
+    --danger: #F5222D;
+    --danger-bg: #FFF1F0;
+    --danger-border: #FFA39E;
+    --info: #1890FF;
+    --info-bg: #E6F7FF;
+    --info-border: #91D5FF;
+    --shadow-dropdown: 0 8px 24px rgba(0,0,0,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--text-primary); background: var(--bg-base); -webkit-font-smoothing: antialiased; }
+  a { color: var(--brand); text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
+  input, select, textarea { font-family: inherit; }
+
+  /* === Layout === */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar { width: 200px; background: var(--bg-sidebar); color: rgba(255,255,255,0.85); flex-shrink: 0; }
+  .sidebar-logo { display: flex; align-items: center; height: 56px; padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .logo-char { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: #000; color: var(--text-inverse); font-size: 18px; font-weight: bold; font-family: "PingFang SC", "Microsoft YaHei", serif; border-radius: 2px; margin-right: 8px; }
+  .logo-text { color: var(--text-inverse); font-size: 15px; font-weight: 500; }
+  .nav-group { padding: 12px 0; }
+  .nav-title { color: rgba(255,255,255,0.45); font-size: 12px; padding: 0 16px 8px; }
+  .nav-item { display: flex; align-items: center; height: 40px; padding: 0 16px; color: rgba(255,255,255,0.85); font-size: 14px; cursor: pointer; }
+  .nav-item:hover { color: var(--text-inverse); background: rgba(255,255,255,0.04); }
+  .nav-item.active { color: var(--text-inverse); background: var(--brand); }
+  .nav-icon { width: 16px; height: 16px; margin-right: 10px; flex-shrink: 0; }
+
+  /* === P1-4 侧栏 16 频道扩展：状态标 + 规划中灰显 === */
+  .nav-label { flex: 1; }
+  .status-tag { display: inline-block; padding: 0 6px; height: 16px; line-height: 16px; font-size: 10px; border-radius: 2px; margin-left: auto; flex-shrink: 0; }
+  .status-live { background: rgba(82,196,26,0.2); color: var(--success); border: 1px solid rgba(82,196,26,0.5); }
+  .status-soon { background: rgba(250,173,20,0.2); color: var(--warning); border: 1px solid rgba(250,173,20,0.5); }
+  .status-plan { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.35); border: 1px solid rgba(255,255,255,0.15); }
+  .nav-item.disabled { color: rgba(255,255,255,0.35); cursor: not-allowed; pointer-events: auto; }
+  .nav-item.disabled:hover { background: transparent; color: rgba(255,255,255,0.35); }
+
+  /* === 频道页通用框架（规划中占位） === */
+  .empty-plan { background: var(--bg-card); border: 1px dashed var(--border-input); border-radius: 2px; padding: 60px 20px; text-align: center; }
+  .empty-plan .icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+  .empty-plan h3 { color: var(--text-primary); font-size: 18px; margin-bottom: 8px; font-weight: 500; }
+  .empty-plan p { color: var(--text-muted); font-size: 13px; margin-bottom: 4px; }
+  .empty-plan .meta { color: var(--text-placeholder); font-size: 12px; margin-top: 12px; }
+  .channel-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 2px; padding: 20px; margin-bottom: 16px; }
+  .channel-card h3 { font-size: 15px; margin-bottom: 12px; color: var(--text-primary); }
+  .channel-card .hint { color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .topbar { background: var(--bg-card); border-bottom: 1px solid var(--border); height: 56px; display: flex; align-items: center; padding: 0 24px; }
+  .crumb { color: var(--text-primary); font-size: 14px; }
+  .crumb .sep { color: var(--text-muted); margin: 0 6px; }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+  .user-chip { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-primary); }
+  .user-avatar { width: 28px; height: 28px; background: var(--brand); color: var(--text-inverse); border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .user-chip a { color: var(--text-secondary); font-size: 12px; }
+  .user-chip a:hover { color: var(--brand); }
+  .user-menu { position: relative; }
+  .user-chip-btn { display: flex; align-items: center; gap: 8px; background: none; border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; font-size: 14px; color: var(--text-primary); cursor: pointer; }
+  .user-chip-btn:hover { border-color: var(--brand); }
+  .user-dropdown { position: absolute; right: 0; top: calc(100% + 6px); min-width: 250px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-dropdown); z-index: 100; padding: 6px; }
+  .dd-head { padding: 8px 10px; font-size: 13px; color: var(--text-secondary); border-bottom: 1px solid #f0f0f0; margin-bottom: 4px; word-break: break-all; }
+  .dd-tenants { max-height: 200px; overflow-y: auto; }
+  .dd-item { display: flex; align-items: center; gap: 6px; padding: 8px 10px; font-size: 13px; color: var(--text-primary); text-decoration: none; border-radius: 6px; cursor: pointer; }
+  .dd-item:hover { background: var(--bg-hover); }
+  .dd-item.danger { color: var(--danger); }
+  .dd-item.danger:hover { background: var(--danger-bg); }
+  .dd-tenant { justify-content: space-between; }
+  .dd-tenant.active { background: var(--brand-light); color: #1890FF; }
+  .dd-tenant-role { font-size: 11px; color: var(--text-muted); }
+  .dd-check { color: var(--brand); font-size: 12px; }
+  .dd-empty { padding: 8px 10px; font-size: 12px; color: var(--text-muted); }
+  .dd-sep { height: 1px; background: var(--border-light); margin: 4px 0; }
+
+  .content { flex: 1; padding: 24px; overflow: auto; }
+
+  /* === Cards === */
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 2px; }
+  .card-head { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; }
+  .card-title { font-size: 15px; color: var(--text-primary); font-weight: 500; }
+  .card-extra { margin-left: auto; }
+  .card-body { padding: 20px; }
+
+  .row { display: grid; gap: 16px; }
+  .row.c4 { grid-template-columns: repeat(4, 1fr); }
+  .row.c2 { grid-template-columns: repeat(2, 1fr); }
+  .row.c3 { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 900px) { .row.c4, .row.c3, .row.c2 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .row.c4, .row.c3, .row.c2 { grid-template-columns: 1fr; } }
+
+  .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 2px; padding: 18px 20px; }
+  .stat-label { color: var(--text-muted); font-size: 13px; margin-bottom: 8px; }
+  .stat-value { color: var(--text-primary); font-size: 24px; font-weight: 500; }
+  .stat-extra { color: var(--success); font-size: 12px; margin-top: 4px; }
+  .stat-extra.warn { color: var(--warning); }
+  .stat-extra.err { color: var(--danger); }
+
+  /* === Bar chart (纯 CSS) === */
+  .bar-chart { display: flex; align-items: flex-end; height: 200px; padding: 0 8px; gap: 12px; border-bottom: 1px solid var(--border); }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; }
+  .bar-fill { width: 100%; max-width: 40px; background: var(--brand); transition: height 0.4s; min-height: 2px; }
+  .bar-label { color: var(--text-muted); font-size: 12px; margin-top: 8px; }
+  .bar-value { color: var(--text-primary); font-size: 12px; margin-bottom: 4px; }
+
+  /* === Table === */
+  .table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .table th { background: var(--bg-elevated); color: var(--text-primary); font-weight: 500; text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .table td { padding: 12px 16px; border-bottom: 1px solid var(--border-light); color: var(--text-primary); }
+  .table tr:hover td { background: var(--bg-elevated); }
+  .tag { display: inline-block; padding: 2px 8px; font-size: 12px; border-radius: 2px; }
+  .tag.ok { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+  .tag.warn { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
+  .tag.err { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
+  .tag.info { background: var(--info-bg); color: #1890FF; border: 1px solid var(--info-border); }
+
+  .btn { display: inline-block; height: 30px; line-height: 30px; padding: 0 14px; font-size: 13px; border-radius: 2px; border: 1px solid var(--border-input); background: var(--bg-card); color: var(--text-primary); cursor: pointer; }
+  .btn:hover { border-color: var(--brand); color: #1890FF; }
+  .btn.primary { background: var(--brand); color: var(--text-inverse); border-color: var(--brand); }
+  .btn.primary:hover { background: var(--brand-hover); border-color: var(--brand-hover); color: var(--text-inverse); }
+  .btn.danger { color: var(--danger); border-color: var(--danger-border); }
+  .btn.danger:hover { background: var(--danger); color: var(--text-inverse); border-color: var(--danger); }
+  .btn.sm { height: 24px; line-height: 24px; padding: 0 10px; font-size: 12px; }
+
+  .form-row { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
+  .form-row label { width: 100px; color: var(--text-primary); font-size: 13px; }
+  .form-row input, .form-row select, .form-row textarea { flex: 1; height: 32px; padding: 4px 11px; border: 1px solid var(--border-input); border-radius: 2px; font-size: 13px; color: var(--text-primary); outline: none; }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color: var(--brand); }
+  .form-row textarea { height: auto; min-height: 80px; padding: 8px 11px; }
+
+  .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .modal-mask.show { display: flex; }
+  .modal { background: var(--bg-card); width: 460px; max-width: 90vw; border-radius: 2px; }
+  .modal-head { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; }
+  .modal-title { font-size: 15px; color: var(--text-primary); font-weight: 500; }
+  .modal-close { margin-left: auto; cursor: pointer; color: var(--text-muted); font-size: 18px; background: none; border: none; }
+  .modal-body { padding: 20px; }
+  .modal-foot { padding: 12px 20px; border-top: 1px solid var(--border); text-align: right; }
+  .modal-foot .btn { margin-left: 8px; }
+
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.78); color: var(--text-inverse); padding: 10px 20px; font-size: 13px; border-radius: 2px; display: none; z-index: 200; }
+  .toast.show { display: block; }
+
+  .empty { text-align: center; color: var(--text-muted); padding: 40px 20px; font-size: 13px; }
+  .key-cell { font-family: monospace; font-size: 12px; color: var(--text-secondary); }
+
+  .progress { height: 6px; background: var(--bg-base); border-radius: 2px; overflow: hidden; margin-top: 8px; }
+  .progress-bar { height: 100%; background: var(--brand); }
+  .progress-bar.warn { background: var(--warning); }
+  .progress-bar.err { background: var(--danger); }
+
+  /* Footer */
+  .app-footer { text-align: center; padding: 14px 0; color: var(--text-muted); font-size: 12px; border-top: 1px solid #E8E8E8; background: var(--bg-card); }
+  .app-footer a { color: var(--text-muted); }
+  .app-footer a:hover { color: var(--brand); }
+  .footer-sep { margin: 0 8px; color: var(--border-input); }
+
+  /* Mobile */
+  .menu-toggle { display: none; background: none; border: none; color: var(--text-inverse); font-size: 20px; margin-right: 8px; }
+  .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 49; }
+  .sidebar-overlay.active { display: block; }
+
+  /* 768px 平板/小屏：侧栏变抽屉 */
+  @media (max-width: 768px) {
+    .sidebar { position: fixed; left: -200px; top: 0; bottom: 0; z-index: 50; transition: left 0.2s; box-shadow: 2px 0 12px rgba(0,0,0,0.15); }
+    .sidebar.open { left: 0; }
+    .menu-toggle { display: inline-block; }
+    .topbar { padding: 0 12px; height: 52px; }
+    .crumb { font-size: 13px; max-width: 60vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .content { padding: 12px; }
+  }
+
+  /* 480px 手机：顶部栏简化、面包屑缩略、表格横向滚动 */
+  @media (max-width: 480px) {
+    .topbar { padding: 0 10px; height: 48px; gap: 8px; }
+    .topbar-right { gap: 8px; }
+    .user-chip-btn { padding: 3px 8px; font-size: 12px; }
+    .user-chip-btn .tag { display: none; }
+    .crumb { font-size: 12px; max-width: 50vw; }
+    .crumb .sep { margin: 0 3px; }
+    .content { padding: 8px; }
+    .card { padding: 12px; border-radius: 4px; }
+    .card h3 { font-size: 14px; }
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table-wrap table { min-width: 480px; }
+    .modal { width: 96%; padding: 16px; }
+    .modal h3 { font-size: 15px; }
+  }
+
+  /* 360px 极小屏：卡片单列，按钮全宽，表单堆叠 */
+  @media (max-width: 360px) {
+    .topbar { padding: 0 8px; }
+    .crumb { font-size: 11.5px; max-width: 45vw; }
+    .sidebar { width: 180px; left: -180px; }
+    .content { padding: 6px; }
+    .card { padding: 10px; }
+    .btn { width: 100%; padding: 10px 12px; }
+    .btn + .btn { margin-top: 8px; }
+    .form-group { margin-bottom: 12px; }
+    .form-row { flex-direction: column; align-items: stretch; }
+    .form-row label { width: 100%; margin-bottom: 4px; }
+    .modal-actions { flex-direction: column-reverse; gap: 8px; }
+    .modal-actions .btn { width: 100%; }
+    .user-dropdown { min-width: 220px; right: -8px; }
+  }
+</style>
+    <link rel="stylesheet" href="/css/ddw-themes.css">
+    <script src="/js/ddw-theme-switcher.js"></script>
+  </head>
+<body>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-char">钜</span>
+      <span class="logo-text">DDW 控制台</span>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">总览</div>
+      <a class="nav-item" data-route="overview">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l7 4v6l-7 4-7-4V5l7-4z"/></svg>
+        <span class="nav-label">数据概览</span>
+      </a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">AI 能力</div>
+      <a class="nav-item" data-route="llm">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="3" width="12" height="10"/><path d="M5 6h6M5 9h4" stroke="white" fill="none"/></svg>
+        <span class="nav-label">LLM 配置</span>
+      </a>
+      <a class="nav-item" data-route="knowledge">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M3 1h10v14H3z"/><path d="M5 5h6M5 8h6M5 11h4" stroke="white" fill="none"/></svg>
+        <span class="nav-label">知识库</span>
+      </a>
+      <a class="nav-item" data-route="agents">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="6" r="3"/><path d="M2 14c0-2 3-3 6-3s6 1 6 3"/></svg>
+        <span class="nav-label">数字员工</span>
+      </a>
+      <a class="nav-item" data-route="skills">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l7 4-7 4-7-4 7-4zM1 9l7 4 7-4"/></svg>
+        <span class="nav-label">技能 Skill</span>
+      </a>
+      <a class="nav-item" data-route="carbon">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6"/></svg>
+        <span class="nav-label">碳硅协同</span>
+      </a>
+      <a class="nav-item" data-route="pal">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l7 7-7 7-7-7z"/></svg>
+        <span class="nav-label">DDW Pal</span>
+      </a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">企业管理</div>
+      <a class="nav-item" data-route="users">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><circle cx="6" cy="5" r="3"/><path d="M2 14c0-2 2-3 4-3s4 1 4 3"/></svg>
+        <span class="nav-label">成员管理</span>
+      </a>
+      <a class="nav-item" data-route="plugins">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M5 2h6v3l3 3v6H5V2z"/><circle cx="7" cy="10" r="1"/></svg>
+        <span class="nav-label">插件管理</span>
+      </a>
+      <a class="nav-item" data-route="forum">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v9H6l-4 3V2z"/></svg>
+        <span class="nav-label">插件论坛</span>
+      </a>
+      <a class="nav-item" data-route="worklogs" data-perm="admin">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10v12H3z"/><path d="M5 5h6M5 8h6M5 11h4" stroke="white" fill="none"/></svg>
+        <span class="nav-label">企业工作日志</span>
+      </a>
+      <a class="nav-item" data-route="partners" data-perm="partner">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><circle cx="5" cy="6" r="3"/><circle cx="11" cy="6" r="3"/><path d="M1 14c0-2 2-3 4-3M9 14c0-2 2-3 4-3"/></svg>
+        <span class="nav-label">经销商</span>
+      </a>
+      <a class="nav-item" data-route="demo-accounts" data-perm="partner">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="3" width="12" height="10"/><path d="M5 8h6" stroke="white" fill="none"/></svg>
+        <span class="nav-label">客户 Demo 账号</span>
+      </a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">平台</div>
+      <a class="nav-item" data-route="billing" data-perm="finance">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="3" width="12" height="10"/><path d="M4 6h8M4 9h8" stroke="white" fill="none"/></svg>
+        <span class="nav-label">套餐与账单</span>
+      </a>
+      <a class="nav-item" data-route="invoices" data-perm="finance">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M3 1h10v14l-2-1.5L9 15l-2-1.5L5 15l-2-1.5V1z"/><path d="M5 5h6M5 8h6M5 11h4" stroke="white" fill="none"/></svg>
+        <span class="nav-label">发票管理</span>
+      </a>
+      <a class="nav-item" data-route="settings">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M3 13l1.4-1.4M11.6 4.4L13 3"/></svg>
+        <span class="nav-label">企业基础信息</span>
+      </a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="menu-toggle" id="menuToggle">☰</button>
+      <div class="crumb">
+        <span>控制台</span>
+        <span class="sep">/</span>
+        <span id="crumb">数据概览</span>
+      </div>
+      <div class="topbar-right">
+        <div class="user-chip" id="userChip">未登录</div>
+      </div>
+    </header>
+
+    <div class="content" id="content">
+      <div class="empty">加载中…</div>
+    </div>
+
+    <footer class="app-footer">
+      <span>&copy; 2026 武汉锐果互动信息技术有限公司</span>
+      <span class="footer-sep">|</span>
+      <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">鄂ICP备2026024883号-1</a>
+      <span class="footer-sep">|</span>
+      <a href="https://beian.mps.gov.cn/#/query/webSearch?code=42011102006255" target="_blank" rel="noopener">鄂公网安备42011102006255号</a>
+    </footer>
+  </main>
+</div>
+
+<div class="modal-mask" id="modal">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title" id="modalTitle">提示</span>
+      <button class="modal-close" id="modalClose">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot">
+      <button class="btn" id="modalCancel">取消</button>
+      <button class="btn primary" id="modalOk">确定</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:8500' : '';
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
+const toast = (m, t=2000) => { const el = $('#toast'); el.textContent = m; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'), t); };
+
+// ====== Auth ======
+const TOKEN = localStorage.getItem('ddw_token');
+const USER_STR = localStorage.getItem('ddw_user');
+const TENANT_STR = localStorage.getItem('ddw_tenant');
+// 2026-08-11：无 token 静默跳登录页，禁止 confirm 弹窗（退出死循环根因）
+if (!TOKEN) { location.href = '/login.html'; }
+const USER = USER_STR ? JSON.parse(USER_STR) : { name: '?', role: 'member' };
+const TENANT = TENANT_STR ? JSON.parse(TENANT_STR) : { name: '?', plan: 'free' };
+
+async function api(path, opts = {}) {
+  const r = await fetch(API_BASE + path, {
+    ...opts,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + TOKEN,
+      ...(opts.headers || {})
+    }
+  });
+  if (r.status === 401) { localStorage.clear(); location.href = '/login.html'; return; }
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.detail || ('HTTP ' + r.status));
+  return d;
+}
+
+// ====== User Chip（含租户切换下拉，2026-08-11）======
+function roleLabel(role) {
+  const m = { superadmin: '超级管理员', owner: '公司管理员', admin: '部门管理员', partner: '经销商', member: '成员', user: '成员' };
+  return m[role] || role || '成员';
+}
+function renderUserChip(u) {
+  var name = u.name || '?';
+  var phoneTail = u.phone ? u.phone.slice(-6) : '';
+  var display = name + (phoneTail ? ' · ' + phoneTail : '');
+  $('#userChip').innerHTML =
+    '<div class="user-menu" id="userMenu">' +
+      '<button class="user-chip-btn" id="userChipBtn">' +
+        '<span class="user-avatar">' + name.charAt(0) + '</span>' +
+        '<span>' + display + '</span>' +
+        '<span class="tag info" style="margin-left:4px">' + roleLabel(u.role) + '</span>' +
+        '<span class="caret">▾</span>' +
+      '</button>' +
+      '<div class="user-dropdown" id="userDropdown" style="display:none">' +
+        '<div class="dd-head">' + display + ' · ' + roleLabel(u.role) + '</div>' +
+        '<div class="dd-tenants" id="ddTenants"></div>' +
+        '<div class="dd-sep"></div>' +
+        '<a href="/pal.html" class="dd-item">🤖 DDW Pal</a>' +
+        '<a href="/saas-admin.html" class="dd-item">⚙️ 控制台</a>' +
+        '<a href="javascript:void(0)" class="dd-item danger" id="btnLogout">退出登录</a>' +
+      '</div>' +
+    '</div>';
+  $('#userChipBtn').addEventListener('click', function (e) {
+    e.stopPropagation();
+    var dd = $('#userDropdown');
+    dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+    loadTenantOptions();
+  });
+  document.addEventListener('click', function () { $('#userDropdown').style.display = 'none'; });
+  $('#btnLogout').addEventListener('click', function (e) {
+    e.stopPropagation();
+    localStorage.clear();
+    try { document.cookie = 'ddw_logged_in=; Domain=.9cio.com; Path=/; Max-Age=0'; } catch (err) {}
+    location.href = '/index.html';
+  });
+}
+// 拉取同手机号全部租户，渲染切换选项
+async function loadTenantOptions() {
+  var box = $('#ddTenants');
+  try {
+    var d = await api('/api/v1/auth/me');
+    var list = (d && d.tenants) || [];
+    if (!list.length) { box.innerHTML = '<div class="dd-empty">无其他身份</div>'; return; }
+    var curId = (d.tenant && d.tenant.id);
+    box.innerHTML = list.map(function (t) {
+      var active = t.tenant_id === curId ? ' class="active"' : '';
+      return '<a href="javascript:void(0)" class="dd-item dd-tenant"' + active + ' data-tid="' + t.tenant_id + '">' +
+        '<span class="dd-tenant-name">' + t.name + '</span>' +
+        '<span class="dd-tenant-role">' + roleLabel(t.role) + '</span>' +
+        (t.tenant_id === curId ? '<span class="dd-check">✓</span>' : '') +
+      '</a>';
+    }).join('');
+    box.querySelectorAll('.dd-tenant').forEach(function (el) {
+      el.addEventListener('click', async function (e) {
+        e.stopPropagation();
+        var tid = parseInt(el.dataset.tid, 10);
+        if (tid === curId) return;
+        try {
+          var r = await api('/api/v1/auth/switch-tenant', { method: 'POST', body: JSON.stringify({ tenant_id: tid }) });
+          if (r && r.access_token) {
+            localStorage.setItem('ddw_token', r.access_token);
+            localStorage.setItem('ddw_user', JSON.stringify(r.user));
+            localStorage.setItem('ddw_tenant', JSON.stringify(r.tenant));
+            toast('已切换身份，正在刷新…', 1500);
+            setTimeout(function () { location.reload(); }, 600);
+          } else { toast('切换失败：' + (r.detail || '未知错误')); }
+        } catch (err) { toast('切换失败：' + err.message); }
+      });
+    });
+  } catch (err) {
+    box.innerHTML = '<div class="dd-empty">加载身份失败</div>';
+  }
+}
+renderUserChip(USER);
+
+// 异步刷新 /auth/me 并缓存
+api('/api/v1/auth/me').then(function (d) {
+  if (d && d.user) {
+    localStorage.setItem('ddw_user', JSON.stringify(d.user));
+    localStorage.setItem('ddw_tenant', JSON.stringify(d.tenant));
+    renderUserChip(d.user);
+  }
+  // 权限矩阵过滤侧栏（2026-08-11：经销商/财务频道按 permissions 显示，企业租户不显示经销商频道）
+  const perms = (d && d.permissions) || {};
+  document.querySelectorAll('.nav-item[data-perm]').forEach(function (el) {
+    const need = el.dataset.perm;
+    const has = need === 'partner' ? !!perms.can_manage_partner_demo
+      : (need === 'finance' ? !!perms.can_view_finance
+        : (need === 'admin' ? !!perms.can_access_admin : true));
+    el.style.display = has ? '' : 'none';
+  });
+}).catch(function () {});
+
+// ====== Mobile menu ======
+$('#menuToggle').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+
+// ====== Router ======
+// P1-4 侧栏 16 频道注册；status: live=已有/soon=展示中/plan=规划中灰显
+const NAV_ITEMS = {
+  overview:      { title: '数据概览',       group: '总览',     status: 'live' },
+  llm:           { title: 'LLM 配置',       group: 'AI 能力',  status: 'live' },
+  knowledge:     { title: '知识库',         group: 'AI 能力',  status: 'live' },
+  agents:        { title: '数字员工',       group: 'AI 能力',  status: 'live' },
+  skills:        { title: '技能 Skill',     group: 'AI 能力',  status: 'live' },
+  carbon:     { title: '碳硅协同',     status: 'live' },
+  pal:           { title: 'DDW Pal',        group: 'AI 能力',  status: 'live' },
+  users:         { title: '成员管理',       group: '企业管理', status: 'live' },
+  plugins:       { title: '插件管理',       group: '企业管理', status: 'live' },
+  forum:         { title: '插件论坛',       group: '企业管理', status: 'live' },
+  worklogs:      { title: '企业工作日志',   group: '企业管理', status: 'live', perm: 'admin' },
+  partners:      { title: '经销商',         group: '企业管理', status: 'live', perm: 'partner' },
+  'demo-accounts': { title: '客户 Demo 账号', group: '企业管理', status: 'live', perm: 'partner' },
+  billing:       { title: '套餐与账单',     group: '平台',     status: 'live', perm: 'finance' },
+  invoices:      { title: '发票管理',       group: '平台',     status: 'live', perm: 'finance' },
+  settings:      { title: '企业基础信息',   group: '平台',     status: 'live' },
+};
+
+// 已实现渲染的频道（live/soon）→ 旧 render* 函数；其它走 renderPlaceholder
+const ROUTES = {
+  overview:   { title: '数据概览',     render: renderOverview },
+  users:      { title: '成员管理',     render: renderUsers },
+  billing:    { title: '套餐与账单',   render: renderBilling },
+  invoices:   { title: '发票管理',     render: renderInvoices },
+  settings:   { title: '企业基础信息', render: renderSettings },
+  // P1-4 新增：LLM 已实装、其它占位
+  llm:        { title: 'LLM 配置',     render: renderLLM },
+  knowledge:  { title: '知识库',       render: renderKnowledge },
+  agents:     { title: '数字员工',     render: renderOrgAgents },
+  skills:     { title: '技能 Skill',   render: renderSkills },
+  plugins:    { title: '插件管理',     render: renderPlugins },
+  partners:   { title: '经销商',       render: renderPartners },
+  'demo-accounts': { title: '客户 Demo 账号', render: renderDemoAccounts },
+  forum:      { title: '插件论坛',     render: renderForum },
+  worklogs:   { title: '企业工作日志', render: renderWorkLogs },
+  carbon:     { title: '碳硅协同',     render: renderCarbonRedirect },
+  pal:        { title: 'DDW Pal',      render: renderPalRedirect },
+};
+
+function renderCarbonRedirect() {
+  location.href = '/carbon-silicon.html';
+  return '<div class="empty">正在前往碳硅协同…</div>';
+}
+
+function renderPalRedirect() {
+  location.href = '/pal.html';
+  return '<div class="empty">正在前往 DDW Pal…</div>';
+}
+
+// 规划中频道占位页（P1-4 铁律：规划中不假装可用）
+function renderPlaceholder(route) {
+  const meta = NAV_ITEMS[route] || { title: route, eta: '规划中' };
+  return `
+    <div class="empty-plan">
+      <div class="icon">🚧</div>
+      <h3>${meta.title}</h3>
+      <p>该频道正在规划中，${meta.eta || '尚未排期'}</p>
+      <p class="meta">铁律：规划中频道不假装可用；点击侧栏其他频道继续操作</p>
+    </div>
+  `;
+}
+
+// 通用 hash 切换
+function showChannel(route) {
+  document.querySelectorAll('.channel-page').forEach(p => p.style.display = 'none');
+  const el = document.getElementById('page-' + route);
+  if (el) el.style.display = 'block';
+  document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+  document.querySelector(`.nav-item[data-route="${route}"]`)?.classList.add('active');
+}
+
+function route() {
+  const hash = location.hash.replace(/^#\/?/, '') || 'overview';
+  const r = ROUTES[hash] || ROUTES.overview;
+  $('#crumb').textContent = r.title;
+  // 规划中频道（status=plan 且渲染函数返回占位）不调真实 API
+  const isPlan = NAV_ITEMS[hash] && NAV_ITEMS[hash].status === 'plan';
+  $$('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.route === (ROUTES[hash] ? hash : 'overview')));
+  $('#content').innerHTML = '<div class="empty">加载中…</div>';
+  Promise.resolve(r.render()).then(html => { $('#content').innerHTML = html; bindPage(hash); });
+  // 移动端关闭
+  $('#sidebar').classList.remove('open');
+}
+
+// 规划中频道点击：toast 提示，不切换路由
+document.querySelectorAll('.nav-item.disabled').forEach(el => {
+  el.addEventListener('click', (e) => {
+    e.preventDefault();
+    const route = el.dataset.route;
+    const meta = NAV_ITEMS[route];
+    toast((meta?.title || route) + ' 正在规划中，' + (meta?.eta || '尚未排期'), 2500);
+  });
+});
+// 2026-08-11 修复：live 频道点击无反应（此前从未绑定 click）
+document.querySelectorAll('.nav-item[data-route]:not(.disabled)').forEach(el => {
+  el.addEventListener('click', () => {
+    const route = el.dataset.route;
+    if (route === 'pal') { location.href = '/pal.html'; return; }  // DDW Pal 独立工作台
+    location.hash = route;
+  });
+});
+window.addEventListener('hashchange', route);
+
+// ====== Modal ======
+function modal({ title, body, onOk, okText='确定', cancelText='取消' }) {
+  return new Promise((resolve) => {
+    $('#modalTitle').textContent = title;
+    $('#modalBody').innerHTML = body;
+    $('#modalOk').textContent = okText;
+    $('#modalCancel').textContent = cancelText;
+    const close = (val) => { $('#modal').classList.remove('show'); resolve(val); };
+    $('#modalOk').onclick = async () => { const v = onOk ? await onOk() : true; close(v); };
+    $('#modalCancel').onclick = () => close(false);
+    $('#modalClose').onclick = () => close(false);
+    $('#modal').classList.add('show');
+  });
+}
+
+// ====== Pages ======
+
+// 概览
+async function renderOverview() {
+  let data;
+  try { data = await api('/api/v1/admin/overview'); } catch (e) { return '<div class="card"><div class="empty">加载失败：' + e.message + '</div></div>'; }
+  let usage;
+  try { usage = await api('/api/v1/admin/llm/usage?days=7'); } catch (e) { usage = null; }
+  const max = Math.max(1, ...data.trend_7d.map(t => t.tokens));
+  const bars = data.trend_7d.map(t => {
+    const h = Math.round(t.tokens / max * 160);
+    return '<div class="bar-col"><div class="bar-value">' + (t.tokens >= 10000 ? (t.tokens/10000).toFixed(1) + 'w' : t.tokens) + '</div><div class="bar-fill" style="height:' + h + 'px"></div><div class="bar-label">' + t.date.slice(5) + '</div></div>';
+  }).join('');
+  const usageRatio = data.token_limit ? (data.tokens_used / data.token_limit) : 0;
+  const ratioPct = Math.min(100, Math.round(usageRatio * 100));
+  const ratioCls = ratioPct > 80 ? 'err' : ratioPct > 60 ? 'warn' : '';
+  return `
+    <div class="row c4" style="margin-bottom:16px">
+      <div class="stat-card"><div class="stat-label">活跃用户</div><div class="stat-value">${data.user}</div><div class="stat-extra">+0 本周</div></div>
+      <div class="stat-card"><div class="stat-label">API Key</div><div class="stat-value">${data.api_key_count}</div><div class="stat-extra">活跃</div></div>
+      <div class="stat-card"><div class="stat-label">本月 Token</div><div class="stat-value">${(data.tokens_used/10000).toFixed(1)}w</div><div class="stat-extra ${ratioCls}">${ratioPct}% 已用</div><div class="progress"><div class="progress-bar ${ratioCls}" style="width:${ratioPct}%"></div></div></div>
+      <div class="stat-card"><div class="stat-label">当前套餐</div><div class="stat-value">${TENANT.plan}</div><div class="stat-extra">${data.token_limit ? (data.token_limit/10000).toFixed(0) + 'w Token / 月' : ''}</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head"><div class="card-title">Token 消耗趋势（近 7 天）</div></div>
+      <div class="card-body">${'<div class="bar-chart">' + bars + '</div>'}</div>
+    </div>
+
+    <div class="row c2">
+      <div class="card">
+        <div class="card-head"><div class="card-title">API 调用统计</div></div>
+        <div class="card-body"><div id="apiStats">${data.plugin_ranking.map(p => '<div class="form-row"><label>' + p.name + '</label><div style="flex:1"><div class="progress"><div class="progress-bar" style="width:' + Math.min(100, p.calls/20) + '%"></div></div><div style="font-size:12px;color:var(--text-muted);margin-top:4px">' + p.calls + ' 次调用</div></div></div>').join('')}</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">插件调用排行</div></div>
+        <div class="card-body"><table class="table"><thead><tr><th>插件</th><th>调用次数</th></tr></thead><tbody>${data.plugin_ranking.map(p => '<tr><td>' + p.name + '</td><td>' + p.calls + '</td></tr>').join('')}</tbody></table></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-head"><div class="card-title">LLM 网关消耗（近 7 天 · 真实数据）</div></div>
+      <div class="card-body">${usage ? `
+        ${usage.cloud || usage.selfhosted ? `
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+          ${usage.cloud && usage.cloud.tokens > 0 ? `
+          <div style="flex:1;min-width:200px;padding:14px 16px;border:1px solid var(--info-border);border-radius:4px;background:var(--info-bg)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="tag info">云端</span><span style="font-size:13px;color:#666">${(usage.cloud.providers||[]).join(' / ') || '—'}</span></div>
+            <div style="font-size:20px;font-weight:500;color:#333">${(usage.cloud.tokens/10000).toFixed(1)}w tokens</div>
+            <div style="font-size:12px;color:#999;margin-top:4px">预估支出 ¥${usage.cloud.cost_cny.toFixed(4)}</div>
+          </div>` : ''}
+          ${usage.selfhosted && usage.selfhosted.tokens > 0 ? `
+          <div style="flex:1;min-width:200px;padding:14px 16px;border:1px solid #B7EB8F;border-radius:4px;background:#F6FFED">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="tag ok">自建</span><span style="font-size:13px;color:#666">${(usage.selfhosted.providers||[]).join(' / ') || '—'}</span></div>
+            <div style="font-size:20px;font-weight:500;color:#333">${(usage.selfhosted.tokens/10000).toFixed(1)}w tokens</div>
+            <div style="font-size:12px;color:#999;margin-top:4px">预估节约 ¥${usage.selfhosted.saved_cny.toFixed(4)}</div>
+          </div>` : ''}
+        </div>` : ''}
+        <div class="row c4" style="margin-bottom:12px">
+          <div class="stat-card"><div class="stat-label">网关调用</div><div class="stat-value">${usage.total.calls}</div><div class="stat-extra">次</div></div>
+          <div class="stat-card"><div class="stat-label">输入 Tokens</div><div class="stat-value">${usage.total.tokens_in}</div></div>
+          <div class="stat-card"><div class="stat-label">输出 Tokens</div><div class="stat-value">${usage.total.tokens_out}</div></div>
+          <div class="stat-card"><div class="stat-label">消耗成本</div><div class="stat-value">¥${usage.total.cost.toFixed(4)}</div><div class="stat-extra">按网关记录</div></div>
+        </div>
+        ${(usage.by_provider || []).map(p => '<div class="form-row"><label>' + p.provider + ' / ' + p.model + '</label><div style="flex:1"><div class="progress"><div class="progress-bar" style="width:' + Math.min(100, p.calls * 5) + '%"></div></div><div style="font-size:12px;color:#999;margin-top:4px">' + p.calls + ' 次 · ' + p.tokens_in + ' in / ' + p.tokens_out + ' out · ¥' + p.cost.toFixed(4) + '</div></div></div>').join('')}
+        <table class="table" style="margin-top:8px"><thead><tr><th>时间</th><th>Provider</th><th>模型</th><th>In/Out</th><th>成本</th></tr></thead><tbody>${(usage.recent || []).slice(0,8).map(r => '<tr><td>' + String(r.created_at||'').slice(0,16).replace('T',' ') + '</td><td>' + r.provider + '</td><td>' + r.model + '</td><td>' + r.tokens_in + '/' + r.tokens_out + '</td><td>¥' + r.cost.toFixed(4) + '</td></tr>').join('')}</tbody></table>`
+        : '<div class="empty">暂无网关消耗记录——AI 客服问答后将自动统计</div>'}
+      </div>
+    </div>
+  `;
+}
+
+async function renderUsers() {
+  let users;
+  try { users = await api('/api/v1/admin/users'); } catch (e) { return '<div class="card"><div class="empty">加载失败：' + e.message + '</div></div>'; }
+  // 铁律2：列表端点统一 {items,total} 信封，前端解包
+  const list = users.items || users || [];
+  return `
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">成员列表（${list.length}）</div>
+        <div class="card-extra"><button class="btn primary" id="btnInvite">邀请成员</button></div>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="table">
+          <thead><tr><th>ID</th><th>手机号</th><th>姓名</th><th>角色</th><th>状态</th><th>创建时间</th><th>最后登录</th><th>操作</th></tr></thead>
+          <tbody>
+            ${list.map(u => `
+              <tr>
+                <td>${u.id}</td>
+                <td>${u.phone}</td>
+                <td>${u.name || '-'}</td>
+                <td><span class="tag ${u.role === 'owner' ? 'info' : ''}">${u.role}</span></td>
+                <td><span class="tag ${u.status === 'active' ? 'ok' : 'warn'}">${u.status}</span></td>
+                <td>${(u.created_at || '').slice(0,19).replace('T',' ')}</td>
+                <td>${(u.last_login_at || '-').slice(0,19).replace('T',' ')}</td>
+                <td>${u.role !== 'owner' ? '<button class="btn sm danger" data-del-user="' + u.id + '">移除</button>' : '<span class="tag info">owner</span>'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function bindUsers() {
+  $('#btnInvite').addEventListener('click', async () => {
+    const v = await modal({
+      title: '邀请成员',
+      body: '<div class="form-row"><label>手机号</label><input id="m_phone" placeholder="11 位手机号"></div><div class="form-row"><label>姓名</label><input id="m_name" placeholder="选填"></div><div class="form-row"><label>角色</label><select id="m_role"><option value="member">member</option><option value="admin">admin</option></select></div>',
+      onOk: async () => {
+        try {
+          await api('/api/v1/admin/users/invite', { method: 'POST', body: JSON.stringify({ phone: $('#m_phone').value.trim(), name: $('#m_name').value.trim() || null, role: $('#m_role').value }) });
+          toast('邀请成功'); route();
+        } catch (e) { toast('邀请失败：' + e.message); return false; }
+      }
+    });
+  });
+  $$('[data-del-user]').forEach(btn => btn.addEventListener('click', async () => {
+    if (!confirm('确定移除该用户？')) return;
+    try { await api('/api/v1/admin/users/' + btn.dataset.delUser, { method: 'DELETE' }); toast('已移除'); route(); } catch (e) { toast('失败：' + e.message); }
+  }));
+}
+
+async function renderApiKeys() {
+  let keys;
+  try { keys = await api('/api/v1/admin/apikeys'); } catch (e) { return '<div class="card"><div class="empty">加载失败：' + e.message + '</div></div>'; }
+  return `
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">API Key 列表（${keys.length}）</div>
+        <div class="card-extra"><button class="btn primary" id="btnCreateKey">创建 Key</button></div>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="table">
+          <thead><tr><th>ID</th><th>名称</th><th>前缀</th><th>状态</th><th>最后使用</th><th>创建时间</th><th>操作</th></tr></thead>
+          <tbody>
+            ${keys.map(k => `
+              <tr>
+                <td>${k.id}</td>
+                <td>${k.name}</td>
+                <td class="key-cell">${k.key_prefix}…</td>
+                <td><span class="tag ${k.status === 'active' ? 'ok' : 'warn'}">${k.status}</span></td>
+                <td>${(k.last_used_at || '-').slice(0,19).replace('T',' ')}</td>
+                <td>${(k.created_at || '').slice(0,19).replace('T',' ')}</td>
+                <td><button class="btn sm danger" data-del-key="${k.id}">删除</button></td>
+              </tr>
+            `).join('') || '<tr><td colspan="7"><div class="empty">暂无 Key</div></td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function bindApiKeys() {
+  $('#btnCreateKey').addEventListener('click', async () => {
+    const v = await modal({
+      title: '创建 API Key',
+      body: '<div class="form-row"><label>名称</label><input id="k_name" placeholder="例如：生产环境"></div><p style="font-size:12px;color:#999;margin-top:8px">Key 仅在创建时返回一次，请妥善保存。</p>',
+      onOk: async () => {
+        try {
+          const r = await api('/api/v1/admin/apikeys', { method: 'POST', body: JSON.stringify({ name: $('#k_name').value.trim() || '未命名' }) });
+          await modal({ title: 'Key 已创建（请复制保存）', body: '<div class="key-cell" style="word-break:break-all;background:#F5F5F5;padding:12px">' + r.raw_key + '</div>', okText: '我已保存', cancelText: '关闭' });
+          route();
+        } catch (e) { toast('失败：' + e.message); return false; }
+      }
+    });
+  });
+  $$('[data-del-key]').forEach(btn => btn.addEventListener('click', async () => {
+    if (!confirm('确定删除该 Key？此操作不可恢复。')) return;
+    try { await api('/api/v1/admin/apikeys/' + btn.dataset.delKey, { method: 'DELETE' }); toast('已删除'); route(); } catch (e) { toast('失败：' + e.message); }
+  }));
+}
+
+// ====== 2026-08-11：LLM 新增（API Key 仅内存注册不落盘） ======
+function bindLLM() {
+  const btnAdd = $('#btnAddLLM');
+  if (!btnAdd) return;
+  btnAdd.addEventListener('click', async () => {
+    await modal({
+      title: '新增 LLM 提供商',
+      body:
+        '<div class="form-row"><label>类型</label><select id="l_type"><option value="minimax">MiniMax</option><option value="deepseek">DeepSeek</option><option value="ollama">Ollama（本地）</option></select></div>' +
+        '<div class="form-row"><label>显示名称</label><input id="l_name" placeholder="如：公司内部 DeepSeek"></div>' +
+        '<div class="form-row"><label>默认模型</label><input id="l_model" placeholder="如 deepseek-chat"></div>' +
+        '<div class="form-row"><label>Base URL（选填）</label><input id="l_base" placeholder="https://..."></div>' +
+        '<div class="form-row"><label>API Key</label><input id="l_key" type="password" placeholder="仅本次进程生效，不落盘"></div>' +
+        '<p style="font-size:12px;color:#999">安全说明：API Key 仅注册到内存，服务重启后需重新录入（红线：明文 Key 不进长期文件）。</p>',
+      okText: '保存',
+      onOk: async () => {
+        const name = $('#l_name').value.trim();
+        const model = $('#l_model').value.trim();
+        if (!name || !model) { toast('名称和模型必填', 'err'); return false; }
+        try {
+          const r = await api('/api/v1/llm/providers', {
+            method: 'POST',
+            body: JSON.stringify({
+              provider: $('#l_type').value,
+              name: name,
+              model: model,
+              base_url: $('#l_base').value.trim() || null,
+              api_key: $('#l_key').value.trim() || null,
+            })
+          });
+          toast('LLM 已添加' + (r.key_saved_in_memory ? '（Key 已生效）' : '（未填 Key，待补）'));
+          route();
+        } catch (e) { toast('添加失败：' + e.message, 'err'); return false; }
+      }
+    });
+  });
+  // API Key 区块（并入 LLM 配置页）
+  const btnKey = $('#btnCreateKey');
+  if (btnKey) {
+    btnKey.addEventListener('click', async () => {
+      const v = await modal({
+        title: '创建 API Key',
+        body: '<div class="form-row"><label>名称</label><input id="k_name" placeholder="例如：生产环境"></div><p style="font-size:12px;color:#999;margin-top:8px">Key 仅在创建时返回一次，请妥善保存。</p>',
+        onOk: async () => {
+          try {
+            const r = await api('/api/v1/admin/apikeys', { method: 'POST', body: JSON.stringify({ name: $('#k_name').value.trim() || '未命名' }) });
+            await modal({ title: 'Key 已创建（请复制保存）', body: '<div class="key-cell" style="word-break:break-all;background:#F5F5F5;padding:12px">' + r.raw_key + '</div>', okText: '我已保存', cancelText: '关闭' });
+            route();
+          } catch (e) { toast('失败：' + e.message); return false; }
+        }
+      });
+    });
+    $$('[data-del-key]').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('确定删除该 Key？此操作不可恢复。')) return;
+      try { await api('/api/v1/admin/apikeys/' + btn.dataset.delKey, { method: 'DELETE' }); toast('已删除'); route(); } catch (e) { toast('失败：' + e.message); }
+    }));
+  }
+}
+
+async function renderBilling() {
+  let b;
+  try { b = await api('/api/v1/admin/billing'); } catch (e) { return '<div class="card"><div class="empty">加载失败：' + e.message + '</div></div>'; }
+  const planCards = b.available_plans.map(p => `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-body" style="display:flex;align-items:center;gap:16px">
+        <div style="flex:1">
+          <div style="font-size:16px;font-weight:500;color:#333">${p.name}</div>
+          <div style="font-size:13px;color:#666;margin-top:4px">最多 ${p.user_limit} 用户 · ¥${p.price_cny}/月</div>
+          <div style="font-size:12px;color:#999;margin-top:6px">${(p.features || []).join(' · ')}</div>
+        </div>
+        <div>
+          ${p.id === b.plan ? '<span class="tag info">当前</span>' : (USER.role === 'owner' ? '<button class="btn primary" data-upgrade="' + p.id + '">切换</button>' : '<span class="tag warn">需 owner</span>')}
+        </div>
+      </div>
+    </div>
+  `).join('');
+  const ratio = Math.round((b.usage_ratio || 0) * 100);
+  const ratioCls = ratio > 80 ? 'err' : ratio > 60 ? 'warn' : '';
+  return `
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head"><div class="card-title">当前套餐</div></div>
+      <div class="card-body">
+        <div style="font-size:22px;color:#333;font-weight:500;margin-bottom:8px">${b.plan_name}</div>
+        <div style="font-size:13px;color:#666;margin-bottom:16px">${(b.features || []).join(' · ')}</div>
+        <div class="form-row"><label>本月用量</label><div style="flex:1"><div style="display:flex;justify-content:spacebetween;font-size:13px;color:#333;margin-bottom:6px"><span>${b.tokens_used.toLocaleString()} / ${b.token_limit.toLocaleString()}</span><span>${ratio}%</span></div><div class="progress"><div class="progress-bar ${ratioCls}" style="width:${ratio}%"></div></div></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">可选套餐</div></div>
+      <div class="card-body">${planCards}</div>
+    </div>
+  `;
+}
+
+function bindBilling() {
+  $$('[data-upgrade]').forEach(btn => btn.addEventListener('click', async () => {
+    if (!confirm('确认切换到 ' + btn.dataset.upgrade + ' 套餐？')) return;
+    try {
+      await api('/api/v1/admin/billing/upgrade', { method: 'POST', body: JSON.stringify({ plan: btn.dataset.upgrade }) });
+      const t = JSON.parse(TENANT_STR || '{}'); t.plan = btn.dataset.upgrade; localStorage.setItem('ddw_tenant', JSON.stringify(t));
+      toast('切换成功'); setTimeout(() => location.reload(), 600);
+    } catch (e) { toast('失败：' + e.message); }
+  }));
+}
+
+async function renderSettings() {
+  // 角色下拉：调用角色栏目数据（铁律：不能随便手工填写）
+  let roles = [];
+  try { const rr = await api('/api/v1/admin/roles'); roles = Array.isArray(rr) ? rr : (rr.items || []); } catch (e) { roles = []; }
+  const roleOptions = roles.map(r => `<option value="${r.name}">${r.name}${r.description ? '（' + r.description + '）' : ''}</option>`).join('');
+  return `
+    <div class="row c2">
+      <div class="card">
+        <div class="card-head"><div class="card-title">企业基础信息</div></div>
+        <div class="card-body">
+          <div class="form-row"><label>企业名称</label><input id="set_company" value="${TENANT.name || ''}"></div>
+          <div class="form-row"><label>租户 ID</label><input value="${TENANT.id || '-'}" disabled></div>
+          <div class="form-row"><label>当前套餐</label><input value="${TENANT.plan}" disabled></div>
+          <div style="text-align:right;margin-top:12px"><button class="btn primary" id="btnSaveCompany">保存</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">安全</div></div>
+        <div class="card-body">
+          <div class="form-row"><label>登录手机号</label><input value="${USER.phone || '-'}" disabled></div>
+          <div class="form-row"><label>角色</label><select id="set_role">${roleOptions || '<option>' + (USER.role || '-') + '</option>'}</select></div>
+          <div class="form-row"><label>会话超时</label><select><option>2 小时</option><option>8 小时</option><option>24 小时</option></select></div>
+          <p style="font-size:12px;color:#999;margin-top:12px;line-height:1.7">提示：双因素认证、单点登录、IP 白名单等高级安全功能请升级至企业版。</p>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-head"><div class="card-title">企业授权</div></div>
+      <div class="card-body">
+        <div class="form-row"><label>授权码</label><input id="set_license" placeholder="输入企业授权码，如 JBY-DEMO-2026"></div>
+        <div id="licenseResult" style="font-size:13px;margin-bottom:10px"></div>
+        <div style="text-align:right"><button class="btn primary" id="btnVerifyLicense">验证授权码</button></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-head"><div class="card-title">通知偏好</div></div>
+      <div class="card-body">
+        <div class="form-row"><label>用量预警</label><select><option>达到 80%</option><option>达到 90%</option><option>达到 100%</option></select></div>
+        <div class="form-row"><label>异常告警</label><select><option>仅严重</option><option>全部</option><option>关闭</option></select></div>
+        <div class="form-row"><label>周报</label><select><option>开启</option><option>关闭</option></select></div>
+      </div>
+    </div>
+  `;
+}
+
+function bindSettings() {
+  if ($('#btnSaveCompany')) $('#btnSaveCompany').addEventListener('click', () => toast('企业信息已保存（演示）'));
+  if ($('#btnVerifyLicense')) $('#btnVerifyLicense').addEventListener('click', async () => {
+    const code = $('#set_license').value.trim();
+    if (!code) { toast('请输入授权码', 'err'); return; }
+    const btn = $('#btnVerifyLicense');
+    btn.disabled = true; btn.textContent = '验证中…';
+    try {
+      const r = await api('/api/v1/admin/license/verify', { method: 'POST', body: JSON.stringify({ license_code: code }) });
+      if (r && r.valid) {
+        $('#licenseResult').innerHTML = '<span class="tag ok">✅ 授权有效</span> ' +
+          '<span style="font-size:12.5px;color:#333">' + (r.company_name || '') + ' · 有效期至 ' + String(r.expires_at || '-').slice(0, 10) + '</span>';
+      } else {
+        $('#licenseResult').innerHTML = '<span class="tag err">❌ 验证失败：' + (r.detail || '未知错误') + '</span>';
+      }
+    } catch (e) {
+      $('#licenseResult').innerHTML = '<span class="tag err">❌ ' + e.message + '</span>';
+    }
+    btn.disabled = false; btn.textContent = '验证授权码';
+  });
+}
+
+// ====== P1-4 新增：LLM 配置频道 ======
+async function renderLLM() {
+  let providers = [];
+  let keys = [];
+  try {
+    const r = await api('/api/v1/llm/providers');
+    // 后端返回 {providers: {name: health}} map → 转数组（铁律2：前端消费统一数组）
+    const pmap = (r && r.providers) || {};
+    providers = Object.keys(pmap).map(k => Object.assign({ name: k }, pmap[k]));
+    try { keys = await api('/api/v1/admin/apikeys'); } catch (e) { keys = []; }
+  } catch (e) {
+    return '<div class="card"><div class="empty">加载失败：' + e.message + '</div></div>';
+  }
+  const rows = (providers || []).map(p => `
+    <tr>
+      <td>${p.name || p.provider || p.id}${p.has_key === false ? ' <span class="tag warn">待补 Key</span>' : ''}</td>
+      <td>${p.kind || p.mode || '-'}</td>
+      <td>${p.base_url || '-'}</td>
+      <td><span class="tag ${(p.enabled !== undefined ? p.enabled : p.ok) ? 'ok' : 'warn'}">${(p.enabled !== undefined ? p.enabled : p.ok) ? '启用' : '停用'}</span></td>
+      <td>${p.default_model || p.model || '-'}</td>
+    </tr>
+  `).join('');
+  const keyRows = (keys || []).map(k => `
+    <tr>
+      <td>${k.name || k.id}</td>
+      <td><code style="font-size:12px">${k.api_key || k.key || '-'}</code></td>
+      <td>${k.created_at ? String(k.created_at).slice(0,10) : '-'}</td>
+      <td><button class="btn sm danger" data-del-key="${k.id}">删除</button></td>
+    </tr>
+  `).join('');
+  return `
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">LLM 配置</div>
+        <div class="card-extra"><button class="btn primary" id="btnAddLLM">＋ 新增 LLM</button></div>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="table">
+          <thead><tr><th>名称</th><th>类型</th><th>Base URL</th><th>状态</th><th>默认模型</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="5" class="empty">暂无 LLM 提供商</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-head">
+        <div class="card-title">API Key（${(keys||[]).length}）</div>
+        <div class="card-extra"><button class="btn" id="btnCreateKey">创建 Key</button></div>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="table">
+          <thead><tr><th>名称</th><th>Key</th><th>创建时间</th><th>操作</th></tr></thead>
+          <tbody>${keyRows || '<tr><td colspan="4" class="empty">暂无 API Key</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="channel-card">
+      <h3>双轨网关</h3>
+      <div class="hint">DDW LLM 网关支持云端（MiniMax / DeepSeek / 火山方舟）与本地（Ollama / vLLM）双轨调度。在「数据概览」可看到当前活跃通道与延迟。新增 LLM 的 API Key 仅本次进程生效（不落盘），重启后需重新录入。</div>
+    </div>
+  `;
+}
+
+// ====== P1-4 新增：知识库频道 ======
+async function renderKnowledge() {
+  let kbs = [];
+  try {
+    const r = await api('/api/v1/plugins/ddw-knowledge-hierarchy/kb');
+    kbs = r.items || r || [];
+  } catch (e) { /* ignore */ }
+
+  return `
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">知识库管理</div>
+        <div class="card-extra">
+          <button class="btn primary" onclick="showCreateKB()">+ 新建知识库</button>
+        </div>
+      </div>
+      <div class="card-body" style="display:flex;gap:16px;min-height:500px">
+        <div style="width:240px;border-right:1px solid var(--border);padding-right:16px;flex-shrink:0">
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">知识库目录</div>
+          ${renderKBTree(kbs)}
+        </div>
+        <div style="flex:1">
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <input id="kbSearch" placeholder="搜索知识库内容..." style="flex:1;height:32px;padding:4px 12px;border:1px solid var(--border-input);border-radius:var(--radius-sm);font-size:13px">
+            <button class="btn" onclick="searchKB()">搜索</button>
+            <button class="btn" onclick="uploadDoc()">上传文档</button>
+          </div>
+          <div id="kbDocList"><div class="empty">选择左侧知识库查看文档</div></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderKBTree(kbs) {
+  if (!kbs || !kbs.length) return '<div class="empty" style="font-size:12px">暂无知识库</div>';
+  const groups = { company: [], department: [], personal: [] };
+  kbs.forEach(kb => { const s = kb.scope || 'company'; if (groups[s]) groups[s].push(kb); });
+  const names = { company: '企业知识库', department: '部门知识库', personal: '个人知识库' };
+  let html = '';
+  for (const [scope, items] of Object.entries(groups)) {
+    if (!items.length) continue;
+    html += '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--text-primary);margin-bottom:4px">' + names[scope] + ' (' + items.length + ')</div>';
+    items.forEach(kb => {
+      html += '<div class="kb-tree-item" onclick="selectKB(' + kb.id + ',this)" style="padding:6px 12px;font-size:13px;color:var(--text-secondary);cursor:pointer;border-radius:var(--radius-sm);margin:2px 0">' + (kb.name || '未命名') + '</div>';
+    });
+    html += '</div>';
+  }
+  return html;
+}
+
+let currentKBId = null;
+async function selectKB(id, el) {
+  currentKBId = id;
+  document.querySelectorAll('.kb-tree-item').forEach(e => e.style.background = '');
+  if (el) el.style.background = 'var(--bg-hover)';
+  try {
+    const r = await api('/api/v1/plugins/ddw-knowledge-hierarchy/documents?kb_id=' + id);
+    const docs = r.items || r || [];
+    const list = document.getElementById('kbDocList');
+    if (!docs.length) { list.innerHTML = '<div class="empty">该知识库暂无文档</div>'; return; }
+    list.innerHTML = '<table class="table"><thead><tr><th>文档名</th><th>大小</th><th>操作</th></tr></thead><tbody>' +
+      docs.map(d => '<tr><td>' + (d.file_name || d.title || '未命名') + '</td><td>' + formatSize(d.file_size || 0) + '</td><td><button class="btn sm" onclick="deleteDoc(' + d.id + ')">删除</button></td></tr>').join('') +
+      '</tbody></table>';
+  } catch (e) {
+    document.getElementById('kbDocList').innerHTML = '<div class="empty">加载失败：' + e.message + '</div>';
+  }
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+async function searchKB() {
+  const q = document.getElementById('kbSearch').value.trim();
+  if (!q) return;
+  try {
+    const r = await api('/api/v1/plugins/ddw-knowledge-hierarchy/search/flat', { method: 'POST', body: JSON.stringify({ query: q, kb_id: currentKBId }) });
+    const results = r.results || r || [];
+    const list = document.getElementById('kbDocList');
+    if (!results.length) { list.innerHTML = '<div class="empty">未找到相关内容</div>'; return; }
+    list.innerHTML = results.map(r => '<div style="padding:10px;border-bottom:1px solid var(--border-light)"><b>' + (r.title || '文档') + '</b><div style="font-size:12px;color:var(--text-muted);margin-top:4px">' + (r.content || r.text || '').slice(0, 200) + '</div></div>').join('');
+  } catch (e) {
+    document.getElementById('kbDocList').innerHTML = '<div class="empty">搜索失败：' + e.message + '</div>';
+  }
+}
+
+function showCreateKB() {
+  const mask = document.createElement('div');
+  mask.className = 'modal-mask';
+  mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;display:flex;align-items:center;justify-content:center';
+  mask.innerHTML = `
+    <div style="background:var(--bg-card);border-radius:var(--radius);width:420px;padding:24px;box-shadow:var(--shadow-dropdown)">
+      <div style="font-size:16px;font-weight:600;margin-bottom:16px">新建知识库</div>
+      <div class="form-row"><label style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;display:block">名称</label><input id="kbName" placeholder="例如：质量管理部知识库" style="width:100%;height:36px;padding:0 12px;border:1px solid var(--border-input);border-radius:var(--radius-sm);font-size:13px"></div>
+      <div class="form-row"><label style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;display:block">描述</label><input id="kbDesc" placeholder="简要描述知识库用途" style="width:100%;height:36px;padding:0 12px;border:1px solid var(--border-input);border-radius:var(--radius-sm);font-size:13px"></div>
+      <div class="form-row"><label style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;display:block">类型</label>
+        <select id="kbScope" style="width:100%;height:36px;padding:0 12px;border:1px solid var(--border-input);border-radius:var(--radius-sm);font-size:13px">
+          <option value="company">企业知识库</option><option value="department">部门知识库</option><option value="personal">个人知识库</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px">
+        <button class="btn" onclick="this.closest('.modal-mask').remove()">取消</button>
+        <button class="btn primary" id="kbCreateBtn">创建</button>
+      </div>
+    </div>`;
+  document.body.appendChild(mask);
+  mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+  document.getElementById('kbCreateBtn').addEventListener('click', async () => {
+    const name = document.getElementById('kbName').value.trim();
+    if (!name) { toast('请输入知识库名称'); return; }
+    try {
+      await api('/api/v1/plugins/ddw-knowledge-hierarchy/kb', {
+        method: 'POST',
+        body: JSON.stringify({ name, description: document.getElementById('kbDesc').value.trim(), scope: document.getElementById('kbScope').value })
+      });
+      mask.remove(); toast('创建成功'); route();
+    } catch (e) { toast('创建失败：' + e.message); }
+  });
+}
+function uploadDoc() {
+  if (!currentKBId) { toast('请先选择知识库'); return; }
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.pdf,.docx,.txt,.md,.xlsx,.csv';
+  input.multiple = true;
+  input.onchange = async () => {
+    for (const file of input.files) {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('kb_id', currentKBId);
+      try {
+        await fetch('/api/v1/plugins/ddw-knowledge-hierarchy/documents/upload', {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + TOKEN }, body: fd
+        });
+        toast('上传成功：' + file.name);
+      } catch (e) { toast('上传失败：' + file.name); }
+    }
+    selectKB(currentKBId);
+  };
+  input.click();
+}
+async function deleteDoc(docId) {
+  if (!confirm('确定删除该文档？')) return;
+  try { await api('/api/v1/plugins/ddw-knowledge-hierarchy/documents/' + docId, { method: 'DELETE' }); selectKB(currentKBId); toast('已删除'); } catch (e) { toast('删除失败：' + e.message); }
+}
+
+// ====== P1-4 新增：插件管理频道 ======
+async function renderPlugins() {
+  let plugins = [];
+  try {
+    const r = await api('/api/v1/admin/plugins');
+    plugins = r.items || r.plugins || r || [];
+  } catch (e) {
+    return '<div class="card"><div class="empty">加载失败：' + e.message + '</div></div>';
+  }
+  const rows = (plugins || []).map(p => `
+    <tr>
+      <td>${p.name || p.id}</td>
+      <td>${p.version || '-'}</td>
+      <td>${p.category || '-'}</td>
+      <td><span class="tag ${p.installed ? 'ok' : 'warn'}">${p.installed ? '已装' : '未装'}</span></td>
+      <td>${p.description || ''}</td>
+    </tr>
+  `).join('');
+  return `
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">插件管理</div>
+        <div class="card-extra"><span class="tag ok">已上线</span></div>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="table">
+          <thead><tr><th>插件</th><th>版本</th><th>分类</th><th>状态</th><th>说明</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="5" class="empty">暂无插件</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ====== P1-4 新增：经销商频道（重定向到独立页） ======
+function renderPartners() {
+  return `
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">经销商</div>
+      </div>
+      <div class="card-body">
+        <div class="hint">经销商管理为独立工作台，请前往 <a href="saas-partners.html">saas-partners.html</a>。</div>
+        <p style="margin-top:12px"><button class="btn primary" onclick="location.href='saas-partners.html'">打开经销商工作台</button></p>
+      </div>
+    </div>
+  `;
+}
+
+// ====== P1-4 新增：客户 Demo 账号频道（重定向到独立页） ======
+function renderDemoAccounts() {
+  return `
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">客户 Demo 账号</div>
+      </div>
+      <div class="card-body">
+        <div class="hint">Demo 账号管理已迁移到独立工作台，请前往 <a href="saas-demo-accounts.html">saas-demo-accounts.html</a>。</div>
+        <p style="margin-top:12px"><button class="btn primary" onclick="location.href='saas-demo-accounts.html'">打开 Demo 账号工作台</button></p>
+      </div>
+    </div>
+  `;
+}
+
+// ====== 2026-08-11：数字员工（ddw_org 真实数据） ======
+async function renderOrgAgents() {
+  let agents = [];
+  try {
+    const r = await api('/api/v1/org/agents');
+    agents = r.items || r || [];
+  } catch (e) {
+    return '<div class="card"><div class="empty">加载失败：' + e.message + '</div></div>';
+  }
+  const rows = (agents || []).map(a => `
+    <tr>
+      <td>${a.name || '未命名'}</td>
+      <td>${a.role || '-'}</td>
+      <td>${a.department_name || a.department_id || '-'}</td>
+      <td><span class="tag ${a.status === 'online' ? 'ok' : 'warn'}">${a.status === 'online' ? '在线' : '离线'}</span></td>
+      <td>${(a.description || '').slice(0, 40)}</td>
+    </tr>
+  `).join('');
+  return `
+    <div class="card">
+      <div class="card-head"><div class="card-title">数字员工（${(agents||[]).length}）</div></div>
+      <div class="card-body" style="padding:0">
+        <table class="table">
+          <thead><tr><th>名称</th><th>角色</th><th>所属部门</th><th>状态</th><th>说明</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="5" class="empty">暂无数字员工</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ====== 2026-08-11：技能 Skill（真实 API） ======
+async function renderSkills() {
+  let skills = [];
+  try {
+    const r = await api('/api/v1/skills');
+    skills = r.items || r || [];
+  } catch (e) {
+    return '<div class="card"><div class="empty">加载失败：' + e.message + '</div></div>';
+  }
+  const rows = (skills || []).map(s => `
+    <tr>
+      <td>${s.name || '未命名'}</td>
+      <td>${s.trigger || '-'}</td>
+      <td><span class="tag ${s.is_soft_link ? 'warn' : 'ok'}">${s.is_soft_link ? '软链' : '自建'}</span></td>
+    </tr>
+  `).join('');
+  return `
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">技能 Skill（${(skills||[]).length}）</div>
+        <div class="card-extra"><button class="btn primary" onclick="location.href='/pal.html'">在 DDW Pal 中创建</button></div>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="table">
+          <thead><tr><th>名称</th><th>触发词</th><th>类型</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="3" class="empty">暂无 Skill，点击右上角在 DDW Pal 中创建</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ====== 2026-08-11：插件论坛（独立页） ======
+function renderForum() {
+  return `
+    <div class="card">
+      <div class="card-head"><div class="card-title">插件论坛</div></div>
+      <div class="card-body">
+        <div class="hint">插件论坛为独立页面：发布 / 评论 / 提需求 / 需求闭环。</div>
+        <p style="margin-top:12px"><button class="btn primary" onclick="location.href='/plugin-forum.html'">打开插件论坛</button></p>
+      </div>
+    </div>
+  `;
+}
+
+// ====== 2026-08-11：企业工作日志（对话 + 流程执行，owner/admin 可见） ======
+function escapeHtml(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function fmtLogTime(iso) {
+  if (!iso) return '-';
+  try {
+    const d = new Date(String(iso).endsWith('Z') ? iso : iso + 'Z');
+    d.setHours(d.getHours() + 8);
+    return d.toISOString().slice(0, 16).replace('T', ' ');
+  } catch (e) { return String(iso).slice(0, 16).replace('T', ' '); }
+}
+async function renderWorkLogs() {
+  window.wlType = window.wlType || 'all';
+  window.wlDays = window.wlDays || 7;
+  const curType = window.wlType;
+  const curDays = window.wlDays;
+  async function load() {
+    const r = await api('/api/v1/admin/work-logs?days=' + curDays + '&log_type=' + curType + '&limit=100');
+    return r.items || r || [];
+  }
+  let logs = [];
+  try { logs = await load(); } catch (e) {
+    return '<div class="card"><div class="empty">加载失败：' + e.message + '</div></div>';
+  }
+  const typeBadge = (t) => t === 'chat' ? '<span class="tag info">对话</span>' : '<span class="tag warn">流程</span>';
+  const rows = logs.map((l, i) => {
+    if (l.type === 'chat') {
+      return `<tr>
+        <td>${fmtLogTime(l.created_at)}</td>
+        <td>${typeBadge('chat')}</td>
+        <td>${l.user || '-'}${l.user_role ? ' <span class="tag muted">' + l.user_role + '</span>' : ''}</td>
+        <td style="max-width:380px"><span class="log-role ${l.role === 'user' ? 'log-u' : 'log-a'}">${l.role === 'user' ? '问' : '答'}</span> <span class="log-content" data-log="${i}">${escapeHtml(String(l.content || '').slice(0, 80))}</span></td>
+        <td>${l.model || '-'}</td>
+        <td>${l.tokens_in || 0}/${l.tokens_out || 0} · ¥${(l.cost || 0).toFixed(4)}</td>
+      </tr>`;
+    }
+    return `<tr>
+      <td>${fmtLogTime(l.created_at)}</td>
+      <td>${typeBadge('flow')}</td>
+      <td>${l.user || '-'}</td>
+      <td style="max-width:380px"><b>${l.flow_name || '-'}</b> <span class="tag ${l.status === 'success' ? 'ok' : 'err'}">${l.status === 'success' ? '成功' : '失败'}</span> <span class="log-content" data-log="${i}">${escapeHtml(String(l.result || l.error || '').slice(0, 60))}</span></td>
+      <td>v${l.flow_version || '-'}</td>
+      <td>-</td>
+    </tr>`;
+  }).join('');
+  const full = logs.map(l => l.type === 'chat' ? ('【' + (l.user || '') + ' · ' + (l.role === 'user' ? '提问' : '回答') + '】\n' + (l.content || '')) : ('【流程 ' + (l.flow_name || '') + ' v' + (l.flow_version || '') + ' · ' + (l.status || '') + '】\n' + (l.result || l.error || ''))).join('\n\n=====\n\n');
+  return `
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">企业工作日志（${logs.length}）</div>
+        <div class="card-extra">
+          <select id="wl_type" style="margin-right:8px">
+            <option value="all" ${curType === 'all' ? 'selected' : ''}>全部</option>
+            <option value="chat" ${curType === 'chat' ? 'selected' : ''}>仅对话</option>
+            <option value="flow" ${curType === 'flow' ? 'selected' : ''}>仅流程执行</option>
+          </select>
+          <select id="wl_days">
+            <option value="7" ${curDays === 7 ? 'selected' : ''}>近 7 天</option>
+            <option value="30" ${curDays === 30 ? 'selected' : ''}>近 30 天</option>
+            <option value="90" ${curDays === 90 ? 'selected' : ''}>近 90 天</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="table">
+          <thead><tr><th>时间</th><th>类型</th><th>用户</th><th>内容</th><th>模型/流程</th><th>消耗</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="6" class="empty">暂无日志——员工使用 DDW Pal 对话或执行碳硅流程后自动记录</td></tr>'}</tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px;text-align:right"><button class="btn sm" id="wlExport">复制全部日志</button></div>
+    </div>`;
+}
+
+function bindWorkLogs() {
+  $('#wl_type').addEventListener('change', (e) => { window.wlType = e.target.value; route(); });
+  $('#wl_days').addEventListener('change', (e) => { window.wlDays = parseInt(e.target.value, 10); route(); });
+  const exp = $('#wlExport');
+  if (exp) exp.addEventListener('click', () => {
+    // 从表格重建文本
+    const texts = [];
+    document.querySelectorAll('#content tbody tr').forEach(tr => {
+      texts.push(Array.from(tr.querySelectorAll('td')).map(td => td.innerText.trim()).join(' | '));
+    });
+    const blob = new Blob([texts.join('\n')], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'work-logs-' + new Date().toISOString().slice(0, 10) + '.txt';
+    a.click();
+    toast('日志已导出');
+  });
+}
+
+// ====== 发票管理（管理员增强版） ======
+const INV_STATUS = { requested: { text: '待开票', cls: 'warn' }, issued: { text: '已开票', cls: 'ok' }, voided: { text: '已作废', cls: 'err' } };
+const INV_TYPE = { special: '专票', normal: '普票' };
+
+async function renderInvoices() {
+  let list, stats;
+  try {
+    list = await api('/api/v1/plugins/ddw-invoice/invoices?page=1&page_size=50');
+    stats = await api('/api/v1/plugins/ddw-invoice/invoices/stats');
+  } catch (e) { return '<div class="card"><div class="empty">加载失败：' + e.message + '</div></div>'; }
+  const rows = (list.items || []).map(inv => {
+    const st = INV_STATUS[inv.status] || { text: inv.status, cls: 'muted' };
+    const type = INV_TYPE[inv.invoice_type] || inv.invoice_type;
+    const issued = inv.issued_at ? new Date(inv.issued_at).toISOString().slice(0, 10) : '-';
+    const action = inv.status === 'requested'
+      ? '<button class="btn sm primary" data-upload-one="' + inv.id + '">上传发票</button>'
+      : (inv.status === 'issued'
+          ? '<button class="btn sm" data-view-one="' + inv.id + '">查看</button>'
+          : '<span class="tag muted">-</span>');
+    return '<tr>' +
+      '<td>' + inv.id + '</td>' +
+      '<td>' + (inv.invoice_no || '<span style="color:#999">未开票</span>') + '</td>' +
+      '<td>' + inv.invoice_title + '<br><span style="font-size:11px;color:#999">' + inv.tax_id + '</span></td>' +
+      '<td>' + type + '</td>' +
+      '<td>¥ ' + Number(inv.total_amount).toFixed(2) + '</td>' +
+      '<td>' + issued + '</td>' +
+      '<td><span class="tag ' + st.cls + '">' + st.text + '</span></td>' +
+      '<td>' + (inv.download_count || 0) + '</td>' +
+      '<td>' + action + '</td>' +
+      '</tr>';
+  }).join('');
+
+  return `
+    <div class="row c4" style="margin-bottom:16px">
+      <div class="stat-card"><div class="stat-label">总发票数</div><div class="stat-value">${stats.total}</div></div>
+      <div class="stat-card"><div class="stat-label">待开票</div><div class="stat-value">${stats.requested}</div><div class="stat-extra warn">需上传发票文件</div></div>
+      <div class="stat-card"><div class="stat-label">已开票</div><div class="stat-value">${stats.issued}</div><div class="stat-extra">已下载 ${stats.download_total || 0} 次</div></div>
+      <div class="stat-card"><div class="stat-label">累计金额</div><div class="stat-value">¥ ${Number(stats.total_amount).toFixed(2)}</div><div class="stat-extra">税额 ¥ ${Number(stats.tax_amount).toFixed(2)}</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">开票申请与发票记录</div>
+        <div class="card-extra">
+          <button class="btn" id="btnFilterPending">只看待开票</button>
+          <button class="btn primary" id="btnBatchUpload">批量上传发票文件</button>
+        </div>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="table">
+          <thead><tr>
+            <th>ID</th><th>发票号</th><th>抬头 / 税号</th><th>类型</th><th>价税合计</th>
+            <th>开票日期</th><th>状态</th><th>下载次数</th><th>操作</th>
+          </tr></thead>
+          <tbody>${rows || '<tr><td colspan="9" class="empty">暂无发票</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function bindInvoices() {
+  $('#btnBatchUpload')?.addEventListener('click', showBatchUploadModal);
+  $('#btnFilterPending')?.addEventListener('click', async () => {
+    try {
+      const r = await api('/api/v1/plugins/ddw-invoice/invoices?status=requested&page=1&page_size=50');
+      const ids = (r.items || []).map(i => i.id).join(', ');
+      toast('当前共 ' + r.total + ' 张待开票申请（ID: ' + ids + '）', 4000);
+    } catch (e) { toast('查询失败：' + e.message); }
+  });
+  $$('[data-upload-one]').forEach(b => b.addEventListener('click', () => showSingleUploadModal(parseInt(b.dataset.uploadOne, 10))));
+  $$('[data-view-one]').forEach(b => b.addEventListener('click', () => {
+    const id = parseInt(b.dataset.viewOne, 10);
+    location.href = 'invoice-portal.html?focus=' + id;
+  }));
+}
+
+async function showSingleUploadModal(invoiceId) {
+  const body = `
+    <div class="form-row"><label>开票申请 ID</label><input value="${invoiceId}" disabled></div>
+    <div class="form-row"><label>发票号<span class="req">*</span></label><input id="u_no" placeholder="如 INV-2026-0001"></div>
+    <div class="form-row"><label>发票代码</label><input id="u_code" placeholder="选填（电子发票 10-12 位）"></div>
+    <div class="form-row"><label>校验码</label><input id="u_check" placeholder="选填（电子发票后 6 位）"></div>
+    <div class="form-row"><label>文件 URL<span class="req">*</span></label><input id="u_url" placeholder="https://invoice.ddw.dev/xxx.pdf"></div>
+    <div class="form-row"><label>文件大小（字节）</label><input id="u_size" type="number" min="0" placeholder="0"></div>
+    <div class="form-row"><label>开票日期</label><input id="u_date" type="date"></div>
+  `;
+  const ok = await modal({ title: '上传发票文件', body, okText: '上传并开票', cancelText: '取消' });
+  if (!ok) return;
+  const url = $('#u_url').value.trim();
+  const no = $('#u_no').value.trim();
+  if (!url || !no) { toast('请填写发票号和文件 URL', 2500, 'err'); return; }
+  try {
+    await api('/api/v1/plugins/ddw-invoice/invoices/' + invoiceId + '/upload', {
+      method: 'POST',
+      body: JSON.stringify({
+        invoice_url: url,
+        invoice_no: no,
+        invoice_code: $('#u_code').value.trim() || null,
+        invoice_check_code: $('#u_check').value.trim() || null,
+        file_type: 'pdf',
+        file_size_bytes: parseInt($('#u_size').value || '0', 10) || null,
+        issued_at: $('#u_date').value || null,
+      }),
+    });
+    toast('上传成功', 2000, 'ok');
+    route();
+  } catch (e) { toast('上传失败：' + e.message, 3000, 'err'); }
+}
+
+async function showBatchUploadModal() {
+  let pending;
+  try {
+    const r = await api('/api/v1/plugins/ddw-invoice/invoices?status=requested&page=1&page_size=50');
+    pending = r.items || [];
+  } catch (e) { toast('加载待开票列表失败：' + e.message); return; }
+  if (pending.length === 0) { toast('当前没有待开票申请', 2500); return; }
+
+  const rows = pending.map(p =>
+    '<tr><td>' + p.id + '</td><td>' + p.invoice_title + '<br><span style="font-size:11px;color:#999">' + p.tax_id + '</span></td><td>¥ ' + Number(p.total_amount).toFixed(2) + '</td>' +
+    '<td><input class="batch-no" data-id="' + p.id + '" placeholder="发票号" style="width:160px"></td>' +
+    '<td><input class="batch-url" data-id="' + p.id + '" placeholder="文件 URL" style="width:240px"></td></tr>'
+  ).join('');
+
+  const body = `
+    <div style="max-height:420px;overflow:auto;border:1px solid #E8E8E8">
+      <table class="table" style="font-size:12px">
+        <thead><tr><th>ID</th><th>抬头</th><th>金额</th><th>发票号</th><th>文件 URL</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="font-size:12px;color:#999;margin-top:8px">填写每行的发票号和文件 URL 后点确定，系统将批量更新这些申请为已开票状态。</div>
+  `;
+  const ok = await modal({ title: '批量上传发票文件（' + pending.length + ' 张待开票）', body, okText: '提交批量上传', cancelText: '取消' });
+  if (!ok) return;
+
+  const items = pending.map(p => ({
+    invoice_id: p.id,
+    invoice_no: document.querySelector('.batch-no[data-id="' + p.id + '"]').value.trim(),
+    invoice_url: document.querySelector('.batch-url[data-id="' + p.id + '"]').value.trim(),
+    file_type: 'pdf',
+  })).filter(i => i.invoice_no && i.invoice_url);
+
+  if (items.length === 0) { toast('请至少填写一行有效的发票号与文件 URL', 2500, 'err'); return; }
+
+  try {
+    const r = await api('/api/v1/plugins/ddw-invoice/invoices/batch-upload', {
+      method: 'POST',
+      body: JSON.stringify({ items, notify: true }),
+    });
+    let msg = '提交完成：成功 ' + r.succeeded + '，失败 ' + r.failed;
+    if (r.failed > 0) {
+      const firstErr = (r.results || []).find(x => !x.ok);
+      if (firstErr) msg += '（首条失败原因：' + firstErr.error + '）';
+    }
+    toast(msg, 3500, r.failed === 0 ? 'ok' : 'err');
+    route();
+  } catch (e) { toast('批量上传失败：' + e.message, 3000, 'err'); }
+}
+
+function bindPage(name) {
+  if (name === 'users') bindUsers();
+  else if (name === 'billing') bindBilling();
+  else if (name === 'invoices') bindInvoices();
+  else if (name === 'settings') bindSettings();
+  else if (name === 'llm') bindLLM();
+  else if (name === 'worklogs') bindWorkLogs();
+  // P1-4 新增频道暂无交互绑定，保留扩展位
+}
+
+route();
+</script>
+</body>
+</html>

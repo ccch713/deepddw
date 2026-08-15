@@ -1,0 +1,93 @@
+type: orthodontics
+name: 正畸病历
+version: "1.0"
+required_fields:
+  - chief_complaint
+  - present_illness
+  - malocclusion_type
+  - angle_class
+  - overjet
+  - overbite
+  - treatment_modality
+  - estimated_duration
+  - informed_consent_signed
+
+fields:
+  chief_complaint:
+    label: 主诉
+    type: text
+    max_length: 200
+    required: true
+  present_illness:
+    label: 现病史
+    type: text
+    max_length: 1000
+    required: true
+  past_history:
+    label: 既往史
+    type: text
+    max_length: 500
+    required: false
+  malocclusion_type:
+    label: 错合类型
+    type: select
+    options: [crowding, spacing, crossbite, deepbite, openbite, protrusion]
+    required: true
+  angle_class:
+    label: 安氏分类
+    type: select
+    options: [I, II_1, II_2, III]
+    required: true
+  arch_form:
+    label: 牙弓形态
+    type: select
+    options: [oval, tapered, square]
+    required: false
+  overjet:
+    label: 覆盖(mm)
+    type: number
+    unit: mm
+    required: true
+  overbite:
+    label: 覆合(mm)
+    type: number
+    unit: mm
+    required: true
+  crowe_index:
+    label: Crowe 指数
+    type: select
+    options: [mild, moderate, severe]
+    required: false
+  treatment_modality:
+    label: 矫治方案
+    type: select
+    options: [fixed, removable, invisible, combined]
+    required: true
+  extraction_needed:
+    label: 是否拔牙
+    type: boolean
+    required: false
+  estimated_duration:
+    label: 预估疗程(月)
+    type: number
+    unit: months
+    required: true
+  informed_consent_signed:
+    label: 知情同意已签
+    type: boolean
+    required: true
+
+display_order:
+  - chief_complaint
+  - present_illness
+  - past_history
+  - malocclusion_type
+  - angle_class
+  - arch_form
+  - overjet
+  - overbite
+  - crowe_index
+  - treatment_modality
+  - extraction_needed
+  - estimated_duration
+  - informed_consent_signed

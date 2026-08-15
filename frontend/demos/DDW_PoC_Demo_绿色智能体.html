@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DDW AI Hub · 制造业智能体 PoC 演示</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg-0: #050816;
+    --bg-1: #0a0f24;
+    --bg-2: #111a3a;
+    --bg-3: #1a2348;
+    --border: rgba(0, 229, 255, 0.15);
+    --border-hover: rgba(0, 229, 255, 0.4);
+    --cyan: #00e5ff;
+    --green: #00ff9d;
+    --blue: #4f9eff;
+    --purple: #a78bfa;
+    --orange: #ffb454;
+    --red: #ff5e7e;
+    --green-rgb: 0, 255, 157;
+    --blue-rgb: 79, 158, 255;
+    --text-primary: #e6f1ff;
+    --text-secondary: #8892b0;
+    --text-muted: #5a6789;
+  }
+  html, body {
+    background: var(--bg-0);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(0, 229, 255, 0.08), transparent 40%),
+      radial-gradient(circle at 85% 70%, rgba(167, 139, 250, 0.06), transparent 40%),
+      radial-gradient(circle at 50% 100%, rgba(var(--green-rgb, 0, 255, 157), 0.04), transparent 50%);
+    pointer-events: none; z-index: 0;
+  }
+  .app { position: relative; z-index: 1; }
+
+  /* ============== HEADER ============== */
+  header {
+    background: linear-gradient(180deg, var(--bg-1), transparent);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex; align-items: center; gap: 20px;
+    backdrop-filter: blur(20px);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .logo-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--cyan), var(--blue));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; color: var(--bg-0);
+    font-size: 18px; letter-spacing: -1px;
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.5);
+  }
+  .logo-text { display: flex; flex-direction: column; }
+  .logo-text .brand {
+    font-size: 16px; font-weight: 700;
+    background: linear-gradient(90deg, var(--cyan), var(--blue));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    letter-spacing: 0.5px;
+  }
+  .logo-text .sub { font-size: 11px; color: var(--text-muted); letter-spacing: 1px; }
+
+  .header-title {
+    margin-left: 16px; padding-left: 24px;
+    border-left: 1px solid var(--border);
+    flex: 1;
+  }
+  .header-title h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.5px; }
+  .header-title p { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+  .header-meta {
+    display: flex; align-items: center; gap: 16px;
+    font-size: 12px; color: var(--text-secondary);
+  }
+  .meta-pill {
+    padding: 6px 12px; border-radius: 20px;
+    background: rgba(var(--green-rgb, 0, 255, 157), 0.08);
+    border: 1px solid rgba(var(--green-rgb, 0, 255, 157), 0.3);
+    color: var(--green);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.3); }
+  }
+
+  /* ============== LAYOUT ============== */
+  .layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: calc(100vh - 76px);
+  }
+
+  /* ============== SIDEBAR ============== */
+  aside {
+    background: var(--bg-1);
+    border-right: 1px solid var(--border);
+    padding: 24px 16px;
+  }
+  .sidebar-title {
+    font-size: 11px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 2px;
+    margin-bottom: 16px; padding: 0 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sidebar-title::before {
+    content: ''; display: block;
+    width: 4px; height: 4px; background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+  }
+  .nav-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px 14px; margin-bottom: 6px;
+    border-radius: 10px; cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.25s ease;
+    position: relative;
+  }
+  .nav-item:hover {
+    background: var(--bg-2);
+    border-color: var(--border);
+  }
+  .nav-item.active {
+    background: linear-gradient(90deg, rgba(0, 229, 255, 0.12), transparent);
+    border-color: rgba(0, 229, 255, 0.3);
+  }
+  .nav-item.active::before {
+    content: ''; position: absolute; left: 0; top: 12px; bottom: 12px;
+    width: 3px; background: var(--cyan);
+    border-radius: 0 3px 3px 0;
+    box-shadow: 0 0 10px var(--cyan);
+  }
+  .nav-icon {
+    width: 36px; height: 36px; flex-shrink: 0;
+    border-radius: 8px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    transition: all 0.25s ease;
+  }
+  .nav-item.active .nav-icon { background: rgba(0, 229, 255, 0.15); border-color: var(--cyan); }
+  .nav-content { flex: 1; min-width: 0; }
+  .nav-content .name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .nav-content .desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .nav-tag {
+    font-size: 10px;
+    padding: 2px 6px; border-radius: 4px;
+    background: rgba(var(--green-rgb, 0, 255, 157), 0.12);
+    color: var(--green);
+    margin-left: 8px;
+    border: 1px solid rgba(var(--green-rgb, 0, 255, 157), 0.2);
+  }
+
+  /* ============== MAIN ============== */
+  main { padding: 32px 40px; overflow-y: auto; }
+  .pane { display: none; animation: fadeIn 0.4s ease; }
+  .pane.active { display: block; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .pane-header {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .pane-header h2 {
+    font-size: 24px; font-weight: 700;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .pane-header .badge {
+    font-size: 11px; padding: 4px 10px; border-radius: 6px;
+    background: rgba(var(--green-rgb, 0, 255, 157), 0.1);
+    border: 1px solid rgba(var(--green-rgb, 0, 255, 157), 0.3);
+    color: var(--green);
+  }
+  .pane-header .lead { color: var(--text-secondary); margin-top: 8px; font-size: 13px; max-width: 720px; }
+
+  /* Two-column body */
+  .pane-body {
+    display: grid; grid-template-columns: 380px 1fr; gap: 20px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card-title {
+    font-size: 13px; font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-title::before {
+    content: ''; display: block;
+    width: 3px; height: 14px;
+    background: linear-gradient(180deg, var(--cyan), var(--blue));
+    border-radius: 2px;
+  }
+  .card-title .num {
+    font-size: 10px; padding: 2px 6px; border-radius: 4px;
+    background: var(--bg-2); color: var(--text-muted);
+    margin-left: auto;
+  }
+
+  /* Form */
+  .form-group { margin-bottom: 14px; }
+  .form-label {
+    font-size: 12px; color: var(--text-secondary);
+    margin-bottom: 6px; display: block;
+  }
+  .form-input, .form-textarea, .form-select {
+    width: 100%;
+    background: var(--bg-0);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: inherit;
+    transition: border 0.2s;
+  }
+  .form-input:focus, .form-textarea:focus, .form-select:focus {
+    outline: none; border-color: var(--cyan);
+    box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.1);
+  }
+  .form-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+  .upload-zone {
+    background: var(--bg-0);
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .upload-zone:hover {
+    border-color: var(--cyan);
+    background: rgba(0, 229, 255, 0.03);
+  }
+  .upload-zone .ico { font-size: 28px; margin-bottom: 6px; }
+  .upload-zone .txt { font-size: 12px; color: var(--text-secondary); }
+  .upload-zone .hint { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+
+  .btn {
+    width: 100%; padding: 11px 20px;
+    background: linear-gradient(135deg, var(--cyan), var(--blue));
+    border: none; border-radius: 6px;
+    color: var(--bg-0); font-weight: 600; font-size: 13px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0, 229, 255, 0.4); }
+  .btn:active { transform: translateY(0); }
+  .btn .arrow { font-weight: 700; }
+
+  /* Output */
+  .output-card {
+    background: linear-gradient(180deg, var(--bg-1), var(--bg-0));
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .output-head {
+    background: var(--bg-2);
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .output-head .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r { background: var(--red); }
+  .dot.y { background: var(--orange); }
+  .dot.g { background: var(--green); }
+  .output-head .title { font-size: 12px; color: var(--text-secondary); margin-left: 8px; font-family: "SF Mono", Menlo, monospace; }
+  .output-head .meta { margin-left: auto; font-size: 11px; color: var(--text-muted); font-family: "SF Mono", Menlo, monospace; }
+  .output-body {
+    padding: 24px; line-height: 1.7;
+    max-height: 540px; overflow-y: auto;
+  }
+  .output-body::-webkit-scrollbar { width: 6px; }
+  .output-body::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 3px; }
+
+  /* Output typography */
+  .section-h {
+    font-size: 13px; font-weight: 700; color: var(--cyan);
+    margin: 18px 0 8px;
+    display: flex; align-items: center; gap: 8px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .section-h::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--border), transparent);
+  }
+  .section-h:first-child { margin-top: 0; }
+
+  .kv-row {
+    display: flex; gap: 12px;
+    padding: 6px 0; font-size: 13px;
+    border-bottom: 1px dashed rgba(255,255,255,0.04);
+  }
+  .kv-row:last-child { border-bottom: none; }
+  .kv-row .k { color: var(--text-secondary); min-width: 90px; flex-shrink: 0; }
+  .kv-row .v { color: var(--text-primary); flex: 1; }
+
+  .para { color: var(--text-primary); margin-bottom: 10px; font-size: 13px; }
+  .para .hl { color: var(--cyan); font-weight: 500; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0; }
+  .stat-card {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .stat-card .v { font-size: 20px; font-weight: 700; color: var(--cyan); font-family: "SF Mono", Menlo, monospace; }
+  .stat-card .l { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .stat-card.warn .v { color: var(--orange); }
+  .stat-card.bad .v { color: var(--red); }
+  .stat-card.good .v { color: var(--green); }
+
+  /* 8D-specific */
+  .d8step {
+    background: var(--bg-1);
+    border-left: 3px solid var(--cyan);
+    padding: 12px 14px; margin-bottom: 8px;
+    border-radius: 0 6px 6px 0;
+  }
+  .d8step .step-num {
+    display: inline-block;
+    background: var(--cyan); color: var(--bg-0);
+    font-weight: 700; font-size: 11px;
+    padding: 2px 8px; border-radius: 4px;
+    margin-right: 8px;
+  }
+  .d8step .step-title { font-weight: 600; font-size: 13px; color: var(--text-primary); }
+  .d8step .step-content { font-size: 12px; color: var(--text-secondary); margin-top: 6px; line-height: 1.6; }
+
+  /* BOM table */
+  .bom-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 12px;
+    margin: 12px 0;
+  }
+  .bom-table th {
+    background: var(--bg-2);
+    color: var(--text-secondary);
+    text-align: left; padding: 8px 12px;
+    font-weight: 500; font-size: 11px;
+    border-bottom: 1px solid var(--border);
+  }
+  .bom-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-family: "SF Mono", Menlo, monospace;
+  }
+  .bom-table tr.add td { background: rgba(var(--green-rgb, 0, 255, 157), 0.05); }
+  .bom-table tr.del td { background: rgba(255, 94, 126, 0.05); }
+  .bom-table tr.mod td { background: rgba(255, 180, 84, 0.05); }
+  .bom-table .pno { color: var(--cyan); }
+  .bom-table .sign-add { color: var(--green); font-weight: 700; }
+  .bom-table .sign-del { color: var(--red); font-weight: 700; }
+  .bom-table .sign-mod { color: var(--orange); font-weight: 700; }
+
+  /* Meeting format */
+  .meeting-meta {
+    background: var(--bg-2); padding: 12px 16px;
+    border-radius: 8px; margin-bottom: 14px;
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 16px;
+    font-size: 12px;
+  }
+  .meeting-meta .k { color: var(--text-muted); display: inline-block; min-width: 56px; }
+  .meeting-meta .v { color: var(--text-primary); }
+
+  .agenda-item {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+  }
+  .agenda-item .head { display: flex; justify-content: space-between; align-items: center; }
+  .agenda-item .head .topic { font-weight: 600; font-size: 13px; color: var(--text-primary); }
+  .agenda-item .head .time { font-size: 11px; color: var(--text-muted); font-family: "SF Mono", Menlo, monospace; }
+  .agenda-item .body { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+  .todo-list { list-style: none; padding: 0; }
+  .todo-item {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px dashed rgba(255,255,255,0.04);
+    font-size: 12px;
+  }
+  .todo-item:last-child { border-bottom: none; }
+  .todo-item .checkbox {
+    width: 16px; height: 16px; border-radius: 4px;
+    border: 1.5px solid var(--cyan);
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .todo-item .desc { color: var(--text-primary); flex: 1; }
+  .todo-item .owner {
+    font-size: 11px; padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(79, 158, 255, 0.1);
+    color: var(--blue);
+    border: 1px solid rgba(79, 158, 255, 0.2);
+  }
+  .todo-item .due { font-size: 11px; color: var(--orange); margin-left: 8px; }
+
+  /* HR / decision styles */
+  .chat-bubble {
+    padding: 12px 16px; border-radius: 14px;
+    margin-bottom: 10px; max-width: 95%; font-size: 13px;
+    line-height: 1.6;
+  }
+  .chat-bubble.user {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+    color: var(--text-primary);
+    margin-right: auto;
+  }
+  .chat-bubble.ai {
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.08), rgba(79, 158, 255, 0.05));
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-bubble .who {
+    font-size: 11px; color: var(--cyan); margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .chat-bubble ul { padding-left: 20px; margin: 6px 0; }
+  .chat-bubble li { margin-bottom: 4px; }
+
+  .callout {
+    padding: 12px 14px; border-radius: 8px;
+    background: rgba(0, 229, 255, 0.05);
+    border-left: 3px solid var(--cyan);
+    font-size: 12px; color: var(--text-secondary);
+    margin: 10px 0;
+  }
+
+  /* Delivery badge */
+  .delivery-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px;
+    background: rgba(var(--green-rgb, 0, 255, 157), 0.08);
+    border: 1px solid rgba(var(--green-rgb, 0, 255, 157), 0.3);
+    border-radius: 20px;
+    color: var(--green);
+    font-size: 12px; font-weight: 500;
+    margin-top: 12px;
+  }
+  .delivery-tag::before {
+    content: '⚡'; font-size: 12px;
+  }
+
+  /* ============== FOOTER (Capabilities) ============== */
+  .capabilities {
+    background: linear-gradient(180deg, var(--bg-1), var(--bg-0));
+    border-top: 1px solid var(--border);
+    padding: 32px;
+    margin: 0;
+  }
+  .cap-header { text-align: center; margin-bottom: 28px; }
+  .cap-header h3 {
+    font-size: 20px;
+    background: linear-gradient(90deg, var(--cyan), var(--green));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    display: inline-block;
+  }
+  .cap-header p { color: var(--text-secondary); font-size: 13px; margin-top: 6px; }
+
+  .cap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .cap-card {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cap-card::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--cyan), var(--blue));
+  }
+  .cap-card:nth-child(2)::before { background: linear-gradient(90deg, var(--blue), var(--purple)); }
+  .cap-card:nth-child(3)::before { background: linear-gradient(90deg, var(--purple), var(--green)); }
+  .cap-card:nth-child(4)::before { background: linear-gradient(90deg, var(--green), var(--orange)); }
+  .cap-card .ico {
+    font-size: 24px; margin-bottom: 10px;
+  }
+  .cap-card .name {
+    font-size: 15px; font-weight: 600;
+    color: var(--text-primary); margin-bottom: 4px;
+  }
+  .cap-card .tag {
+    font-size: 11px; color: var(--cyan);
+    font-family: "SF Mono", Menlo, monospace;
+    margin-bottom: 10px;
+  }
+  .cap-card .desc { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+  .cap-card ul { list-style: none; padding: 0; margin-top: 10px; }
+  .cap-card li {
+    font-size: 11px; color: var(--text-muted);
+    padding: 3px 0;
+    display: flex; gap: 6px; align-items: center;
+  }
+  .cap-card li::before {
+    content: '▸'; color: var(--cyan); font-size: 10px;
+  }
+
+  .footer-bar {
+    border-top: 1px solid var(--border);
+    padding: 16px 32px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 11px;
+    background: var(--bg-0);
+  }
+  .footer-bar .strong { color: var(--cyan); font-weight: 600; }
+
+  @media (max-width: 1100px) {
+    .pane-body { grid-template-columns: 1fr; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .cap-grid { grid-template-columns: repeat(2, 1fr); }
+    .layout { grid-template-columns: 240px 1fr; }
+    main { padding: 20px; }
+  }
+  @media (max-width: 720px) {
+    .layout { grid-template-columns: 1fr; }
+    aside { border-right: none; border-bottom: 1px solid var(--border); }
+    .cap-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ===== 官网主题联动（主题模版由 DDW 底座后台统一切换；standard 保留本页深色特色） ===== */
+  html[data-theme="holiday"] {
+    --bg-0: #fbf6f2; --bg-1: #f9ede3; --bg-2: #fdf8f4; --bg-3: #f0e0d2;
+    --border: rgba(192, 57, 43, 0.25); --border-hover: rgba(192, 57, 43, 0.45);
+    --cyan: #d4a017; --green: #6b8e23; --blue: #c0392b; --purple: #9b59b6; --orange: #e67e22; --red: #c0392b;
+    --green-rgb: 107, 142, 35; --blue-rgb: 192, 57, 43;
+    --text-primary: #4a2c22; --text-secondary: #7a5c4f; --text-muted: #a48d80;
+  }
+  html[data-theme="mourning"] {
+    --bg-0: #ececec; --bg-1: #e3e3e3; --bg-2: #f4f4f4; --bg-3: #d4d4d4;
+    --border: rgba(90, 90, 90, 0.25); --border-hover: rgba(90, 90, 90, 0.5);
+    --cyan: #777777; --green: #666666; --blue: #555555; --purple: #777777; --orange: #666666; --red: #555555;
+    --green-rgb: 90, 90, 90; --blue-rgb: 85, 85, 85;
+    --text-primary: #1a1a1a; --text-secondary: #4d4d4d; --text-muted: #7a7a7a;
+  }
+
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============== HEADER ============== -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">DDW</div>
+      <div class="logo-text">
+        <div class="brand">DDW AI HUB</div>
+        <div class="sub">ENTERPRISE AGENT PLATFORM</div>
+      </div>
+    </div>
+    <div class="header-title">
+      <h1>制造业智能体 PoC 演示</h1>
+      <p>绿色智能体 · LLM + 知识库 + 工作流 · 即可交付</p>
+    </div>
+    <div class="header-meta">
+      <div class="meta-pill"><span class="pulse"></span>演示数据 · 离线运行</div>
+    </div>
+  </header>
+
+  <!-- ============== LAYOUT ============== -->
+  <div class="layout">
+
+    <!-- ============== SIDEBAR ============== -->
+    <aside>
+      <div class="sidebar-title">5 个绿色智能体 PoC</div>
+
+      <div class="nav-item active" data-pane="pane-1" onclick="showPane('pane-1')">
+        <div class="nav-icon" style="color: var(--red);">🛠️</div>
+        <div class="nav-content">
+          <div class="name">8D 报告自动生成 <span class="nav-tag">质量</span></div>
+          <div class="desc">客户投诉 → 标准 8D</div>
+        </div>
+      </div>
+
+      <div class="nav-item" data-pane="pane-2" onclick="showPane('pane-2')">
+        <div class="nav-icon" style="color: var(--orange);">📋</div>
+        <div class="nav-content">
+          <div class="name">BOM 差异比对 <span class="nav-tag">研发</span></div>
+          <div class="desc">两版 BOM → 差异分析</div>
+        </div>
+      </div>
+
+      <div class="nav-item" data-pane="pane-3" onclick="showPane('pane-3')">
+        <div class="nav-icon" style="color: var(--blue);">🎙️</div>
+        <div class="nav-content">
+          <div class="name">会议纪要 <span class="nav-tag">协同</span></div>
+          <div class="desc">录音/转写 → 结构化纪要</div>
+        </div>
+      </div>
+
+      <div class="nav-item" data-pane="pane-4" onclick="showPane('pane-4')">
+        <div class="nav-icon" style="color: var(--purple);">🤝</div>
+        <div class="nav-content">
+          <div class="name">员工自助服务 <span class="nav-tag">HR</span></div>
+          <div class="desc">政策问答 / 请假指引</div>
+        </div>
+      </div>
+
+      <div class="nav-item" data-pane="pane-5" onclick="showPane('pane-5')">
+        <div class="nav-icon" style="color: var(--green);">📊</div>
+        <div class="nav-content">
+          <div class="name">经营决策辅助 <span class="nav-tag">经营</span></div>
+          <div class="desc">BI 数据 → 自然语言洞察</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============== MAIN ============== -->
+    <main>
+
+      <!-- ============ PANE 1: 8D ============ -->
+      <div class="pane active" id="pane-1">
+        <div class="pane-header">
+          <h2>🛠️ 8D 报告自动生成智能体 <span class="badge">质量 · GREEN</span></h2>
+          <p class="lead">客户投诉工单一键导入，自动按 ISO 9001 / AIAG 8D 框架拆解 D1~D8 各阶段内容，输出可编辑、可追溯、可归档的 Word 报告。</p>
+        </div>
+        <div class="pane-body">
+          <!-- INPUT -->
+          <div>
+            <div class="card">
+              <div class="card-title">① 输入: 客户投诉工单 <span class="num">SIM</span></div>
+              <div class="form-group">
+                <label class="form-label">工单来源</label>
+                <select class="form-select">
+                  <option>CRM · Salesforce</option>
+                  <option>邮件 · 自动抓取</option>
+                  <option>手工录入</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">客户名称</label>
+                <input class="form-input" value="上汽集团乘用车公司" readonly />
+              </div>
+              <div class="form-group">
+                <label class="form-label">投诉描述</label>
+                <textarea class="form-textarea" readonly>2026-07-18 批次: SCA7203-A28
+售后反馈 SV71 车型前大灯灯罩出现起雾/水珠现象，20 天内返修 17 例，占该批次装车量 0.42%, 超过我司三包阈值（0.15%）。客户要求 8D 分析 + 改进方案 + 预防措施。</textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">附件</label>
+                <div class="upload-zone">
+                  <div class="ico">📎</div>
+                  <div class="txt">返修件照片 · 不合格品报告 · 工艺卡</div>
+                  <div class="hint">已上传 4 个附件 · 共 12.6 MB</div>
+                </div>
+              </div>
+              <button class="btn" onclick="triggerRun(this, 'pane-1')">
+                <span>运行智能体</span><span class="arrow">→</span>
+              </button>
+              <div class="delivery-tag">DDW AI Hub 现有能力，≤ 8 周可交付</div>
+            </div>
+          </div>
+          <!-- OUTPUT -->
+          <div>
+            <div class="output-card">
+              <div class="output-head">
+                <div class="dot r"></div>
+                <div class="dot y"></div>
+                <div class="dot g"></div>
+                <span class="title">8D_report_SV71_前大灯_2026-07-22.docx</span>
+                <span class="meta">3.8s · 4 模型协作</span>
+              </div>
+              <div class="output-body">
+                <div class="section-h">D1 · 组建团队</div>
+                <div class="kv-row"><span class="k">组长</span><span class="v">李工 · 质量工程部 · 138-****-8821</span></div>
+                <div class="kv-row"><span class="k">成员</span><span class="v">光学设计 × 1、注塑工艺 × 1、装配工艺 × 1、售后 × 1</span></div>
+                <div class="kv-row"><span class="k">首次会议</span><span class="v">2026-07-21 14:00 · 质量部 305 会议室</span></div>
+
+                <div class="section-h">D2 · 问题描述 (5W2H)</div>
+                <div class="kv-row"><span class="k">What</span><span class="v">SV71 车型前大灯灯罩内表面出现水雾/水珠</span></div>
+                <div class="kv-row"><span class="k">Where</span><span class="v">总装二车间, 装配后 5~20 天出现</span></div>
+                <div class="kv-row"><span class="k">When</span><span class="v">2026-07-18 首批售后反馈</span></div>
+                <div class="kv-row"><span class="k">Who</span><span class="v">客户使用场景 · 无地域聚集</span></div>
+                <div class="kv-row"><span class="k">How</span><span class="v">湿度较大地区出现概率 78%, 干燥地区 12%</span></div>
+                <div class="kv-row"><span class="k">数量</span><span class="v">17 / 4050 (0.42%) — 超过阈值</span></div>
+
+                <div class="section-h">D3 · 临时遏制</div>
+                <div class="d8step"><span class="step-num">行动 1</span><span class="step-content">对库内 2200 件同批次库存全数 100% 试水检测</span></div>
+                <div class="d8step"><span class="step-num">行动 2</span><span class="step-content">客户线在制车辆增设检漏工位, 100% 抽检 (含在线烘干预检)</span></div>
+                <div class="d8step"><span class="step-num">行动 3</span><span class="step-content">已发往客户处的 1800 件召回重检</span></div>
+
+                <div class="section-h">D4 · 根本原因 (5-Why)</div>
+                <div class="d8step"><span class="step-num">Why 1</span><span class="step-content">灯罩内有水雾 → 密封失效</span></div>
+                <div class="d8step"><span class="step-num">Why 2</span><span class="step-content">密封失效 → 密封胶圈未在装配时被均匀压实</span></div>
+                <div class="d8step"><span class="step-num">Why 3</span><span class="step-content">未均匀压实 → 机械手压装行程不一致 (公差 ±1.5mm > 设计 ±0.5mm)</span></div>
+                <div class="d8step"><span class="step-num">Why 4</span><span class="step-content">机械手行程不一致 → 压头磨损, 未按 TPM 计划更换</span></div>
+                <div class="d8step" style="border-left-color: var(--red);">
+                  <span class="step-num" style="background: var(--red);">根因</span>
+                  <span class="step-content"><strong style="color: var(--red);">密封工位压头 TPM 计划执行不到位 (频次 8000 件/更换 实际 ~12000 件/更换), 缺乏 Poka-Yoke 防错</strong></span>
+                </div>
+
+                <div class="section-h">D5 · 永久对策</div>
+                <div class="d8step"><span class="step-num">CA-1</span><span class="step-content">压装工位增加位移传感器 + 视觉检测, 不合格自动停线</span></div>
+                <div class="d8step"><span class="step-num">CA-2</span><span class="step-content">TPM 周期由 8000 件 → 4000 件, 并接入 MES 自动提示</span></div>
+                <div class="d8step"><span class="step-num">CA-3</span><span class="step-content">密封胶圈供应商变更 (B+ 替代 B), IP 等级提升到 IPX7</span></div>
+
+                <div class="section-h">D6 · 实施 &amp; 验证</div>
+                <div class="kv-row"><span class="k">实施日</span><span class="v">2026-08-15 (按计划)</span></div>
+                <div class="kv-row"><span class="k">验证方法</span><span class="v">3 个月装车数据跟踪, 返修率目标 ≤ 0.05%</span></div>
+
+                <div class="section-h">D7 · 预防再发</div>
+                <div class="para">已写入 <span class="hl">PFMEA (修订 #2026-Q3-08)</span>，更新作业指导书 <span class="hl">SOP-OP-0521</span>，并同步到 5 个兄弟车型组。</div>
+
+                <div class="section-h">D8 · 表彰团队</div>
+                <div class="para">组长李工 + 团队成员将在 8 月质量月表彰。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ PANE 2: BOM ============ -->
+      <div class="pane" id="pane-2">
+        <div class="pane-header">
+          <h2>📋 BOM 差异比对智能体 <span class="badge">研发 · GREEN</span></h2>
+          <p class="lead">新旧两版 BOM 一键比对，自动归类新增/删除/修改/替代，输出 ECO 草稿清单 + 影响范围（MRP、在制、库存、成本）。</p>
+        </div>
+        <div class="pane-body">
+          <div>
+            <div class="card">
+              <div class="card-title">① 输入: 两版 BOM 文件 <span class="num">SIM</span></div>
+              <div class="form-group">
+                <label class="form-label">基准版本 (旧 BOM)</label>
+                <div class="upload-zone">
+                  <div class="ico">📄</div>
+                  <div class="txt">SV71_前大灯总成_BOM_v3.2.xlsx</div>
+                  <div class="hint">2026-06-10 · 142 行 · 包含 8 级展开</div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">目标版本 (新 BOM)</label>
+                <div class="upload-zone">
+                  <div class="ico">📄</div>
+                  <div class="txt">SV71_前大灯总成_BOM_v3.3.xlsx</div>
+                  <div class="hint">2026-07-25 · 148 行 · 包含 8 级展开</div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">比对维度</label>
+                <select class="form-select">
+                  <option>多维度: 物料号 + 数量 + 替代 + 工艺</option>
+                  <option>仅物料号</option>
+                </select>
+              </div>
+              <button class="btn" onclick="triggerRun(this, 'pane-2')">
+                <span>运行智能体</span><span class="arrow">→</span>
+              </button>
+              <div class="delivery-tag">DDW AI Hub 现有能力，≤ 6 周可交付</div>
+            </div>
+          </div>
+          <div>
+            <div class="output-card">
+              <div class="output-head">
+                <div class="dot r"></div>
+                <div class="dot y"></div>
+                <div class="dot g"></div>
+                <span class="title">ECO_DRAFT_SV71_前大灯_3.2→3.3.html</span>
+                <span class="meta">1.2s · 规则引擎 + LLM</span>
+              </div>
+              <div class="output-body">
+                <div class="section-h">差异摘要</div>
+                <div class="stat-grid">
+                  <div class="stat-card good"><div class="v">+5</div><div class="l">新增物料</div></div>
+                  <div class="stat-card bad"><div class="v">-3</div><div class="l">删除物料</div></div>
+                  <div class="stat-card warn"><div class="v">7</div><div class="l">数量变更</div></div>
+                  <div class="stat-card"><div class="v">2</div><div class="l">替代关系</div></div>
+                </div>
+
+                <div class="section-h">关键变更 (前 8 项)</div>
+                <table class="bom-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 56px;">类型</th>
+                      <th>物料号</th>
+                      <th>名称</th>
+                      <th>版本</th>
+                      <th>3.2 → 3.3</th>
+                      <th style="text-align:right;">成本差</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="add">
+                      <td><span class="sign-add">+ 新增</span></td>
+                      <td class="pno">LA9-D7-SENSOR-02</td>
+                      <td>位移传感器</td>
+                      <td>Rev.B</td>
+                      <td>— → 1</td>
+                      <td style="text-align:right;">+ ¥48.50</td>
+                    </tr>
+                    <tr class="add">
+                      <td><span class="sign-add">+ 新增</span></td>
+                      <td class="pno">LA9-SEAL-08-B+</td>
+                      <td>密封胶圈 (B+ 料)</td>
+                      <td>Rev.A</td>
+                      <td>— → 1</td>
+                      <td style="text-align:right;">+ ¥3.20</td>
+                    </tr>
+                    <tr class="del">
+                      <td><span class="sign-del">- 删除</span></td>
+                      <td class="pno">LA9-SEAL-08</td>
+                      <td>密封胶圈 (B 料)</td>
+                      <td>Rev.A</td>
+                      <td>1 → —</td>
+                      <td style="text-align:right;">- ¥1.80</td>
+                    </tr>
+                    <tr class="mod">
+                      <td><span class="sign-mod">△ 修改</span></td>
+                      <td class="pno">LA9-LENS-PMMA</td>
+                      <td>PC 灯罩</td>
+                      <td>Rev.3 → 4</td>
+                      <td>1 → 1</td>
+                      <td style="text-align:right;">+ ¥6.00</td>
+                    </tr>
+                    <tr class="mod">
+                      <td><span class="sign-mod">△ 修改</span></td>
+                      <td class="pno">LA9-LED-DRV-A</td>
+                      <td>LED 驱动板</td>
+                      <td>Rev.2 → 3</td>
+                      <td>1 → 1</td>
+                      <td style="text-align:right;">+ ¥12.40</td>
+                    </tr>
+                    <tr class="add">
+                      <td><span class="sign-add">+ 新增</span></td>
+                      <td class="pno">LA9-FOAM-12</td>
+                      <td>EVA 泡棉 (新增)</td>
+                      <td>Rev.A</td>
+                      <td>— → 0.08m</td>
+                      <td style="text-align:right;">+ ¥1.10</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div class="section-h">影响分析</div>
+                <div class="callout">
+                  <strong>成本影响:</strong> 单件增加约 <span style="color: var(--orange); font-weight: 700;">+ ¥69.40</span>，按年产能 50 万件计算，年化成本上升 ¥3470 万。<br>
+                  <strong>替代关系:</strong> LA9-SEAL-08 → LA9-SEAL-08-B+，需回收供应商物料 LA9-SEAL-08 库存 2300 件 (¥4140)。
+                </div>
+
+                <div class="section-h">建议动作</div>
+                <div class="para">① ECO 单已自动写入 <span class="hl">PLM → 待签</span></div>
+                <div class="para">② 替代物料已同步至 <span class="hl">ERP / MRP</span> 候选清单</div>
+                <div class="para">③ 邮件通知 <span class="hl">采购 · 李经理</span> 处理供应商切换</div>
+                <div class="para">④ 提示库存 2300 件 LA9-SEAL-08 进入 <span class="hl">呆滞料预警</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ PANE 3: Meeting ============ -->
+      <div class="pane" id="pane-3">
+        <div class="pane-header">
+          <h2>🎙️ 会议纪要智能体 <span class="badge">协同 · GREEN</span></h2>
+          <p class="lead">录音 / 飞书会议转写文字 → 自动抽取议题、决议、待办、责任人、截止时间，一键分发到企业微信 / 飞书。</p>
+        </div>
+        <div class="pane-body">
+          <div>
+            <div class="card">
+              <div class="card-title">① 输入: 会议转写文本 <span class="num">SIM</span></div>
+              <div class="form-group">
+                <label class="form-label">会议来源</label>
+                <select class="form-select">
+                  <option>飞书会议 (Cloud Recording)</option>
+                  <option>腾讯会议</option>
+                  <option>本地录音 + 上传</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">会议标题</label>
+                <input class="form-input" value="SV71 前大灯质量改进周会 - 第 3 次" readonly />
+              </div>
+              <div class="form-group">
+                <label class="form-label">转写文本 (节选)</label>
+                <textarea class="form-textarea" rows="6" readonly>李工: 那今天主要跟一下前面 8D 的整改落实情况。注塑车间上周说要换模具冷却水道，进展到什么程度了？
+
+王工: 已经改完了，7 月 18 日试模，连续 200 件取样尺寸 CPK 1.67，达到了一类能力。
+
+李工: 不错，光学试装呢？
+
+张工: 试装了 50 件，雾度等级全部 OK，IP 等级我们这周还要再过一遍。
+
+李工: 行，那机械手压头更换频次，张工你这边和工艺组同步一下，从 8000 件调到 4000 件。我们 8 月 15 号是 deadline，机械手压头那边的库存够吗？
+
+陈经理: 够，我这边 1200 个备用，库存充足。
+
+李工: 好，最后一项，关于售后零配件召回的物流费用，这次 17 例单台补偿 600 元...</textarea>
+              </div>
+              <button class="btn" onclick="triggerRun(this, 'pane-3')">
+                <span>运行智能体</span><span class="arrow">→</span>
+              </button>
+              <div class="delivery-tag">DDW AI Hub 现有能力，≤ 4 周可交付</div>
+            </div>
+          </div>
+          <div>
+            <div class="output-card">
+              <div class="output-head">
+                <div class="dot r"></div>
+                <div class="dot y"></div>
+                <div class="dot g"></div>
+                <span class="title">meeting_minutes_SV71_质量周会-3.md</span>
+                <span class="meta">2.1s · ASR + LLM</span>
+              </div>
+              <div class="output-body">
+                <div class="meeting-meta">
+                  <div><span class="k">会议</span> <span class="v">SV71 前大灯质量改进周会 - 第 3 次</span></div>
+                  <div><span class="k">时间</span> <span class="v">2026-07-22 14:00 - 15:20</span></div>
+                  <div><span class="k">主持</span> <span class="v">李工 (质量工程部)</span></div>
+                  <div><span class="k">参会</span> <span class="v">王工、张工、陈经理 (共 8 人)</span></div>
+                  <div><span class="k">时长</span> <span class="v">80 分钟</span></div>
+                  <div><span class="k">类型</span> <span class="v">项目推进</span></div>
+                </div>
+
+                <div class="section-h">议题摘要</div>
+                <div class="agenda-item">
+                  <div class="head"><span class="topic">① 模具冷却水道整改进展</span><span class="time">14:05</span></div>
+                  <div class="body">王工汇报：7/18 试模完成，连续 200 件 CPK=1.67，达到一类能力。结论：验证通过。</div>
+                </div>
+                <div class="agenda-item">
+                  <div class="head"><span class="topic">② 光学试装验证</span><span class="time">14:22</span></div>
+                  <div class="body">张工汇报：50 件试装雾度全部 OK。IP 等级待本周复测。结论：阶段性通过，本周补做 IP 验证。</div>
+                </div>
+                <div class="agenda-item">
+                  <div class="head"><span class="topic">③ 压头 TPM 周期调整</span><span class="time">14:38</span></div>
+                  <div class="body">李工要求 8000 → 4000 件，张工与工艺组对接 SOP 修订。陈经理确认库存 1200 件备用充足。结论：8/5 前完成 SOP 升级。</div>
+                </div>
+                <div class="agenda-item">
+                  <div class="head"><span class="topic">④ 售后召回费用结算</span><span class="time">14:55</span></div>
+                  <div class="body">17 例单台补偿 ¥600，合计 ¥10200，从质量保证金列支，财务 7/25 前打款。</div>
+                </div>
+
+                <div class="section-h">关键决议</div>
+                <div class="para">✓ 模具冷却水道整改通过验收</div>
+                <div class="para">✓ 压头 TPM 周期 8000→4000 件，<span class="hl">8/5 前完成 SOP 升级</span></div>
+                <div class="para">✓ IP 等级验证 7/25 前完成，否则升级对策</div>
+                <div class="para">✓ 售后补偿 ¥10200，财务 7/25 前打款</div>
+
+                <div class="section-h">📌 待办事项</div>
+                <ul class="todo-list">
+                  <li class="todo-item">
+                    <div class="checkbox"></div>
+                    <div class="desc">完成 SOP-OP-0521 修订，将压头更换频次由 8000 件改为 4000 件</div>
+                    <span class="owner">张工</span>
+                    <span class="due">截止 2026-08-05</span>
+                  </li>
+                  <li class="todo-item">
+                    <div class="checkbox"></div>
+                    <div class="desc">完成 IP 等级 (IPX7) 复测并出具报告</div>
+                    <span class="owner">张工</span>
+                    <span class="due">截止 2026-07-25</span>
+                  </li>
+                  <li class="todo-item">
+                    <div class="checkbox"></div>
+                    <div class="desc">财务打款 ¥10200 给售后客户</div>
+                    <span class="owner">陈经理</span>
+                    <span class="due">截止 2026-07-25</span>
+                  </li>
+                  <li class="todo-item">
+                    <div class="checkbox"></div>
+                    <div class="desc">8D 报告定稿并同步到客户协同平台</div>
+                    <span class="owner">李工</span>
+                    <span class="due">截止 2026-07-24</span>
+                  </li>
+                  <li class="todo-item">
+                    <div class="checkbox"></div>
+                    <div class="desc">下周二 14:00 召开第 4 次质量改进周会（同一会议号）</div>
+                    <span class="owner">李工</span>
+                    <span class="due">下周二</span>
+                  </li>
+                </ul>
+
+                <div class="callout">
+                  📤 已自动推送至 <span class="hl">飞书 / 企业微信</span> 群 (8 人)，并创建了 5 条待办到责任人日历。
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ PANE 4: HR Self-Service ============ -->
+      <div class="pane" id="pane-4">
+        <div class="pane-header">
+          <h2>🤝 员工自助服务智能体 <span class="badge">HR · GREEN</span></h2>
+          <p class="lead">7×24 在线 HR 助手：年假、薪酬、报销、考勤、社保公积金等高频问题，秒级准确回答；可对接 HR 系统进行查询/办理。</p>
+        </div>
+        <div class="pane-body">
+          <div>
+            <div class="card">
+              <div class="card-title">① 输入: 员工提问 <span class="num">SIM</span></div>
+              <div class="form-group">
+                <label class="form-label">员工</label>
+                <div style="background: var(--bg-2); padding: 10px 14px; border-radius: 6px; font-size: 12px;">
+                  王小妹 · 装配车间 · 工号 B-08-324<br>
+                  <span style="color: var(--text-muted);">入职 2 年 3 个月 · 当前年假余额 8.5 天</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">问题</label>
+                <textarea class="form-textarea" readonly>我想下周一开始休 5 天年假回家看父母，需要提前几天申请？另外这个月发了高温补贴吗？看工资条好像没看到。</textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">可选附件</label>
+                <div class="upload-zone">
+                  <div class="ico">💬</div>
+                  <div class="txt">员工对话记录 (已自动记录)</div>
+                  <div class="hint">Webhook · 嵌入企业微信 / 飞书</div>
+                </div>
+              </div>
+              <button class="btn" onclick="triggerRun(this, 'pane-4')">
+                <span>运行智能体</span><span class="arrow">→</span>
+              </button>
+              <div class="delivery-tag">DDW AI Hub 现有能力，≤ 3 周可交付</div>
+            </div>
+          </div>
+          <div>
+            <div class="output-card">
+              <div class="output-head">
+                <div class="dot r"></div>
+                <div class="dot y"></div>
+                <div class="dot g"></div>
+                <span class="title">hr_assistant_session_2026-07-22.txt</span>
+                <span class="meta">0.8s · 知识库 + HR API</span>
+              </div>
+              <div class="output-body">
+                <div class="chat-bubble user">
+                  <div class="who">👤 王小妹 · 装配车间</div>
+                  我想下周一开始休 5 天年假回家看父母，需要提前几天申请？另外这个月发了高温补贴吗？看工资条好像没看到。
+                </div>
+                <div class="chat-bubble ai">
+                  <div class="who">🤖 DDW HR 助手</div>
+                  您好王小妹，您的两个问题我帮您查到啦👇
+                </div>
+                <div class="chat-bubble ai">
+                  <div class="who">📅 关于年假申请</div>
+                  根据<strong>《员工休假管理办法 V4.2》第 3.2 条</strong>，单次申请 3 天（含）以上需<strong>提前 5 个工作日</strong>报部门主管审批。
+                  <ul>
+                    <li>您的 5 天年假<strong>最早可以在本周五 (2026-07-25) 17:00 前</strong>提交申请</li>
+                    <li>您当前年假余额 <strong style="color: var(--green);">8.5 天</strong>，申请 5 天后剩余 3.5 天</li>
+                    <li>已为您拟好申请单草稿，确认后自动提交到主管张工审批 ↓</li>
+                  </ul>
+                  <div style="background: var(--bg-0); padding: 10px; border-radius: 6px; margin-top: 8px; font-family: 'SF Mono', Menlo, monospace; font-size: 12px;">
+                    申请人: 王小妹 (B-08-324) <br>
+                    类型: 年假 <br>
+                    时段: 2026-07-28 (周一) ~ 2026-08-01 (周五) 共 5 天 <br>
+                    事由: 探亲 <br>
+                    <span style="color: var(--cyan);">[待提交]</span>  <span style="color: var(--text-muted);">→ 提交</span>
+                  </div>
+                </div>
+                <div class="chat-bubble ai">
+                  <div class="who">💰 关于高温补贴</div>
+                  查到了！根据<strong>《2026 年夏季高温补贴发放细则》</strong>：
+                  <ul>
+                    <li>标准: 装配一线 +¥300/月，6/7/8 三个月随工资发放</li>
+                    <li>您本月工资条中实际发放了 ¥300，科目名「高温津贴」</li>
+                    <li>如未显示请检查工资条 <strong>「津贴补助」</strong> 折叠区域</li>
+                  </ul>
+                </div>
+                <div class="chat-bubble ai">
+                  <div class="who">❓ 还需要别的帮助吗？</div>
+                  您还可以问我：<br>
+                  • 今年还剩几天年假？<br>
+                  • 离职手续怎么办？<br>
+                  • 公积金提取条件？<br>
+                  • 加班调休怎么算？<br>
+                </div>
+                <div class="callout">
+                  🛡️ 信息来源: <span class="hl">人事规章库 (42 份文档索引)</span> · 权限: 仅查询本人信息
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ PANE 5: Decision ============ -->
+      <div class="pane" id="pane-5">
+        <div class="pane-header">
+          <h2>📊 经营决策辅助智能体 <span class="badge">经营 · GREEN</span></h2>
+          <p class="lead">自然语言提问，自动生成 BI 图表 SQL、洞察解读、行动建议。CEO/总监/车间主任各取所需。</p>
+        </div>
+        <div class="pane-body">
+          <div>
+            <div class="card">
+              <div class="card-title">① 输入: 经营提问 <span class="num">SIM</span></div>
+              <div class="form-group">
+                <label class="form-label">提问人</label>
+                <input class="form-input" value="陈总监 · 运营中心" readonly />
+              </div>
+              <div class="form-group">
+                <label class="form-label">提问</label>
+                <textarea class="form-textarea" readonly>今年上半年华东四个基地 (上海/苏州/无锡/杭州) 的产能利用率情况怎么样？哪几个基地存在产能爬坡不达预期的问题？主要原因是什么？请给我数据。</textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">数据源 (可多选)</label>
+                <select class="form-select" multiple size="3" style="height: auto;">
+                  <option selected>MES · 产能日表</option>
+                  <option selected>ERP · 销售订单</option>
+                  <option selected>PLM · BOM 工艺定额</option>
+                  <option>HR · 排班表</option>
+                </select>
+              </div>
+              <button class="btn" onclick="triggerRun(this, 'pane-5')">
+                <span>运行智能体</span><span class="arrow">→</span>
+              </button>
+              <div class="delivery-tag">DDW AI Hub 现有能力，≤ 8 周可交付</div>
+            </div>
+          </div>
+          <div>
+            <div class="output-card">
+              <div class="output-head">
+                <div class="dot r"></div>
+                <div class="dot y"></div>
+                <div class="dot g"></div>
+                <span class="title">decision_brief_华东产能_2026H1.html</span>
+                <span class="meta">5.4s · Text2SQL + LLM</span>
+              </div>
+              <div class="output-body">
+                <div class="section-h">经营简报 · 2026 上半年</div>
+                <div class="para"><span class="hl">陈总监：</span>华东四基地 2026 H1 整体产能利用率 <strong style="color: var(--orange);">83.4%</strong>，同比 +4.2pp，环比 Q1 +1.8pp。问题集中在 <strong style="color: var(--red);">苏州 B 厂</strong> 和 <strong style="color: var(--red);">无锡 C 厂</strong> 两个新建基地。</div>
+
+                <div class="section-h">四基地产能利用率</div>
+                <div class="stat-grid">
+                  <div class="stat-card good"><div class="v">92.1%</div><div class="l">上海 A 厂 · 目标 90%</div></div>
+                  <div class="stat-card bad"><div class="v">68.3%</div><div class="l">苏州 B 厂 · 目标 85%</div></div>
+                  <div class="stat-card bad"><div class="v">74.5%</div><div class="l">无锡 C 厂 · 目标 85%</div></div>
+                  <div class="stat-card good"><div class="v">98.7%</div><div class="l">杭州 D 厂 · 目标 95%</div></div>
+                </div>
+
+                <div class="section-h">📉 苏州 B 厂 · 根因 (Top 3)</div>
+                <table class="bom-table">
+                  <thead><tr><th>占比</th><th>原因</th><th>详情</th><th style="text-align:right;">影响小时</th></tr></thead>
+                  <tbody>
+                    <tr class="del"><td>34%</td><td>关键工艺设备 OEE 低</td><td>注塑机 2 台/冲压 1 台 OEE 仅 52~58%</td><td style="text-align:right;">−182h</td></tr>
+                    <tr class="mod"><td>28%</td><td>一线人员流动率 22%</td><td>Q2 新员工占比 41%，人均产出 −15%</td><td style="text-align:right;">−150h</td></tr>
+                    <tr class="del"><td>19%</td><td>来料不良 5.8% (目标 2%)</td><td>2 家新供应商物料问题集中爆发</td><td style="text-align:right;">−102h</td></tr>
+                  </tbody>
+                </table>
+
+                <div class="section-h">📉 无锡 C 厂 · 根因 (Top 2)</div>
+                <div class="kv-row"><span class="k">61%</span><span class="v">订单结构不均，新车型 SC-09 单一占比 64%，工艺验证未稳态</span></div>
+                <div class="kv-row"><span class="k">27%</span><span class="v">AGV 调度策略，跨车间路径冲突平均每日 38 次</span></div>
+
+                <div class="section-h">💡 建议行动</div>
+                <div class="d8step"><span class="step-num">短期 30 天</span><span class="step-content">苏州 B 厂：① 派驻上海 D 厂老员工 8 人作为种子 ② 启动来料 2 家供应商二方审核</span></div>
+                <div class="d8step"><span class="step-num">中期 90 天</span><span class="step-content">无锡 C 厂：① SC-09 工艺定型推进 ② AGV 跨车间调度策略升级</span></div>
+                <div class="d8step"><span class="step-num">长期 180 天</span><span class="step-content">苏州 B 厂：注塑机/冲压机 OEE 提升专项，按月跟踪，目标 75%</span></div>
+
+                <div class="section-h">🔗 数据来源</div>
+                <div class="para">SQL 已记录，BI 看板已挂载 ↓</div>
+                <div style="background: var(--bg-1); padding: 12px; border-radius: 6px; font-family: 'SF Mono', Menlo, monospace; font-size: 12px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5;">
+SELECT base_id, AVG(oee) AS util<br>
+FROM mes_capacity_daily<br>
+WHERE region = '华东'<br>
+&nbsp;&nbsp;AND date BETWEEN '2026-01-01' AND '2026-06-30'<br>
+GROUP BY base_id;
+                </div>
+
+                <div class="callout">
+                  📈 此简报已自动保存到 <span class="hl">BI 驾驶舱 → 经营分析 → 华东产能专题</span>；可设置月度自动推送。
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ============== CAPABILITIES (FOOTER) ============== -->
+  <section class="capabilities">
+    <div class="cap-header">
+      <h3>DDW AI Hub · 平台底座能力</h3>
+      <p>所有绿色智能体均基于以下四项已有能力组合实现 · 不依赖外部商业软件或特殊硬件</p>
+    </div>
+    <div class="cap-grid">
+      <div class="cap-card">
+        <div class="ico">🔗</div>
+        <div class="name">OneAPI · 模型统一调度</div>
+        <div class="tag">/v1/chat/completions · 1 层</div>
+        <div class="desc">统一接入 30+ 大模型，统一鉴权、用量计量、负载均衡、灰度路由。</div>
+        <ul>
+          <li>OpenAI / Claude / 通义 / DeepSeek / 智谱 / 自研</li>
+          <li>细粒度 Token 计费 · 多租户配额</li>
+          <li>模型路由：按场景自动选最优模型</li>
+        </ul>
+      </div>
+      <div class="cap-card">
+        <div class="ico">📚</div>
+        <div class="name">知识库 · RAG</div>
+        <div class="tag">RAG · chunk · vector · 2 层</div>
+        <div class="desc">企业私有知识接入：手册、规章、BOM、SOP、历史工单… 让 LLM 有"企业记忆"。</div>
+        <ul>
+          <li>多格式入库: PDF / Word / Excel / 网页 / 数据库</li>
+          <li>分段 + 向量化 + 关键词混合检索</li>
+          <li>权限隔离：按部门 / 角色 / 项目可见</li>
+        </ul>
+      </div>
+      <div class="cap-card">
+        <div class="ico">⚙️</div>
+        <div class="name">工作流 · Workflow</div>
+        <div class="tag">DAG · node · 3 层</div>
+        <div class="desc">可视化拖拽编排：把 LLM 调用、API 调用、条件分支、人工审批串成确定型流程。</div>
+        <ul>
+          <li>触发器: 定时 / 事件 / Webhook / 人工</li>
+          <li>节点: LLM / HTTP / 数据库 / 邮件 / IM</li>
+          <li>可观测: 每次执行步骤、耗时、Token</li>
+        </ul>
+      </div>
+      <div class="cap-card">
+        <div class="ico">📊</div>
+        <div class="name">BI 驾驶舱 · 数据洞察</div>
+        <div class="tag">Text2SQL · chart · 4 层</div>
+        <div class="desc">自然语言提问 → 自动生成 SQL 与图表 → 数据洞察 + 行动建议输出。</div>
+        <ul>
+          <li>连接: MES / ERP / PLM / WMS / 自建库</li>
+          <li>权限化数据访问 · 行列级脱敏</li>
+          <li>图表推送: 邮件 / IM / Webhook / 大屏</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer-bar">
+    DDW AI Hub · Enterprise Agent Platform · &copy; 2026 &nbsp;·&nbsp; <span class="strong">绿色智能体 = LLM + 知识库 + 工作流 = 已有能力可交付</span>
+  </div>
+
+</div>
+
+<script>
+  function showPane(id) {
+    document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelector(`.nav-item[data-pane="${id}"]`).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function triggerRun(btn, paneId) {
+    const original = btn.innerHTML;
+    btn.innerHTML = '<span>智能体运行中…</span>';
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    setTimeout(() => {
+      btn.innerHTML = '<span>✓ 已生成</span>';
+      btn.style.background = 'linear-gradient(135deg, var(--green), var(--green))';
+      setTimeout(() => {
+        btn.innerHTML = original;
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.background = '';
+      }, 1800);
+    }, 900);
+  }
+  document.addEventListener('keydown', e => {
+    const map = { '1':'pane-1', '2':'pane-2', '3':'pane-3', '4':'pane-4', '5':'pane-5' };
+    if (map[e.key]) showPane(map[e.key]);
+  });
+</script>
+
+<script>
+/* 官网主题桥接 — 读取 DDW 底座后台主题（GET /api/v1/plugins/ddw-website/theme），同步 data-theme */
+(function () {
+  var THEMES = ['standard', 'holiday', 'mourning'];
+  function apply(id) {
+    if (THEMES.indexOf(id) === -1) id = 'standard';
+    document.documentElement.setAttribute('data-theme', id);
+  }
+  apply(localStorage.getItem('ddw-site-theme') || 'standard');
+  try {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/api/v1/plugins/ddw-website/theme', true);
+    xhr.timeout = 2500;
+    xhr.onload = function () {
+      if (xhr.status === 200) {
+        try {
+          var d = JSON.parse(xhr.responseText);
+          if (d && d.theme) { localStorage.setItem('ddw-site-theme', d.theme); apply(d.theme); return; }
+        } catch (e) {}
+      }
+      apply(localStorage.getItem('ddw-site-theme') || 'standard');
+    };
+    xhr.onerror = function () { apply(localStorage.getItem('ddw-site-theme') || 'standard'); };
+    xhr.ontimeout = function () { apply(localStorage.getItem('ddw-site-theme') || 'standard'); };
+    xhr.send();
+  } catch (e) {}
+})();
+</script>
+
+</body>
+</html>

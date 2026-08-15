@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>行业方案演示 — 跳转提示 | 锐果互动</title>
+<meta name="description" content="锐果互动行业AI解决方案演示入口。">
+<link rel="icon" href="assets/logo/favicon-64.svg">
+<link rel="stylesheet" href="assets/css/base.css">
+<script>window.SITE_BASE = '';</script>
+<script src="assets/js/site-common.js"></script>
+<style>
+  .case-hero { padding: 72px 0 48px; text-align: center; }
+  .case-hero .badge { display: inline-block; padding: 4px 14px; border-radius: 14px; background: rgba(0,179,164,.12); color: var(--accent); font-size: 13px; font-weight: 600; margin-bottom: 18px; }
+  .case-hero h1 { font-size: 30px; margin: 0 0 14px; }
+  .case-hero p { max-width: 640px; margin: 0 auto; color: var(--text-secondary); line-height: 1.9; }
+  .case-box { max-width: 720px; margin: 0 auto; padding: 32px; text-align: center; }
+  .case-box .case-name { font-size: 19px; font-weight: 700; margin-bottom: 10px; }
+  .case-box .case-tip { font-size: 14px; color: var(--text-secondary); line-height: 1.9; margin-bottom: 22px; }
+  .case-box .countdown { font-size: 13px; color: var(--text-muted); margin-top: 18px; }
+  .case-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<section class="case-hero">
+  <div class="container">
+    <div class="badge">行业方案演示 · 独立环境</div>
+    <h1>即将进入行业方案演示</h1>
+    <p>演示页面为独立环境，不涉及贵司任何真实数据，免登录即可查看完整功能与版面效果。</p>
+  </div>
+</section>
+
+<section class="section" style="padding-top:8px;">
+  <div class="container">
+    <div class="card case-box">
+      <div class="case-name" id="case-name">行业方案演示</div>
+      <div class="case-tip" id="case-tip">演示页面为独立环境，展示该行业场景下的 AI 能力与版面风格。可随时返回锐果互动官网。</div>
+      <div class="case-actions">
+        <a class="btn btn-accent" id="btn-go" href="https://ddw.9cio.com/quality-mgmt" target="_blank" rel="noopener">立即进入演示 →</a>
+        <a class="btn btn-outline" id="btn-back" href="industry.html">返回行业方案</a>
+      </div>
+      <div class="countdown">页面将在 <b id="cd-num">5</b> 秒后自动打开</div>
+    </div>
+  </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var url = params.get('url');
+  var name = params.get('name');
+  var tip = params.get('tip');
+  var back = params.get('back') || 'industry.html';
+
+  if (url) document.getElementById('btn-go').href = url;
+  if (name) document.getElementById('case-name').textContent = name;
+  if (tip) document.getElementById('case-tip').textContent = tip;
+  document.getElementById('btn-back').href = back;
+
+  var n = 5;
+  var el = document.getElementById('cd-num');
+  var timer = setInterval(function () {
+    n -= 1;
+    el.textContent = n;
+    if (n <= 0) {
+      clearInterval(timer);
+      window.open(url || 'https://ddw.9cio.com/quality-mgmt', '_blank');
+    }
+  }, 1000);
+})();
+</script>
+
+</body>
+</html>

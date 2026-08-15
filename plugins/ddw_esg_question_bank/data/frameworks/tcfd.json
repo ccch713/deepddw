@@ -1,0 +1,406 @@
+{
+  "id": "tcfd",
+  "name": "TCFD 气候相关财务披露工作组",
+  "organization": "FSB",
+  "url": "https://www.fsb-tcfd.org",
+  "description": "金融稳定理事会（FSB）成立的气候相关财务披露工作组，制定气候风险披露建议框架。",
+  "version": "2017",
+  "category": "international",
+  "status": "draft",
+  "standard_code": "TCFD Recommendations",
+  "is_mandatory": false,
+  "issuing_body": "Financial Stability Board",
+  "issue_date": "2017-06-29",
+  "effective_date": "2017-06-29",
+  "supported_sizes": [
+    "large",
+    "enterprise"
+  ],
+  "category_color": "#5856D6",
+  "themes": [
+    {
+      "id": "CLM",
+      "name": "气候披露",
+      "category": "environment",
+      "weight": 1,
+      "description": "气候相关财务信息披露",
+      "color": "#5856D6"
+    }
+  ],
+  "indicators": [
+    {
+      "code": "CLM1",
+      "name": "治理",
+      "theme_id": "CLM",
+      "weight": 1,
+      "description": "气候风险治理架构",
+      "questions": [
+        {
+          "id": "CLM1-Q1",
+          "text": "董事会是否监督管理气候风险？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未监督"
+            },
+            {
+              "value": 2,
+              "label": "初步关注"
+            },
+            {
+              "value": 3,
+              "label": "定期讨论"
+            },
+            {
+              "value": 4,
+              "label": "委员会监督"
+            },
+            {
+              "value": 5,
+              "label": "战略整合+决策"
+            }
+          ]
+        },
+        {
+          "id": "CLM1-Q2",
+          "text": "管理层是否管理气候风险？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未管理"
+            },
+            {
+              "value": 2,
+              "label": "初步识别"
+            },
+            {
+              "value": 3,
+              "label": "日常管理"
+            },
+            {
+              "value": 4,
+              "label": "绩效评估"
+            },
+            {
+              "value": 5,
+              "label": "全面整合+激励"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "CLM2",
+      "name": "战略",
+      "theme_id": "CLM",
+      "weight": 1,
+      "description": "气候风险与机遇的战略分析",
+      "questions": [
+        {
+          "id": "CLM2-Q1",
+          "text": "企业是否进行气候情景分析？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未分析"
+            },
+            {
+              "value": 2,
+              "label": "初步考虑"
+            },
+            {
+              "value": 3,
+              "label": "定量分析"
+            },
+            {
+              "value": 4,
+              "label": "多情景分析"
+            },
+            {
+              "value": 5,
+              "label": "2°C/1.5°C情景+战略"
+            }
+          ]
+        },
+        {
+          "id": "CLM2-Q2",
+          "text": "气候风险是否影响企业战略和财务规划？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未影响"
+            },
+            {
+              "value": 2,
+              "label": "初步考虑"
+            },
+            {
+              "value": 3,
+              "label": "纳入规划"
+            },
+            {
+              "value": 4,
+              "label": "战略调整"
+            },
+            {
+              "value": 5,
+              "label": "全面整合+转型"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "CLM3",
+      "name": "指标与目标",
+      "theme_id": "CLM",
+      "weight": 1,
+      "description": "气候相关指标与目标设定",
+      "questions": [
+        {
+          "id": "CLM3-Q1",
+          "text": "企业是否设定气候相关指标和目标？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "无指标"
+            },
+            {
+              "value": 2,
+              "label": "基本指标"
+            },
+            {
+              "value": 3,
+              "label": "量化目标"
+            },
+            {
+              "value": 4,
+              "label": "科学目标"
+            },
+            {
+              "value": 5,
+              "label": "SBTi+净零路径"
+            }
+          ]
+        },
+        {
+          "id": "CLM3-Q2",
+          "text": "企业是否披露范围1/2/3碳排放？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未披露"
+            },
+            {
+              "value": 2,
+              "label": "范围1"
+            },
+            {
+              "value": 3,
+              "label": "范围1+2"
+            },
+            {
+              "value": 4,
+              "label": "范围1+2+部分3"
+            },
+            {
+              "value": 5,
+              "label": "全范围+第三方核查"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "CLM4",
+      "name": "披露",
+      "theme_id": "CLM",
+      "weight": 1,
+      "description": "气候信息披露质量",
+      "questions": [
+        {
+          "id": "CLM4-Q1",
+          "text": "企业是否披露气候相关财务影响？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未披露"
+            },
+            {
+              "value": 2,
+              "label": "定性披露"
+            },
+            {
+              "value": 3,
+              "label": "量化披露"
+            },
+            {
+              "value": 4,
+              "label": "财务影响分析"
+            },
+            {
+              "value": 5,
+              "label": "integrated reporting"
+            }
+          ]
+        },
+        {
+          "id": "CLM4-Q2",
+          "text": "披露是否与同行可比？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "不可比"
+            },
+            {
+              "value": 2,
+              "label": "部分可比"
+            },
+            {
+              "value": 3,
+              "label": "标准框架"
+            },
+            {
+              "value": 4,
+              "label": "同行对比"
+            },
+            {
+              "value": 5,
+              "label": "基准对标+创新披露"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "CLM5",
+      "name": "转型计划",
+      "theme_id": "CLM",
+      "weight": 1,
+      "description": "低碳转型计划与实施",
+      "questions": [
+        {
+          "id": "CLM5-Q1",
+          "text": "企业是否制定低碳转型计划？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "无计划"
+            },
+            {
+              "value": 2,
+              "label": "初步意向"
+            },
+            {
+              "value": 3,
+              "label": "转型路线图"
+            },
+            {
+              "value": 4,
+              "label": "投资计划"
+            },
+            {
+              "value": 5,
+              "label": "全面转型+绩效追踪"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "CLM6",
+      "name": "价值链",
+      "theme_id": "CLM",
+      "weight": 1,
+      "description": "价值链气候管理",
+      "questions": [
+        {
+          "id": "CLM6-Q1",
+          "text": "企业是否管理价值链的气候风险？",
+          "type": "likert5",
+          "required": true,
+          "score_range": [
+            1,
+            5
+          ],
+          "options": [
+            {
+              "value": 1,
+              "label": "未管理"
+            },
+            {
+              "value": 2,
+              "label": "初步识别"
+            },
+            {
+              "value": 3,
+              "label": "供应商沟通"
+            },
+            {
+              "value": 4,
+              "label": "协同管理"
+            },
+            {
+              "value": 5,
+              "label": "全链条碳管理"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

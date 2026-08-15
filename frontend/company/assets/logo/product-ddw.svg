@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="500" height="500">
+  <defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#D1492F"/><stop offset="100%" stop-color="#9E2F22"/></linearGradient></defs>
+  <g transform="rotate(-3 100 100)">
+    <rect x="4" y="4" width="192" height="192" rx="30" fill="url(#g)"/>
+    <rect x="12" y="12" width="176" height="176" rx="24" fill="none" stroke="rgba(255,255,255,.30)" stroke-width="1.6"/>
+    <text x="100" y="119" text-anchor="middle" font-family="Arial, Helvetica, PingFang SC, sans-serif" font-size="84" font-weight="900" fill="#FFF7EC" letter-spacing="2">DDW</text>
+    <text x="100" y="158" text-anchor="middle" font-family="PingFang SC, STHeiti, Microsoft YaHei, sans-serif" font-size="15" font-weight="700" letter-spacing="6" fill="#FFD98A">AI HUB</text>
+  </g>
+</svg>

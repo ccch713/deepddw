@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>DDW 员工花名册</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; background: #f0f2f5; color: #262626; }
+    .header { background: linear-gradient(135deg, #13c2c2 0%, #1890ff 100%); color: white; padding: 24px 32px; }
+    .header h1 { font-size: 24px; margin-bottom: 4px; }
+    .header .subtitle { opacity: 0.85; font-size: 14px; }
+    .container { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
+    .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .card h2 { font-size: 18px; margin-bottom: 16px; color: #13c2c2; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 12px; border-bottom: 1px solid #f0f0f0; }
+    th { background: #fafafa; color: #595959; font-weight: 500; }
+    .btn { padding: 6px 16px; background: #13c2c2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+    .btn:hover { background: #36cfc9; }
+    .status-active { color: #52c41a; }
+    .status-inactive { color: #faad14; }
+    .api-endpoints { background: #fafafa; padding: 12px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+    .api-endpoints code { display: block; padding: 4px 0; }
+    .api-endpoints .method-GET { color: #52c41a; font-weight: 600; }
+    .api-endpoints .method-POST { color: #1890ff; font-weight: 600; }
+    .api-endpoints .method-PUT { color: #faad14; font-weight: 600; }
+    .api-endpoints .method-DELETE { color: #ff4d4f; font-weight: 600; }
+    .departments { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
+    .dept { background: #f0f9ff; padding: 12px; border-radius: 4px; text-align: center; }
+    .dept .name { font-size: 14px; color: #262626; }
+    .dept .count { font-size: 24px; font-weight: 600; color: #13c2c2; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>👥 DDW 员工花名册</h1>
+    <div class="subtitle">企业 HR 花名册 · 培训档案 · HRIS 集成（北森/用友/SAP/Oracle/Workday/金蝶）</div>
+  </div>
+
+  <div class="container">
+    <!-- 部门概览 -->
+    <div class="card">
+      <h2>🏢 部门概览</h2>
+      <div class="departments" id="departments">
+        <div class="dept"><div class="name">研发</div><div class="count">--</div></div>
+        <div class="dept"><div class="name">销售</div><div class="count">--</div></div>
+        <div class="dept"><div class="name">运营</div><div class="count">--</div></div>
+        <div class="dept"><div class="name">行政</div><div class="count">--</div></div>
+      </div>
+    </div>
+
+    <!-- 员工列表 -->
+    <div class="card">
+      <h2>👨‍💼 员工列表</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>工号</th>
+            <th>姓名</th>
+            <th>部门</th>
+            <th>岗位</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="emp_table">
+          <tr><td colspan="6" style="text-align:center; color:#8c8c8c;">加载中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- API 端点 -->
+    <div class="card">
+      <h2>🔌 API 端点</h2>
+      <div class="api-endpoints">
+        <code><span class="method-GET">GET</span>    /api/v1/plugins/ddw-employee-roster/employees              员工列表</code>
+        <code><span class="method-POST">POST</span>   /api/v1/plugins/ddw-employee-roster/employees              创建员工</code>
+        <code><span class="method-GET">GET</span>    /api/v1/plugins/ddw-employee-roster/employees/{id}         员工详情</code>
+        <code><span class="method-PUT">PUT</span>    /api/v1/plugins/ddw-employee-roster/employees/{id}         更新员工</code>
+        <code><span class="method-DELETE">DELETE</span> /api/v1/plugins/ddw-employee-roster/employees/{id}         删除员工</code>
+        <code><span class="method-GET">GET</span>    /api/v1/plugins/ddw-employee-roster/employees/{id}/training  培训档案</code>
+        <code><span class="method-GET">GET</span>    /api/v1/plugins/ddw-employee-roster/departments            部门列表</code>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Mock 数据（实际从 API 拉取）
+    const mockEmployees = [
+      { employee_no: 'E001', name: '张三', department: '研发', position: '工程师', status: 'active' },
+      { employee_no: 'E002', name: '李四', department: '销售', position: '销售经理', status: 'active' },
+      { employee_no: 'E003', name: '王五', department: '运营', position: '运营专员', status: 'active' },
+      { employee_no: 'E004', name: '赵六', department: '研发', position: '高级工程师', status: 'inactive' },
+    ];
+
+    function renderTable() {
+      const tbody = document.getElementById('emp_table');
+      tbody.innerHTML = mockEmployees.map(e => `
+        <tr>
+          <td>${e.employee_no}</td>
+          <td>${e.name}</td>
+          <td>${e.department}</td>
+          <td>${e.position}</td>
+          <td><span class="status-${e.status}">${e.status === 'active' ? '在职' : '离职'}</span></td>
+          <td><button class="btn" onclick="viewDetail('${e.employee_no}')">详情</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function viewDetail(empNo) {
+      alert(`查看员工档案：${empNo}（实际调用 GET /api/v1/plugins/ddw-employee-roster/employees/{id}）`);
+    }
+
+    renderTable();
+  </script>
+</body>
+</html>

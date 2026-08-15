@@ -1,0 +1,25 @@
+name: ddw_offline_pos
+tier: core
+version: "0.1.0"
+description: "收费与支付（多支付方式 + 日结汇总）"
+author: "DDW Team"
+license: commercial
+type: plugin
+entry: plugin:Plugin
+endpoints:
+  - path: /api/v1/plugins/ddw_offline_pos/health
+    method: GET
+  - path: /api/v1/plugins/ddw_offline_pos/records
+    method: POST
+  - path: /api/v1/plugins/ddw_offline_pos/records
+    method: GET
+  - path: /api/v1/plugins/ddw_offline_pos/records/{id}
+    method: GET
+  - path: /api/v1/plugins/ddw_offline_pos/records/{id}
+    method: PATCH
+  - path: /api/v1/plugins/ddw_offline_pos/records/{id}/pay
+    method: POST
+  - path: /api/v1/plugins/ddw_offline_pos/records/{id}/refund
+    method: POST
+  - path: /api/v1/plugins/ddw_offline_pos/daily-summary
+    method: GET

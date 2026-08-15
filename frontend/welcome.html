@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>欢迎使用 DDW AI Hub</title>
+<link rel="icon" type="image/svg+xml" href="assets/logo-ju.svg">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: #333; background: #F0F2F5; -webkit-font-smoothing: antialiased; }
+
+/* 顶部导航 */
+.topbar { background: #001529; color: #FFF; height: 56px; display: flex; align-items: center; padding: 0 24px; position: sticky; top: 0; z-index: 100; }
+.header-logo { display: flex; align-items: center; }
+.logo-char { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: #FFF; color: #001529; font-size: 20px; font-weight: bold; font-family: "PingFang SC", serif; border-radius: 2px; margin-right: 10px; }
+.header-title { color: #FFF; font-size: 16px; font-weight: 500; }
+.topbar-right { margin-left: auto; color: rgba(255,255,255,0.65); font-size: 14px; }
+
+/* 欢迎区 */
+.welcome-hero { background: linear-gradient(135deg, #1890FF 0%, #096DD9 100%); color: #FFF; padding: 60px 24px 48px; text-align: center; }
+.welcome-emoji { font-size: 48px; margin-bottom: 16px; }
+.welcome-title { font-size: 28px; font-weight: 600; margin-bottom: 12px; }
+.welcome-sub { font-size: 16px; opacity: 0.9; max-width: 600px; margin: 0 auto; line-height: 1.6; }
+
+/* 进度条 */
+.progress-bar { max-width: 680px; margin: -24px auto 0; padding: 0 24px; position: relative; z-index: 10; }
+.progress-card { background: #FFF; border-radius: 4px; padding: 24px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.09); }
+.progress-steps { display: flex; align-items: center; justify-content: space-between; }
+.step { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.step-dot { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; border: 2px solid #D9D9D9; color: #BFBFBF; background: #FFF; transition: all 0.3s; }
+.step-dot.active { border-color: #1890FF; color: #FFF; background: #1890FF; }
+.step-dot.done { border-color: #52C41A; color: #FFF; background: #52C41A; }
+.step-label { margin-top: 8px; font-size: 12px; color: #999; }
+.step-label.active { color: #1890FF; font-weight: 500; }
+.step-label.done { color: #52C41A; }
+.step-line { flex: 1; height: 2px; background: #E8E8E8; margin: 0 -8px; margin-bottom: 20px; }
+.step-line.done { background: #52C41A; }
+
+/* 内容区 */
+.content { max-width: 680px; margin: 0 auto; padding: 32px 24px; }
+.card { background: #FFF; border-radius: 4px; padding: 32px; margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.card h2 { font-size: 20px; color: #333; margin-bottom: 8px; }
+.card p { font-size: 14px; color: #666; line-height: 1.8; margin-bottom: 16px; }
+.card .highlight { background: #E6F7FF; border-left: 3px solid #1890FF; padding: 12px 16px; border-radius: 0 4px 4px 0; margin: 16px 0; font-size: 13px; color: #333; line-height: 1.8; }
+
+/* 表单 */
+.form-item { margin-bottom: 16px; }
+.form-label { display: block; font-size: 13px; color: #333; margin-bottom: 6px; font-weight: 500; }
+.form-input { width: 100%; height: 40px; padding: 8px 12px; border: 1px solid #D9D9D9; border-radius: 2px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+.form-input:focus { border-color: #1890FF; }
+.form-input::placeholder { color: #BFBFBF; }
+.form-row { display: flex; gap: 12px; }
+.form-row .form-item { flex: 1; }
+
+/* 按钮 */
+.btn { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 24px; border: none; border-radius: 2px; font-size: 15px; cursor: pointer; transition: all 0.2s; }
+.btn-primary { background: #1890FF; color: #FFF; }
+.btn-primary:hover { background: #40A9FF; }
+.btn-primary:disabled { background: #BFBFBF; cursor: not-allowed; }
+.btn-ghost { background: transparent; color: #1890FF; border: 1px solid #1890FF; }
+.btn-ghost:hover { background: #E6F7FF; }
+.btn-block { width: 100%; }
+.btn-group { display: flex; gap: 12px; margin-top: 24px; }
+.btn-group .btn { flex: 1; }
+
+/* 信息卡 */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+.info-item { background: #FAFAFA; border-radius: 4px; padding: 16px; }
+.info-item .label { font-size: 12px; color: #999; margin-bottom: 4px; }
+.info-item .value { font-size: 15px; color: #333; font-weight: 500; word-break: break-all; }
+
+/* 状态提示 */
+.status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+.status-ok { background: #F6FFED; color: #52C41A; border: 1px solid #B7EB8F; }
+.status-warn { background: #FFFBE6; color: #FAAD14; border: 1px solid #FFE58F; }
+.status-error { background: #FFF2F0; color: #FF4D4F; border: 1px solid #FFCCC7; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* 完成区 */
+.finish-icon { text-align: center; font-size: 64px; margin-bottom: 16px; }
+.finish-title { text-align: center; font-size: 24px; font-weight: 600; color: #333; margin-bottom: 8px; }
+.finish-sub { text-align: center; font-size: 14px; color: #666; margin-bottom: 24px; }
+
+/* 页脚 */
+.footer { text-align: center; padding: 24px; color: #999; font-size: 12px; }
+</style>
+    <link rel="stylesheet" href="/css/ddw-themes.css">
+    <script src="/js/ddw-theme-switcher.js"></script>
+  </head>
+<body>
+
+<div class="topbar">
+  <div class="header-logo">
+    <span class="logo-char">渡</span>
+    <span class="header-title">DDW AI Hub</span>
+  </div>
+  <div class="topbar-right">企业智能协作平台</div>
+</div>
+
+<!-- 欢迎区 -->
+<div class="welcome-hero">
+  <div class="welcome-emoji">👋</div>
+  <div class="welcome-title">欢迎使用 DDW AI Hub</div>
+  <div class="welcome-sub">您的企业智能协作平台已部署完成<br>只需 3 步即可开始使用</div>
+</div>
+
+<!-- 进度条 -->
+<div class="progress-bar">
+  <div class="progress-card">
+    <div class="progress-steps">
+      <div class="step">
+        <div class="step-dot active" id="step1-dot">1</div>
+        <div class="step-label active" id="step1-label">创建账号</div>
+      </div>
+      <div class="step-line" id="line1"></div>
+      <div class="step">
+        <div class="step-dot" id="step2-dot">2</div>
+        <div class="step-label" id="step2-label">激活许可证</div>
+      </div>
+      <div class="step-line" id="line2"></div>
+      <div class="step">
+        <div class="step-dot" id="step3-dot">3</div>
+        <div class="step-label" id="step3-label">开始使用</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 步骤内容 -->
+<div class="content">
+
+  <!-- Step 1: 创建账号 -->
+  <div class="card" id="step1-card">
+    <h2>第一步：创建管理员账号</h2>
+    <p>请设置您的管理员账号，这将是您管理平台的主账号。</p>
+
+    <div class="form-item">
+      <label class="form-label">手机号 <span style="color:#F5222D">*</span></label>
+      <input class="form-input" id="reg-phone" type="tel" placeholder="请输入手机号" maxlength="11">
+    </div>
+    <div class="form-item">
+      <label class="form-label">图形验证码 <span style="color:#F5222D">*</span></label>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input class="form-input" id="reg-captcha" type="text" placeholder="4 位验证码" maxlength="4" style="flex:1;">
+        <img id="reg-captcha-img" src="" alt="验证码" style="height:42px; border-radius:6px; cursor:pointer; border:1px solid #D9D9D9;" title="点击换一张">
+        <a href="javascript:void(0)" id="reg-captcha-refresh" style="font-size:12.5px; color:#1890FF; white-space:nowrap;">换一张</a>
+      </div>
+    </div>
+    <div class="form-item">
+      <label class="form-label">管理员姓名</label>
+      <input class="form-input" id="reg-name" type="text" placeholder="请输入您的姓名">
+    </div>
+    <div class="form-item">
+      <label class="form-label">设置密码 <span style="color:#F5222D">*</span></label>
+      <input class="form-input" id="reg-password" type="password" placeholder="至少8位">
+    </div>
+    <div class="form-item">
+      <label class="form-label">企业名称</label>
+      <input class="form-input" id="reg-company" type="text" placeholder="请输入企业名称">
+    </div>
+
+    <button class="btn btn-primary btn-block" onclick="doRegister()">创建账号</button>
+    <p class="form-tips" style="text-align:center; margin-top:12px;">已有账号？ <a href="javascript:showLogin()">直接登录</a></p>
+  </div>
+
+  <!-- Step 1 alt: 登录 -->
+  <div class="card" id="login-card" style="display:none">
+    <h2>登录</h2>
+    <p>使用已注册的账号登录。</p>
+    <div class="form-item">
+      <label class="form-label">手机号</label>
+      <input class="form-input" id="login-phone" type="tel" placeholder="请输入手机号" maxlength="11">
+    </div>
+    <div class="form-item">
+      <label class="form-label">密码</label>
+      <input class="form-input" id="login-password" type="password" placeholder="请输入密码">
+    </div>
+    <div class="form-item">
+      <label class="form-label">验证码</label>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input class="form-input" id="login-captcha" type="text" placeholder="4 位验证码" maxlength="4" style="flex:1;">
+        <img id="login-captcha-img" src="" alt="验证码" style="height:42px; border-radius:6px; cursor:pointer; border:1px solid #D9D9D9;" title="点击换一张">
+        <a href="javascript:void(0)" id="login-captcha-refresh" style="font-size:12.5px; color:#1890FF; white-space:nowrap;">换一张</a>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="doLogin()">登录</button>
+    <p class="form-tips" style="text-align:center; margin-top:12px;">还没有账号？ <a href="javascript:showRegister()">注册新账号</a></p>
+  </div>
+
+  <!-- Step 2: 激活许可证 -->
+  <div class="card" id="step2-card" style="display:none">
+    <h2>第二步：激活许可证</h2>
+    <p>请输入您的许可证密钥以激活平台功能。</p>
+
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="label">当前状态</div>
+        <div class="value" id="license-status"><span class="status-badge status-warn"><span class="status-dot"></span>待激活</span></div>
+      </div>
+      <div class="info-item">
+        <div class="label">已授权插件</div>
+        <div class="value" id="license-plugins">-</div>
+      </div>
+    </div>
+
+    <div class="form-item" style="margin-top:16px">
+      <label class="form-label">许可证密钥</label>
+      <input class="form-input" id="license-key" type="text" placeholder="格式：LIC-XXXXXXXX-XXX">
+    </div>
+
+    <button class="btn btn-primary btn-block" onclick="activateLicense()">激活</button>
+
+    <div class="highlight">
+      <strong>💡 没有许可证？</strong><br>
+      请联系您的 DDW 供应商获取。试用期间可点击「跳过，先体验」使用基础功能。
+    </div>
+    <button class="btn btn-ghost btn-block" onclick="goStep3()" style="margin-top:12px">跳过，先体验基础功能</button>
+  </div>
+
+  <!-- Step 3: 开始使用 -->
+  <div class="card" id="step3-card" style="display:none">
+    <div class="finish-icon">🎉</div>
+    <div class="finish-title">初始化完成！</div>
+    <div class="finish-sub">您的 DDW AI Hub 已准备就绪</div>
+
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="label">访问地址</div>
+        <div class="value" id="info-url">http://localhost:8500</div>
+      </div>
+      <div class="info-item">
+        <div class="label">管理员</div>
+        <div class="value" id="info-admin">-</div>
+      </div>
+      <div class="info-item">
+        <div class="label">企业名称</div>
+        <div class="value" id="info-company">-</div>
+      </div>
+      <div class="info-item">
+        <div class="label">已加载插件</div>
+        <div class="value" id="info-plugins">-</div>
+      </div>
+    </div>
+
+    <div class="highlight">
+      <strong>🚀 快速开始：</strong><br>
+      • 点击顶部菜单浏览各功能模块<br>
+      • 在「插件市场」发现更多扩展能力<br>
+      • 随时点击右上角头像管理账号设置
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-primary btn-block" onclick="enterPlatform()">进入平台 →</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  DDW AI Hub · 渡笃微企业智能协作平台 · 武汉锐果互动信息技术有限公司
+</div>
+
+<script src="/js/fingerprint.js"></script>
+<script>
+const API = window.location.origin;
+
+// ====== 步骤切换 ======
+let currentStep = 1;
+let token = null;
+let userInfo = null;
+
+function goStep(n) {
+  currentStep = n;
+  // 更新进度条
+  for (let i = 1; i <= 3; i++) {
+    const dot = document.getElementById('step' + i + '-dot');
+    const label = document.getElementById('step' + i + '-label');
+    dot.className = 'step-dot' + (i < n ? ' done' : i === n ? ' active' : '');
+    label.className = 'step-label' + (i < n ? ' done' : i === n ? ' active' : '');
+  }
+  for (let i = 1; i <= 2; i++) {
+    const line = document.getElementById('line' + i);
+    line.className = 'step-line' + (i < n ? ' done' : '');
+  }
+  // 显示对应卡片
+  document.getElementById('step1-card').style.display = n === 1 ? '' : 'none';
+  document.getElementById('login-card').style.display = 'none';
+  document.getElementById('step2-card').style.display = n === 2 ? '' : 'none';
+  document.getElementById('step3-card').style.display = n === 3 ? '' : 'none';
+}
+
+function showLogin() {
+  document.getElementById('step1-card').style.display = 'none';
+  document.getElementById('login-card').style.display = '';
+}
+function showRegister() {
+  document.getElementById('login-card').style.display = 'none';
+  document.getElementById('step1-card').style.display = '';
+}
+
+// ====== 验证码管理 ======
+let regCaptchaId = '';
+let loginCaptchaId = '';
+
+async function loadRegCaptcha() {
+  try {
+    const r = await fetch(API + '/api/v1/auth/captcha');
+    const d = await r.json();
+    regCaptchaId = d.captcha_id;
+    document.getElementById('reg-captcha-img').src = d.image_base64;
+  } catch(e) {}
+}
+
+async function loadLoginCaptcha() {
+  try {
+    const r = await fetch(API + '/api/v1/auth/captcha');
+    const d = await r.json();
+    loginCaptchaId = d.captcha_id;
+    document.getElementById('login-captcha-img').src = d.image_base64;
+  } catch(e) {}
+}
+
+// 验证码图片点击刷新
+document.getElementById('reg-captcha-img').addEventListener('click', loadRegCaptcha);
+document.getElementById('reg-captcha-refresh').addEventListener('click', function(e) { e.preventDefault(); loadRegCaptcha(); });
+document.getElementById('login-captcha-img').addEventListener('click', loadLoginCaptcha);
+document.getElementById('login-captcha-refresh').addEventListener('click', function(e) { e.preventDefault(); loadLoginCaptcha(); });
+
+// 页面加载验证码
+loadRegCaptcha();
+loadLoginCaptcha();
+
+// ====== 注册 ======
+async function doRegister() {
+  const phone = document.getElementById('reg-phone').value.trim();
+  const captchaCode = document.getElementById('reg-captcha').value.trim();
+  const name = document.getElementById('reg-name').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const company = document.getElementById('reg-company').value.trim();
+
+  if (!phone || phone.length < 11) { alert('请输入正确的手机号'); return; }
+  if (!captchaCode) { alert('请输入图形验证码'); return; }
+  if (!password || password.length < 8) { alert('密码至少8位'); return; }
+
+  try {
+    const r = await fetch(API + '/api/v1/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phone: phone,
+        password: password,
+        captcha_id: regCaptchaId,
+        captcha_code: captchaCode,
+        name: name,
+        company_name: company || '我的企业'
+      })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || '注册失败');
+    token = d.access_token;
+    userInfo = d.user;
+    document.getElementById('info-admin').textContent = d.user.name || d.user.phone;
+    document.getElementById('info-company').textContent = d.tenant.name;
+    goStep(2);
+  } catch(e) {
+    alert('注册失败: ' + e.message);
+    loadRegCaptcha();
+  }
+}
+
+// ====== 登录 ======
+async function doLogin() {
+  const phone = document.getElementById('login-phone').value.trim();
+  const password = document.getElementById('login-password').value;
+  const captchaCode = document.getElementById('login-captcha').value.trim();
+  if (!phone || !password) { alert('请输入手机号和密码'); return; }
+  if (!captchaCode) { alert('请输入验证码'); return; }
+
+  // 等待指纹采集
+  if (!window.DDW_FINGERPRINT) {
+    try { await DDW.collectFingerprint(); } catch(e) {}
+  }
+
+  try {
+    const r = await fetch(API + '/api/v1/auth/login-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phone: phone,
+        password: password,
+        captcha_id: loginCaptchaId,
+        captcha_code: captchaCode,
+        device_fingerprint: window.DDW_FINGERPRINT || {}
+      })
+    });
+    const d = await r.json();
+    if (!r.ok) {
+      if (r.status === 429) {
+        alert('安全限制：请稍后重试');
+      } else {
+        alert(d.detail || '登录失败');
+      }
+      loadLoginCaptcha();
+      return;
+    }
+    token = d.access_token;
+    userInfo = d.user;
+    // 密码过期或首次登录 → 弹窗提醒（不再强制）
+    if (d.must_change) {
+      if (window.confirm('您的密码已到期或首次登录，建议立即修改密码以保障账号安全。\n\n点击"确定"现在修改，点击"取消"以后再提醒。')) {
+        sessionStorage.setItem('ddw_token', d.access_token);
+        window.location.href = '/change-password.html';
+        return;
+      }
+      try { localStorage.setItem('ddw_skip_pwd', String(Date.now())); } catch (e) {}
+    }
+    document.getElementById('info-admin').textContent = d.user.name || d.user.phone;
+    document.getElementById('info-company').textContent = d.tenant.name;
+    goStep(2);
+  } catch(e) {
+    alert('登录失败: ' + e.message);
+    loadLoginCaptcha();
+  }
+}
+
+// ====== 激活许可证 ======
+function activateLicense() {
+  const key = document.getElementById('license-key').value.trim();
+  if (!key) { alert('请输入许可证密钥'); return; }
+
+  // 尝试激活
+  fetch(API + '/api/v1/plugins/ddw-license-core/licenses', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({
+      license_type: 'formal',
+      valid_from: new Date().toISOString().split('T')[0],
+      valid_to: new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0],
+      plugin_entitlements: ['*'],
+      notes: '客户自行激活: ' + key
+    })
+  }).then(r => {
+    if (!r.ok) return r.json().then(e => { throw new Error(e.detail || '激活失败'); });
+    return r.json();
+  }).then(d => {
+    document.getElementById('license-status').innerHTML = '<span class="status-badge status-ok"><span class="status-dot"></span>已激活</span>';
+    document.getElementById('license-plugins').textContent = '全部插件';
+    alert('许可证激活成功！');
+    goStep3();
+  }).catch(e => { alert('激活失败: ' + e.message); });
+}
+
+function goStep3() {
+  // 获取插件数量
+  fetch(API + '/openapi.json').then(r => r.json()).then(d => {
+    const plugins = new Set();
+    Object.keys(d.paths).forEach(p => {
+      if (p.includes('/plugins/')) plugins.add(p.split('/plugins/')[1].split('/')[0]);
+    });
+    document.getElementById('info-plugins').textContent = plugins.size + ' 个';
+  }).catch(() => {
+    document.getElementById('info-plugins').textContent = '已加载';
+  });
+  document.getElementById('info-url').textContent = window.location.origin;
+  goStep(3);
+}
+
+// ====== 进入平台 ======
+function enterPlatform() {
+  // 保存 token 到 sessionStorage
+  if (token) sessionStorage.setItem('ddw_token', token);
+  // 跳转到主界面
+  window.location.href = '/ui/saas-admin.html';
+}
+
+// ====== 自动检测是否已登录 ======
+(function checkExisting() {
+  fetch(API + '/api/v1/auth/me').then(r => {
+    if (r.ok) return r.json();
+    throw new Error('not logged in');
+  }).then(d => {
+    // 已登录，跳到步骤2或3
+    userInfo = d.user;
+    document.getElementById('info-admin').textContent = d.user.name || d.user.phone;
+    document.getElementById('info-company').textContent = d.tenant ? d.tenant.name : '-';
+    goStep(2);
+  }).catch(() => {
+    // 未登录，停留在步骤1
+  });
+})();
+</script>
+</body>
+</html>

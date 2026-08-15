@@ -1,0 +1,43 @@
+name: ddw-reconciliation
+license: commercial
+tier: core
+version: 1.0.0
+display_name: DDW 应收实收核销
+description: 销售端应收（Receivable）与实收（Payment）的核销（对账）插件。自动匹配推荐（金额+公司精确匹配）、确认核销（事务：receivable.paid_amount + payment.matched_amount + 双方状态机自动重算）、取消核销、内存级核销历史、未核销汇总。本插件不创建新表，直接读写 P1-3 crm_receivables 与 P1-4 crm_payments。
+engine: plugin_base
+isolation: inline
+
+permissions:
+  - database.read
+  - database.write
+
+dependencies:
+  plugins:
+    - ddw-company-profile
+    - ddw-receivable
+    - ddw-payment
+
+config_schema:
+  type: object
+  properties:
+    default_tenant_id:
+      type: integer
+      default: 1
+    max_match_per_request:
+      type: integer
+      default: 20
+      description: 单次 confirm 允许的最大 match 条数
+    allow_overpay:
+      type: boolean
+      default: false
+      description: 是否允许 receivable 收款超额（超付）— 默认 false，对账严格
+    receivable_matchable_statuses:
+      type: array
+      default: [pending, partial, overdue]
+      description: 允许被核销的应收状态
+    payment_matchable_statuses:
+      type: array
+      default: [pending, partial]
+      description: 允许核销到应收的实收状态
+
+router_prefix: /api/v1/plugins/ddw-reconciliation

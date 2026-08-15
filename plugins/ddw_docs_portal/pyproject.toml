@@ -1,0 +1,15 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 110
+extend-exclude = ["data"]
+
+[tool.ruff.lint]
+# B008: FastAPI 路由标准写法 `user: dict = Depends(current_user)`（平台所有插件同款）
+ignore = ["UP045", "UP007", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["DTZ005", "S101", "PLR2004"]

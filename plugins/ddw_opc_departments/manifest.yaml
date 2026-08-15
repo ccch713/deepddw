@@ -1,0 +1,53 @@
+name: ddw-opc-departments
+version: 2.0.0
+display_name: "OPC 虚拟部门制"
+description: |
+  OPC (One-Person-Company) 11虚拟部门插件（新协议）。
+  为中小企业提供完整的AI虚拟组织架构：CEO/产品/设计/研发/市场/销售/财务/客服/法务/行政/量化。
+  每个部门有独立的AI人设、权限边界、预置Skill。
+  安装即用，离线运行，无需联网。
+  可通过DDW管理后台自定义部门名称、权限、Skill。
+  FDE现场增强：可深度定制部门协作流程、接入企业IM、对接业务系统。
+
+author: "DDW AI Hub · 锐果互动"
+license: commercial
+price:
+  self_service: 99
+  fde_on_site: 3000
+
+category: "organization"
+tags:
+  - opc
+  - multi-agent
+  - virtual-department
+  - 一人公司
+  - 新协议
+
+dependencies: {}
+permissions:
+  - database
+  - llm
+  - im
+
+config:
+  departments:
+    ceo:      { enabled: true, display: "CEO战略中心" }
+    product:  { enabled: true, display: "产品部" }
+    design:   { enabled: true, display: "设计部" }
+    dev:      { enabled: true, display: "研发部" }
+    marketing: { enabled: true, display: "市场营销部" }
+    sales:    { enabled: true, display: "销售部" }
+    finance:  { enabled: true, display: "财务部" }
+    cs:       { enabled: true, display: "客户服务部" }
+    legal:    { enabled: true, display: "法务部" }
+    admin:    { enabled: true, display: "行政运营部" }
+    quant:    { enabled: true, display: "量化交易部" }
+
+  routing:
+    mode: "keyword"
+    fallback_agent: "admin"
+    separator: "@"
+
+  collaboration:
+    allow_cross_dept: true
+    require_approval_from: "ceo"

@@ -1,0 +1,80 @@
+type: cosmetic
+name: 医美病历
+version: "1.0"
+required_fields:
+  - chief_complaint
+  - present_illness
+  - treatment_subtype
+  - material
+  - tooth_count
+  - photos_taken
+  - informed_consent_signed
+
+fields:
+  chief_complaint:
+    label: 主诉
+    type: text
+    max_length: 200
+    required: true
+  present_illness:
+    label: 现病史
+    type: text
+    max_length: 1000
+    required: true
+  past_history:
+    label: 既往史
+    type: text
+    max_length: 500
+    required: false
+  treatment_subtype:
+    label: 医美子类型
+    type: select
+    options: [veneer, whitening, composite, gingivoplasty]
+    required: true
+  material:
+    label: 材料
+    type: select
+    options: [porcelain, composite, ceramic, resin]
+    required: true
+  target_shade:
+    label: 目标色号
+    type: text
+    required: false
+  tooth_count:
+    label: 牙位数
+    type: number
+    required: true
+  smile_design:
+    label: 微笑设计
+    type: boolean
+    required: false
+  photos_taken:
+    label: 已拍照
+    type: boolean
+    required: true
+  mock_up_done:
+    label: 已做 mock-up
+    type: boolean
+    required: false
+  follow_up_weeks:
+    label: 复诊周数
+    type: number
+    required: false
+  informed_consent_signed:
+    label: 知情同意已签
+    type: boolean
+    required: true
+
+display_order:
+  - chief_complaint
+  - present_illness
+  - past_history
+  - treatment_subtype
+  - material
+  - target_shade
+  - tooth_count
+  - smile_design
+  - photos_taken
+  - mock_up_done
+  - follow_up_weeks
+  - informed_consent_signed

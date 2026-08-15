@@ -1,0 +1,10 @@
+# 运行时数据
+data/
+output/
+audio_queue/
+
+# 缓存
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc

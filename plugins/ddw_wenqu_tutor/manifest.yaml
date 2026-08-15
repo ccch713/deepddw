@@ -1,0 +1,75 @@
+name: DDW 问渠学科包（物理化学）
+tier: beta
+version: 0.1.0
+description: 苏格拉底式物理化学学习插件，支持错题本、家长统计等功能
+author: DDW Team
+license: commercial
+
+entry_point: plugin.py
+plugin_class: WenquTutorPlugin
+
+dependencies:
+  - fastapi
+  - sqlalchemy[asyncio]
+  - pydantic>=2.0
+  - httpx
+
+config:
+  WALLET_BASE:
+    description: 钱包服务地址
+    default: http://127.0.0.1:8500
+    required: true
+  LLM_GATEWAY:
+    description: LLM Gateway 地址
+    default: http://127.0.0.1:8500
+    required: true
+  MODEL:
+    description: 对话主模型
+    default: deepseek-v4-flash
+  TEXTBOOK_ROOT:
+    description: 教材根目录
+    default: /opt/wenqu/textbooks
+  DB_URL:
+    description: 问渠独立 PG 数据库
+    default: postgresql+asyncpg://localhost:5432/wenqu
+    required: true
+
+routes:
+  prefix: /api/v1/plugins/ddw_wenqu_tutor
+  endpoints:
+    - path: /session/start
+      method: POST
+      description: 开课
+    - path: /session/{id}/message
+      method: POST
+      description: 苏格拉底对话
+    - path: /session/{id}/end
+      method: POST
+      description: 下课计费
+    - path: /session/{id}
+      method: GET
+      description: 会话详情
+    - path: /textbook/list
+      method: GET
+      description: 教材列表
+    - path: /textbook/upload
+      method: POST
+      description: 上传教材
+    - path: /questions/list
+      method: GET
+      description: 真题列表
+    - path: /questions/submit
+      method: POST
+      description: 提交答案
+    - path: /wrongbook/list
+      method: GET
+      description: 错题本
+    - path: /wrongbook/{id}/redo
+      method: POST
+      description: 错题复盘
+    - path: /parent/stats
+      method: GET
+      description: 家长统计
+    - path: /health
+      method: GET
+      description: 健康检查

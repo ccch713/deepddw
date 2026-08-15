@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unlimited-OCR 现场演示 SOP · FDE 手册</title>
+<style>
+:root{
+  --bg-base:#050816;--bg-page:#0a0f24;--bg-card:#111a3a;--bg-elevated:#16204a;
+  --text-primary:#e8ecf8;--text-secondary:#a8b3d0;--text-muted:#6b7899;
+  --brand:#00e5ff;--brand-hover:#33ecff;--brand-glow:rgba(0,229,255,.25);
+  --accent-green:#00ff9d;--accent-blue:#4f9eff;--accent-purple:#b388ff;--accent-orange:#ffab40;
+  --border:#233052;--border-hover:#00e5ff;
+  --success:#00ff9d;--warning:#ffab40;--danger:#ff6b6b;--info:#4f9eff;
+  --shadow:0 4px 24px rgba(0,0,0,.35);--shadow-glow:0 0 24px var(--brand-glow);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg-base);color:var(--text-primary);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.75}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+.nav{position:sticky;top:0;z-index:50;background:rgba(5,8,22,.85);backdrop-filter:blur(18px);border-bottom:1px solid var(--border)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+.nav-brand{font-weight:700;font-size:17px}.nav-brand b{color:var(--brand)}
+.nav-links a{color:var(--text-secondary);text-decoration:none;margin-left:26px;font-size:14px}
+.nav-links a:hover{color:var(--brand)}
+.hero{padding:60px 0 40px;text-align:center;background:radial-gradient(ellipse 70% 60% at 50% 0%,rgba(0,229,255,.10),transparent)}
+.hero .tag{display:inline-block;padding:5px 16px;border:1px solid var(--border-hover);border-radius:999px;color:var(--brand);font-size:13px;margin-bottom:18px;background:rgba(0,229,255,.06)}
+.hero h1{font-size:34px;font-weight:800;margin-bottom:10px}
+.hero p{color:var(--text-muted);font-size:15px}
+section{padding:46px 0;border-top:1px solid var(--border)}
+.section-title{font-size:24px;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.section-title .no{color:var(--brand);background:rgba(0,229,255,.08);border:1px solid var(--border-hover);border-radius:8px;padding:2px 12px;font-size:16px}
+.section-sub{color:var(--text-muted);font-size:14px;margin-bottom:26px}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:16px}
+.card h4{font-size:16px;margin-bottom:12px;color:var(--text-primary)}
+.card h4 .ck{color:var(--accent-green);margin-right:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+ul,ol{margin-left:22px}
+li{margin-bottom:8px;color:var(--text-secondary);font-size:14.5px}
+li b{color:var(--text-primary)}
+.timeline{position:relative;margin-left:8px}
+.tl-item{position:relative;padding:0 0 22px 30px;border-left:2px solid var(--border)}
+.tl-item::before{content:"";position:absolute;left:-7px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--brand);box-shadow:var(--shadow-glow)}
+.tl-item .time{color:var(--brand);font-weight:700;font-size:14px}
+.tl-item .name{font-weight:700;font-size:15px;margin:2px 0 6px}
+.tl-item p{color:var(--text-secondary);font-size:14px}
+.tl-item .script{background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:10px;font-size:13.5px;color:var(--text-secondary)}
+.tl-item .script b{color:var(--text-primary)}
+.talk{background:var(--bg-elevated);border-left:3px solid var(--brand);border-radius:0 10px 10px 0;padding:14px 18px;margin:10px 0;font-size:14px;color:var(--text-secondary)}
+.talk b{color:var(--text-primary)}
+.badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600}
+.badge-green{background:rgba(0,255,157,.12);color:var(--accent-green);border:1px solid rgba(0,255,157,.3)}
+.badge-orange{background:rgba(255,171,64,.12);color:var(--warning);border:1px solid rgba(255,171,64,.3)}
+.badge-red{background:rgba(255,107,107,.12);color:var(--danger);border:1px solid rgba(255,107,107,.3)}
+.badge-blue{background:rgba(79,158,255,.12);color:var(--info);border:1px solid rgba(79,158,255,.3)}
+.q-item{margin-bottom:14px}
+.q-item .q{font-weight:700;font-size:14.5px;color:var(--text-primary);margin-bottom:6px}
+.q-item .a{color:var(--text-secondary);font-size:14px}
+footer{border-top:1px solid var(--border);padding:30px 0;text-align:center;color:var(--text-muted);font-size:13px}
+@media(max-width:800px){.grid2,.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav class="nav"><div class="wrap">
+  <div class="nav-brand">锐果互动 · <b>文档智能</b></div>
+  <div class="nav-links">
+    <a href="unlimited-ocr-intro.html">能力介绍</a>
+    <a href="unlimited-ocr-demo-sop.html">现场演示 SOP</a>
+    <a href="unlimited-ocr-deploy.html">快速部署指南</a>
+  </div>
+</div></nav>
+
+<div class="hero"><div class="wrap">
+  <span class="tag">FDE 现场演示标准流程 · 30-45 分钟标准场次</span>
+  <h1>Unlimited-OCR 现场演示 SOP</h1>
+  <p>本文档为 FDE 现场演示操作手册：准备清单 → 时间轴 → 五场景脚本 → 故障应急 → 客户问答 → 演示后跟进</p>
+</div></div>
+
+<section><div class="wrap">
+  <h2 class="section-title"><span class="no">1</span>演示前准备清单（出发前 1 天）</h2>
+  <p class="section-sub">逐项核对，缺一不可——现场翻车 90% 源于准备不足</p>
+  <div class="grid2">
+    <div class="card"><h4><span class="ck">☐</span>硬件与模型</h4>
+      <ul>
+        <li><b>GPU 服务器</b>：NVIDIA 显卡（最低 16GB / 推荐 24GB+），驱动 535+，CUDA 12.1+</li>
+        <li><b>模型文件</b>：完整权重 6.3GB 就位（本目录随行拷贝），<code>model-00001-of-000001.safetensors</code> 大小核对</li>
+        <li><b>SGLang 环境</b>：venv 可启动，<code>nvidia-smi</code> 正常输出</li>
+        <li><b>启动验证</b>：提前 30 分钟启动服务，curl 健康检查通过</li>
+      </ul>
+    </div>
+    <div class="card"><h4><span class="ck">☐</span>演示物料</h4>
+      <ul>
+        <li><b>样例 PDF ×5</b>：合同（含跨页表格）、财务报表、扫描说明书、招投标文件、双语资料——<b>优先客户真实文档</b>（提前向客户收集 3-5 份脱敏件）</li>
+        <li><b>对比数据</b>：同一份文档的"传统方式 vs Unlimited-OCR"输出对比截图</li>
+        <li><b>RAG 演示环境</b>：如条件允许，准备一个简易知识库问答 demo（解析结果 → 向量库 → 问答）</li>
+        <li><b>网络与电源</b>：备用电源、离线可用确认（演示全程可断网）</li>
+      </ul>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="section-title"><span class="no">2</span>标准时间轴（45 分钟场次）</h2>
+  <p class="section-sub">可根据客户时间压缩为 30 分钟（省略环节 5 与环节 6 的深度展开）</p>
+  <div class="timeline">
+    <div class="tl-item"><span class="time">0-5 min</span><div class="name">开场破冰</div>
+      <p>确认参会人角色（IT / 业务 / 管理层），明确本次演示目标</p>
+      <div class="talk"><b>话术</b>："今天用一个 45 分钟的现场演示，展示一套能让贵公司历史文档真正被用起来的技术方案。我们不谈概念，直接看效果。"</div>
+    </div>
+    <div class="tl-item"><span class="time">5-10 min</span><div class="name">痛点共鸣</div>
+      <p>引导客户回忆：有多少扫描件/历史合同无法检索？现有知识库为什么效果不好？</p>
+      <div class="talk"><b>话术</b>："贵公司的知识库是不是遇到过这样的情况——问了系统一个问题，它答不上来，因为源头文档根本没被正确读进去。这就是我们解决的第一个问题。"</div>
+    </div>
+    <div class="tl-item"><span class="time">10-25 min</span><div class="name">Live 演示（核心 15 分钟）</div>
+      <p>按"场景 1→2→3"顺序演示（详见第三节），优先使用客户真实文档</p>
+      <div class="talk"><b>节奏</b>：每个场景 5 分钟 = 1 分钟讲背景 + 2 分钟跑解析 + 2 分钟展示输出亮点（跨页表格完整、公式还原、条款定位）</div>
+    </div>
+    <div class="tl-item"><span class="time">25-30 min</span><div class="name">对比与数据</div>
+      <p>展示 OmniDocBench 榜单位置 + 与传统方案对比表（页面：能力介绍中的榜单与对比章节）</p>
+      <div class="talk"><b>话术</b>："这个模型在权威评测里排名第一，而且是 30 亿小参数模型——说明靠的是架构创新，不是堆显卡。"</div>
+    </div>
+    <div class="tl-item"><span class="time">30-35 min</span><div class="name">RAG 价值演示</div>
+      <p>解析结果 → 现场提问 → 展示答案与引用来源；强调"入库质量决定问答质量"</p>
+      <div class="talk"><b>话术</b>："刚才这段问答能答对，是因为源头文档被完整、正确地读进来了。这就是对贵公司 RAG 投入的最大保障。"</div>
+    </div>
+    <div class="tl-item"><span class="time">35-45 min</span><div class="name">答疑与下一步</div>
+      <p>开放问答（见第五节），明确下一步：POC 周期、语料收集、商务流程</p>
+      <div class="talk"><b>收尾</b>："建议用贵公司 20-50 份真实文档做一轮 POC，我们会提供部署支持和验收标准，让效果说话。"</div>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="section-title"><span class="no">3</span>五个演示场景脚本</h2>
+  <p class="section-sub">每个场景独立可用；时间紧就演 1+2+4</p>
+  <div class="card">
+    <h4>场景 1：合同条款结构化 <span class="badge badge-blue">必备</span></h4>
+    <p style="color:var(--text-secondary);font-size:14px;margin-bottom:10px">目标：让客户看到"整本合同 → 条款清单"的质变</p>
+    <div class="script">
+      <b>演示步骤：</b><br>
+      ① 选择一份 20-40 页合同（含跨页表格）<br>
+      ② 运行整篇解析，展示耗时（对比逐页方案）<br>
+      ③ 展开输出：展示"甲方/乙方/金额/付款条件/违约条款"被正确结构化<br>
+      ④ 现场提问：用解析结果问 RAG"本合同违约金的计算方式？"→ 展示答案 + 引用页码<br>
+      <b>亮点话术：</b>"注意这份合同的表格跨了 3 页——传统方式会断成三截，这里是一张完整的表。"
+    </div>
+  </div>
+  <div class="card">
+    <h4>场景 2：财务报表还原 <span class="badge badge-blue">必备</span></h4>
+    <div class="script">
+      <b>演示步骤：</b><br>
+      ① 财务报表/年报 PDF（扫描版更佳）<br>
+      ② 展示输出 Markdown 表格与原文逐格对照<br>
+      ③ 强调：数字零误差、表头跨页保留、可直接导入 Excel/BI<br>
+      <b>亮点话术：</b>"财务数字错一位就是事故，这套方案把表格还原做到了评测榜第一的精度。"
+    </div>
+  </div>
+  <div class="card">
+    <h4>场景 3：扫描说明书全文检索 <span class="badge badge-orange">按需</span></h4>
+    <div class="script">
+      <b>演示步骤：</b><br>
+      ① 设备说明书/技术手册扫描件 → 整篇解析<br>
+      ② 检索演示："这台设备的报警代码 23 是什么意思？"<br>
+      ③ 展示售后场景价值：客服查询从"翻纸质手册"变"秒级问答"<br>
+      <b>亮点话术：</b>"这就是把沉睡在档案室的说明书变成了 7×24 小时的智能客服。"
+    </div>
+  </div>
+  <div class="card">
+    <h4>场景 4：招投标文件分析 <span class="badge badge-blue">必备</span></h4>
+    <div class="script">
+      <b>演示步骤：</b><br>
+      ① 招投标文件（50 页左右，含资质要求、评分标准、时间节点）<br>
+      ② 一次解析后提问："投标截止时间？资质要求有几项？评分权重最高的是哪项？"<br>
+      ③ 展示：销售团队从"逐页翻找"到"10 秒出答案"<br>
+      <b>亮点话术：</b>"招投标窗口期通常只有几天，这套方案能让贵司的响应速度翻倍。"
+    </div>
+  </div>
+  <div class="card">
+    <h4>场景 5：多语言与混合版式 <span class="badge badge-orange">按需</span></h4>
+    <div class="script">
+      <b>演示步骤：</b><br>
+      ① 中英混排合同/技术资料<br>
+      ② 展示双语混排识别正确、格式不乱<br>
+      <b>亮点话术：</b>"国际化业务的对口文件，一套方案全覆盖。"
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="section-title"><span class="no">4</span>现场故障应急表</h2>
+  <p class="section-sub">演示中遇到问题不要慌，按表处理；核心原则：<b>先重启服务，再重启演示</b></p>
+  <div class="grid2">
+    <div class="card"><h4>🖥️ 服务类</h4>
+      <ul>
+        <li><b>服务未启动/端口不通</b> → <code>ps aux | grep sglang</code> 检查；重启 launch 命令，等待 60-90 秒模型加载</li>
+        <li><b>模型加载慢</b> → 提前 30 分钟预热；现场等待时讲背景故事</li>
+        <li><b>显存不足 OOM</b> → 降低并发、改用 gundam 模式（640px）；检查是否有其他进程占用 GPU（<code>nvidia-smi</code>）</li>
+        <li><b>输出乱码/重复</b> → 确认用的是 SGLang 后端（llama.cpp 有已知重复 bug）；重启服务再试</li>
+      </ul>
+    </div>
+    <div class="card"><h4>📋 演示类</h4>
+      <ul>
+        <li><b>客户文档解析效果不佳</b>（手写/超低清扫描件）→ 立即切换备用样例；诚实说明："这类文档建议搭配传统 OCR 双通道"</li>
+        <li><b>网络中断</b> → 演示全程离线可用（模型本地），不受影响</li>
+        <li><b>客户临时加文档</b> → 先解析一页验证质量，效果好再整篇</li>
+        <li><b>时间超时</b> → 压缩场景 2/3，保证场景 1+4 完整呈现</li>
+      </ul>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="section-title"><span class="no">5</span>客户问答准备（TOP 10）</h2>
+  <p class="section-sub">提前背熟，答得专业且不夸大</p>
+  <div class="grid2">
+    <div class="card">
+      <div class="q-item"><div class="q">Q1：这套方案要多少钱？</div><div class="a">模型本身开源免费（MIT 协议），成本 = GPU 服务器硬件 + 部署实施服务。相比按页计费的商业 OCR API，本地化后长期成本更低。</div></div>
+      <div class="q-item"><div class="q">Q2：数据安全怎么保证？</div><div class="a">完全本地化部署，文档不出企业网络，可离线运行，满足数据不出域要求。</div></div>
+      <div class="q-item"><div class="q">Q3：需要买什么硬件？</div><div class="a">一台带 NVIDIA GPU 的服务器即可：推荐 24GB 显存（如 RTX 4090/A10），最低 16GB 可跑演示。模型权重仅 6.3GB。</div></div>
+      <div class="q-item"><div class="q">Q4：和现有系统怎么对接？</div><div class="a">提供标准 API（OpenAI 兼容），可对接知识库、OA、档案系统；也可由我方提供完整流水线。</div></div>
+      <div class="q-item"><div class="q">Q5：识别准确率到底多少？</div><div class="a">权威评测 OmniDocBench 综合 93.92（行业第一）。具体到贵公司语料，建议 POC 用真实文档验证——这也是我们建议先做 POC 的原因。</div></div>
+    </div>
+    <div class="card">
+      <div class="q-item"><div class="q">Q6：能处理手写文档吗？</div><div class="a">印刷体、扫描件为强项；手写体建议搭配传统 OCR 双通道方案，POC 阶段可实测贵司样本。</div></div>
+      <div class="q-item"><div class="q">Q7：每天能处理多少文档？</div><div class="a">取决于 GPU 配置：24GB 显存级单机每日可处理数千页；高吞吐配置（48GB+）可达万页级。</div></div>
+      <div class="q-item"><div class="q">Q8：部署要多久？</div><div class="a">标准环境半天内可完成部署与验证（详见部署指南）；含对接定制则视范围评估。</div></div>
+      <div class="q-item"><div class="q">Q9：和已有的 OCR 系统冲突吗？</div><div class="a">不冲突。可作为现有系统的增强通道，或在知识库前端独立部署。我们不做替换，只做增量。</div></div>
+      <div class="q-item"><div class="q">Q10：怎么证明对 RAG 有用？</div><div class="a">同一批文档分别用传统方式与本方案入库，做同样的问答对比——检索命中率与答案准确性的差异一目了然，POC 中可量化呈现。</div></div>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="section-title"><span class="no">6</span>演示后跟进</h2>
+  <p class="section-sub">演示结束不是结束，是 POC 的开始</p>
+  <div class="grid3">
+    <div class="card"><h4>📝 POC 建议书</h4><p style="color:var(--text-secondary);font-size:14px">2 天内输出：POC 范围（语料规模 20-50 份）、验收指标（解析准确率抽样 + RAG 问答命中率对比）、周期与资源、成功标准。</p></div>
+    <div class="card"><h4>📦 语料收集</h4><p style="color:var(--text-secondary);font-size:14px">请客户提供脱敏真实文档（合同/报表/扫描件各 5-10 份），覆盖主要场景；明确脱敏要求。</p></div>
+    <div class="card"><h4>📅 复盘记录</h4><p style="color:var(--text-secondary);font-size:14px">记录客户关注点、异议、竞品信息；反馈给方案与产品团队，沉淀进公司案例库。</p></div>
+  </div>
+</div></section>
+
+<footer>
+  <div class="wrap">
+    <p>锐果互动 · 文档智能 FDE 手册 · 内部使用，请勿外传</p>
+    <p style="margin-top:8px">武汉锐果互动信息技术有限公司</p>
+  </div>
+</footer>
+
+</body>
+</html>

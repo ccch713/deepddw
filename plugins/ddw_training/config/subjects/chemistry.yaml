@@ -1,0 +1,79 @@
+subject: chemistry
+display_name: 初三化学
+grade: 9
+chapters:
+  - id: ch1
+    title: 走进化学世界
+    concepts:
+      - {id: c1, name: 物质的变化, difficulty: easy}
+      - {id: c2, name: 物质的性质, difficulty: easy}
+  - id: ch2
+    title: 我们周围的空气
+    concepts:
+      - {id: c3, name: 空气的成分, difficulty: easy}
+      - {id: c4, name: 氧气, difficulty: medium}
+  - id: ch3
+    title: 物质构成的奥秘
+    concepts:
+      - {id: c5, name: 分子和原子, difficulty: medium}
+      - {id: c6, name: 元素, difficulty: medium}
+      - {id: c7, name: 化学式与化合价, difficulty: hard}
+
+# 6 思维动作推荐使用顺序
+recommended_moves: [1, 2, 3, 4, 5, 6]
+
+# 12 图景默认优先级（化学侧重反例/实验设计/可视化图解）
+default_vignettes: [1, 2, 4, 5, 9, 10]
+
+# 苏格拉底追问深度
+socratic_depth: 3
+
+# 多媒体课件生成配置（10 种媒体类型）
+multimedia:
+  slides:
+    enabled: true
+    template: "chemistry_classic"
+    slides_per_chapter: 12
+  interactive_sim:
+    enabled: true
+    engine: "phet"
+    prefer_for: ["物质的变化", "氧气", "分子和原子"]
+  quiz:
+    enabled: true
+    questions_per_chapter: 5
+    types: [numeric, text, short_answer]
+  pbl:
+    enabled: true
+    project_duration_minutes: 20
+    prefer_for: ["氧气", "元素", "化学式与化合价"]
+  whiteboard:
+    enabled: true
+    engine: "whiteboard+katex"
+    prefer_for: ["化学式与化合价"]
+  # 3D 可视化：分子结构（化学特色）
+  viz3d:
+    enabled: true
+    engine: "three.js"
+    scene_type: "molecule"  # 分子结构是化学 3D 的核心
+    prefer_for: ["分子和原子", "化学式与化合价"]
+  # 游戏：化学实验模拟
+  game:
+    enabled: true
+    engine: "phaser.js"
+    game_type: "chemistry_lab"
+    prefer_for: ["物质的变化", "氧气"]
+  tts:
+    enabled: true
+    voice: "male-qn-qingse"
+    speed: 1.0
+    auto_generate_for_concepts: true
+  # AI 配图：化学反应/分子图
+  image:
+    enabled: true
+    style: "scientific"
+    prefer_for: ["物质的变化", "氧气", "分子和原子"]
+  # 教学视频：实验演示
+  video:
+    enabled: true
+    duration_sec: 60
+    prefer_for: ["氧气", "化学式与化合价"]

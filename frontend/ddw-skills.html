@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="format-detection" content="telephone=no">
+<title>技能管理 - DDW AI Hub</title>
+<link rel="icon" type="image/svg+xml" href="assets/logo-ju.svg">
+<style>
+  /* === CSS Variables (对齐 saas-admin.html 完整变量集) === */
+  :root {
+    --bg-base: #F0F2F5;
+    --bg-card: #FFFFFF;
+    --bg-elevated: #FAFAFA;
+    --bg-hover: #F5F7FA;
+    --bg-sidebar: #001529;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --text-muted: #999999;
+    --text-placeholder: #BBBBBB;
+    --text-inverse: #FFFFFF;
+    --brand: #1890FF;
+    --brand-hover: #40A9FF;
+    --brand-light: #E6F4FF;
+    --border: #E8E8E8;
+    --border-light: #F0F0F0;
+    --border-input: #D9D9D9;
+    --border-focus: #1890FF;
+    --success: #52C41A;
+    --success-bg: #F6FFED;
+    --success-border: #B7EB8F;
+    --warning: #FAAD14;
+    --warning-bg: #FFFBE6;
+    --warning-border: #FFE58F;
+    --danger: #F5222D;
+    --danger-bg: #FFF1F0;
+    --danger-border: #FFA39E;
+    --info: #1890FF;
+    --info-bg: #E6F7FF;
+    --info-border: #91D5FF;
+    --shadow-dropdown: 0 8px 24px rgba(0,0,0,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--text-primary); background: var(--bg-base); -webkit-font-smoothing: antialiased; }
+  a { color: var(--brand); text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
+  input, select, textarea { font-family: inherit; }
+
+  /* === Layout === */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar { width: 200px; background: var(--bg-sidebar); color: rgba(255,255,255,0.85); flex-shrink: 0; }
+  .sidebar-logo { display: flex; align-items: center; height: 56px; padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .logo-char { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: #000; color: var(--text-inverse); font-size: 18px; font-weight: bold; font-family: "PingFang SC", "Microsoft YaHei", serif; border-radius: 2px; margin-right: 8px; }
+  .logo-text { color: var(--text-inverse); font-size: 15px; font-weight: 500; }
+  .nav-group { padding: 12px 0; }
+  .nav-title { color: rgba(255,255,255,0.45); font-size: 12px; padding: 0 16px 8px; }
+  .nav-item { display: flex; align-items: center; height: 40px; padding: 0 16px; color: rgba(255,255,255,0.85); font-size: 14px; cursor: pointer; }
+  .nav-item:hover { color: var(--text-inverse); background: rgba(255,255,255,0.04); }
+  .nav-item.active { color: var(--text-inverse); background: var(--brand); }
+  .nav-icon { width: 16px; height: 16px; margin-right: 10px; flex-shrink: 0; }
+  .nav-label { flex: 1; }
+  .status-tag { display: inline-block; padding: 0 6px; height: 16px; line-height: 16px; font-size: 10px; border-radius: 2px; margin-left: auto; flex-shrink: 0; }
+  .status-live { background: rgba(82,196,26,0.2); color: var(--success); border: 1px solid rgba(82,196,26,0.5); }
+  .status-soon { background: rgba(250,173,20,0.2); color: var(--warning); border: 1px solid rgba(250,173,20,0.5); }
+  .status-plan { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.35); border: 1px solid rgba(255,255,255,0.15); }
+  .nav-item.disabled { color: rgba(255,255,255,0.35); cursor: not-allowed; pointer-events: auto; }
+  .nav-item.disabled:hover { background: transparent; color: rgba(255,255,255,0.35); }
+
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .topbar { background: var(--bg-card); border-bottom: 1px solid var(--border); height: 56px; display: flex; align-items: center; padding: 0 24px; }
+  .crumb { color: var(--text-primary); font-size: 14px; }
+  .crumb .sep { color: var(--text-muted); margin: 0 6px; }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+  .user-chip { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-primary); }
+  .user-avatar { width: 28px; height: 28px; background: var(--brand); color: var(--text-inverse); border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .user-chip a { color: var(--text-secondary); font-size: 12px; }
+  .user-chip a:hover { color: var(--brand); }
+
+  .content { flex: 1; padding: 24px; overflow: auto; }
+
+  /* === Filter bar === */
+  .filter-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .filter-bar .btn { height: 32px; line-height: 32px; padding: 0 16px; }
+  .filter-bar .btn.active { background: var(--brand); color: var(--text-inverse); border-color: var(--brand); }
+  .filter-bar .search { flex: 1; min-width: 200px; max-width: 320px; }
+  .search input { width: 100%; height: 32px; padding: 4px 12px; border: 1px solid var(--border-input); border-radius: 2px; font-size: 13px; }
+  .search input:focus { border-color: var(--brand); outline: none; }
+
+  /* === Card === */
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 2px; }
+
+  /* === Table === */
+  .table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .table th { background: var(--bg-elevated); color: var(--text-primary); font-weight: 500; text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .table td { padding: 12px 16px; border-bottom: 1px solid var(--border-light); color: var(--text-primary); }
+  .table tr:hover td { background: var(--bg-elevated); }
+  .tag { display: inline-block; padding: 2px 8px; font-size: 12px; border-radius: 2px; }
+  .tag.ok { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+  .tag.warn { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
+  .tag.err { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
+  .tag.info { background: var(--info-bg); color: var(--brand); border: 1px solid var(--info-border); }
+
+  /* === Button === */
+  .btn { display: inline-block; height: 30px; line-height: 30px; padding: 0 14px; font-size: 13px; border-radius: 2px; border: 1px solid var(--border-input); background: var(--bg-card); color: var(--text-primary); cursor: pointer; }
+  .btn:hover { border-color: var(--brand); color: var(--brand); }
+  .btn.primary { background: var(--brand); color: var(--text-inverse); border-color: var(--brand); }
+  .btn.primary:hover { background: var(--brand-hover); border-color: var(--brand-hover); color: var(--text-inverse); }
+  .btn.sm { height: 24px; line-height: 24px; padding: 0 10px; font-size: 12px; }
+
+  /* === Modal === */
+  .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .modal-mask.show { display: flex; }
+  .modal { background: var(--bg-card); width: 560px; max-width: 90vw; max-height: 85vh; overflow: auto; border-radius: 2px; }
+  .modal-head { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; }
+  .modal-title { font-size: 15px; color: var(--text-primary); font-weight: 500; }
+  .modal-close { margin-left: auto; cursor: pointer; color: var(--text-muted); font-size: 18px; background: none; border: none; }
+  .modal-body { padding: 20px; }
+  .modal-foot { padding: 12px 20px; border-top: 1px solid var(--border); text-align: right; }
+  .modal-foot .btn { margin-left: 8px; }
+
+  /* === Form === */
+  .form-row { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+  .form-row label { width: 100px; color: var(--text-primary); font-size: 13px; padding-top: 6px; flex-shrink: 0; }
+  .form-row input, .form-row select, .form-row textarea { flex: 1; min-height: 32px; padding: 4px 11px; border: 1px solid var(--border-input); border-radius: 2px; font-size: 13px; color: var(--text-primary); outline: none; }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color: var(--brand); }
+  .form-row textarea { min-height: 160px; font-family: monospace; line-height: 1.6; padding: 8px 11px; }
+
+  /* === Tabs === */
+  .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .tab { padding: 10px 16px; font-size: 14px; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab:hover { color: var(--brand); }
+  .tab.active { color: var(--brand); border-bottom-color: var(--brand); }
+
+  /* === Toast === */
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.78); color: var(--text-inverse); padding: 10px 20px; font-size: 13px; border-radius: 2px; display: none; z-index: 200; }
+  .toast.show { display: block; }
+
+  /* === Footer === */
+  .app-footer { text-align: center; padding: 14px 0; color: var(--text-muted); font-size: 12px; border-top: 1px solid var(--border); background: var(--bg-card); }
+  .app-footer a { color: var(--text-muted); }
+  .app-footer a:hover { color: var(--brand); }
+  .footer-sep { margin: 0 8px; color: var(--border-input); }
+
+  /* === Mobile === */
+  .menu-toggle { display: none; background: none; border: none; color: var(--text-inverse); font-size: 20px; margin-right: 8px; }
+  .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 49; }
+  .sidebar-overlay.active { display: block; }
+
+  @media (max-width: 900px) { .row.c4, .row.c3, .row.c2 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .row.c4, .row.c3, .row.c2 { grid-template-columns: 1fr; } }
+  @media (max-width: 768px) {
+    .sidebar { position: fixed; left: -200px; top: 0; bottom: 0; z-index: 50; transition: left 0.2s; box-shadow: 2px 0 12px rgba(0,0,0,0.15); }
+    .sidebar.open { left: 0; }
+    .menu-toggle { display: inline-block; }
+    .topbar { padding: 0 12px; height: 52px; }
+    .crumb { font-size: 13px; max-width: 60vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .content { padding: 12px; }
+  }
+
+  @media (max-width: 480px) {
+    .topbar { padding: 0 10px; height: 48px; gap: 8px; }
+    .topbar-right { gap: 8px; }
+    .crumb { font-size: 12px; max-width: 50vw; }
+    .crumb .sep { margin: 0 3px; }
+    .content { padding: 8px; }
+    .card { padding: 12px; border-radius: 4px; }
+    .card h3 { font-size: 14px; }
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table-wrap table { min-width: 480px; }
+    .modal { width: 96%; padding: 16px; }
+    .modal h3 { font-size: 15px; }
+  }
+
+  @media (max-width: 360px) {
+    .topbar { padding: 0 8px; }
+    .crumb { font-size: 11.5px; max-width: 45vw; }
+    .sidebar { width: 180px; left: -180px; }
+    .content { padding: 6px; }
+    .card { padding: 10px; }
+    .btn { width: 100%; padding: 10px 12px; }
+    .btn + .btn { margin-top: 8px; }
+    .form-group { margin-bottom: 12px; }
+    .form-row { flex-direction: column; align-items: stretch; }
+    .form-row label { width: 100%; margin-bottom: 4px; }
+    .modal-actions { flex-direction: column-reverse; gap: 8px; }
+    .modal-actions .btn { width: 100%; }
+  }
+</style>
+    <link rel="stylesheet" href="/css/ddw-themes.css">
+    <script src="/js/ddw-theme-switcher.js"></script>
+  </head>
+<body>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-char">钜</span>
+      <span class="logo-text">DDW 控制台</span>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">总览</div>
+      <a class="nav-item" data-route="overview" href="saas-admin.html#/overview">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l7 4v6l-7 4-7-4V5l7-4z"/></svg>
+        <span class="nav-label">数据概览</span>
+      </a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">AI 能力</div>
+      <a class="nav-item" data-route="llm" href="saas-admin.html#/llm">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="3" width="12" height="10"/><path d="M5 6h6M5 9h4" stroke="white" fill="none"/></svg>
+        <span class="nav-label">LLM 配置</span>
+      </a>
+      <a class="nav-item" data-route="knowledge" href="saas-admin.html#/knowledge">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M3 1h10v14H3z"/><path d="M5 5h6M5 8h6M5 11h4" stroke="white" fill="none"/></svg>
+        <span class="nav-label">知识库</span>
+      </a>
+      <a class="nav-item" data-route="agents" href="saas-admin.html#/agents">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="6" r="3"/><path d="M2 14c0-2 3-3 6-3s6 1 6 3"/></svg>
+        <span class="nav-label">数字员工</span>
+      </a>
+      <a class="nav-item active" data-route="skills" href="ddw-skills.html">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l7 4-7 4-7-4 7-4zM1 9l7 4 7-4"/></svg>
+        <span class="nav-label">技能 Skill</span>
+      </a>
+      <a class="nav-item" data-route="carbon" href="saas-admin.html#/carbon">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6"/></svg>
+        <span class="nav-label">碳硅协同</span>
+      </a>
+      <a class="nav-item" data-route="pal" href="saas-admin.html#/pal">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l7 7-7 7-7-7z"/></svg>
+        <span class="nav-label">DDW Pal</span>
+      </a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">企业管理</div>
+      <a class="nav-item" data-route="users" href="saas-admin.html#/users">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><circle cx="6" cy="5" r="3"/><path d="M2 14c0-2 2-3 4-3s4 1 4 3"/></svg>
+        <span class="nav-label">成员管理</span>
+      </a>
+      <a class="nav-item" data-route="plugins" href="saas-admin.html#/plugins">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M5 2h6v3l3 3v6H5V2z"/><circle cx="7" cy="10" r="1"/></svg>
+        <span class="nav-label">插件管理</span>
+      </a>
+      <a class="nav-item" data-route="forum" href="saas-admin.html#/forum">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v9H6l-4 3V2z"/></svg>
+        <span class="nav-label">插件论坛</span>
+      </a>
+      <a class="nav-item" data-route="worklogs" href="saas-admin.html#/worklogs" data-perm="admin">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10v12H3z"/><path d="M5 5h6M5 8h6M5 11h4" stroke="white" fill="none"/></svg>
+        <span class="nav-label">企业工作日志</span>
+      </a>
+      <a class="nav-item" data-route="partners" href="saas-admin.html#/partners" data-perm="partner">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><circle cx="5" cy="6" r="3"/><circle cx="11" cy="6" r="3"/><path d="M1 14c0-2 2-3 4-3M9 14c0-2 2-3 4-3"/></svg>
+        <span class="nav-label">经销商</span>
+      </a>
+      <a class="nav-item" data-route="demo-accounts" href="saas-admin.html#/demo-accounts" data-perm="partner">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="3" width="12" height="10"/><path d="M5 8h6" stroke="white" fill="none"/></svg>
+        <span class="nav-label">客户 Demo 账号</span>
+      </a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">平台</div>
+      <a class="nav-item" data-route="billing" href="saas-admin.html#/billing" data-perm="finance">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="3" width="12" height="10"/><path d="M4 6h8M4 9h8" stroke="white" fill="none"/></svg>
+        <span class="nav-label">套餐与账单</span>
+      </a>
+      <a class="nav-item" data-route="invoices" href="saas-admin.html#/invoices" data-perm="finance">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M3 1h10v14l-2-1.5L9 15l-2-1.5L5 15l-2-1.5V1z"/><path d="M5 5h6M5 8h6M5 11h4" stroke="white" fill="none"/></svg>
+        <span class="nav-label">发票管理</span>
+      </a>
+      <a class="nav-item" data-route="settings" href="saas-admin.html#/settings">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M3 13l1.4-1.4M11.6 4.4L13 3"/></svg>
+        <span class="nav-label">企业基础信息</span>
+      </a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="menu-toggle" id="menuToggle">☰</button>
+      <div class="crumb">
+        <span>控制台</span>
+        <span class="sep">/</span>
+        <span>技能管理</span>
+      </div>
+      <div class="topbar-right">
+        <div class="user-chip" id="userChip">未登录</div>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="filter-bar">
+        <button class="btn active" data-cat="all">全部</button>
+        <button class="btn" data-cat="chat">对话</button>
+        <button class="btn" data-cat="tool">工具</button>
+        <button class="btn" data-cat="data">数据</button>
+        <button class="btn" data-cat="integ">集成</button>
+        <div class="search"><input id="searchInput" placeholder="搜索技能名 / 触发词…"></div>
+        <button class="btn primary" id="btnCreate">+ 创建技能</button>
+      </div>
+
+      <div class="card">
+        <table class="table">
+          <thead>
+            <tr><th>技能名</th><th>类型</th><th>触发词</th><th>调用次数</th><th>状态</th><th>最后更新</th><th>操作</th></tr>
+          </thead>
+          <tbody id="skillTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <footer class="app-footer">
+      <span>&copy; 2026 武汉锐果互动信息技术有限公司</span>
+      <span class="footer-sep">|</span>
+      <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">鄂ICP备2026024883号-1</a>
+      <span class="footer-sep">|</span>
+      <a href="https://beian.mps.gov.cn/#/query/webSearch?code=42011102006255" target="_blank" rel="noopener">鄂公网安备42011102006255号</a>
+    </footer>
+  </main>
+</div>
+
+<div class="modal-mask" id="modal">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title" id="modalTitle">技能详情</span>
+      <button class="modal-close" id="modalClose">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot">
+      <button class="btn" id="modalCancel">关闭</button>
+      <button class="btn primary" id="modalOk">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SKILLS = [
+  { id: 's1', name: 'ddw.llm.chat', type: 'chat', desc: '通用 LLM 对话', triggers: ['你好','hi','问'], calls: 12450, status: 'ok', updated: '2026-08-01 12:00' },
+  { id: 's2', name: 'ddw.kb.search', type: 'data', desc: '知识库检索', triggers: ['查一下','搜','检索'], calls: 3210, status: 'ok', updated: '2026-08-01 10:30' },
+  { id: 's3', name: 'ddw.training.start_session', type: 'tool', desc: '启动培训会话', triggers: ['开始学习','上课'], calls: 856, status: 'ok', updated: '2026-07-31 18:22' },
+  { id: 's4', name: 'ddw.smart_cs.handle_message', type: 'chat', desc: '智能客服回复', triggers: ['客服','投诉','咨询'], calls: 2105, status: 'ok', updated: '2026-08-01 09:11' },
+  { id: 's5', name: 'ddw.email.send', type: 'tool', desc: '邮件发送', triggers: ['发邮件','通知'], calls: 432, status: 'warn', updated: '2026-07-28 16:45' },
+  { id: 's6', name: 'ddw.hris.sync_employees', type: 'integ', desc: 'HRIS 员工同步', triggers: ['同步员工','导入人员'], calls: 56, status: 'ok', updated: '2026-07-30 11:00' },
+  { id: 's7', name: 'ddw.training.get_progress', type: 'data', desc: '查询学习进度', triggers: ['我学到哪了','进度'], calls: 234, status: 'ok', updated: '2026-07-30 12:15' },
+  { id: 's8', name: 'ddw.finance.expense_ocr', type: 'integ', desc: '票据 OCR 识别', triggers: ['报销','发票'], calls: 89, status: 'err', updated: '2026-07-25 14:20' },
+];
+
+const TYPE_NAMES = { chat: '对话', tool: '工具', data: '数据', integ: '集成' };
+
+let curCat = 'all';
+let curSearch = '';
+
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
+const toast = (m) => { const t = $('#toast'); t.textContent = m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2000); };
+
+function render() {
+  const rows = SKILLS.filter(s => {
+    if (curCat !== 'all' && s.type !== curCat) return false;
+    if (curSearch) {
+      const q = curSearch.toLowerCase();
+      if (!s.name.toLowerCase().includes(q) && !s.triggers.join(',').toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+  const tb = $('#skillTbody');
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px">无匹配技能</td></tr>'; return; }
+  tb.innerHTML = rows.map(s => `
+    <tr>
+      <td><strong style="color:var(--brand)">${s.name}</strong><br><span style="color:var(--text-muted);font-size:12px">${s.desc}</span></td>
+      <td><span class="tag info">${TYPE_NAMES[s.type] || s.type}</span></td>
+      <td>${s.triggers.map(t => `<span class="tag" style="margin-right:4px">${t}</span>`).join('')}</td>
+      <td>${s.calls.toLocaleString()}</td>
+      <td><span class="tag ${s.status === 'ok' ? 'ok' : s.status === 'warn' ? 'warn' : 'err'}">${s.status === 'ok' ? '已启用' : s.status === 'warn' ? '受限' : '异常'}</span></td>
+      <td style="color:var(--text-secondary)">${s.updated}</td>
+      <td>
+        <button class="btn sm" data-act="view" data-id="${s.id}">详情</button>
+        <button class="btn sm" data-act="toggle" data-id="${s.id}">${s.status === 'ok' ? '禁用' : '启用'}</button>
+        <button class="btn sm" data-act="del" data-id="${s.id}">删除</button>
+      </td>
+    </tr>
+  `).join('');
+  bindRowEvents();
+}
+
+function bindRowEvents() {
+  $$('#skillTbody [data-act]').forEach(b => b.addEventListener('click', () => {
+    const id = b.dataset.id;
+    const sk = SKILLS.find(s => s.id === id);
+    if (b.dataset.act === 'view') showDetail(sk);
+    else if (b.dataset.act === 'toggle') { sk.status = sk.status === 'ok' ? 'warn' : 'ok'; render(); toast('已切换状态'); }
+    else if (b.dataset.act === 'del') { if (confirm('确定删除？')) { const i = SKILLS.findIndex(s => s.id === id); SKILLS.splice(i, 1); render(); toast('已删除'); } }
+  }));
+}
+
+function showDetail(sk) {
+  $('#modalTitle').textContent = sk.name;
+  $('#modalBody').innerHTML = `
+    <div class="tabs">
+      <div class="tab active" data-tab="info">基本信息</div>
+      <div class="tab" data-tab="logs">调用日志</div>
+      <div class="tab" data-tab="config">配置</div>
+    </div>
+    <div data-pane="info">
+      <div class="form-row"><label>名称</label><input value="${sk.name}"></div>
+      <div class="form-row"><label>描述</label><textarea>${sk.desc}</textarea></div>
+      <div class="form-row"><label>类型</label>
+        <select>${Object.entries(TYPE_NAMES).map(([k, v]) => `<option value="${k}" ${k === sk.type ? 'selected' : ''}>${v}</option>`).join('')}</select>
+      </div>
+      <div class="form-row"><label>触发词</label><input value="${sk.triggers.join(',')}"></div>
+    </div>
+    <div data-pane="logs" style="display:none">
+      <div style="font-size:12px;color:var(--text-secondary);line-height:1.9;font-family:monospace;background:var(--bg-hover);padding:12px;border-radius:2px;max-height:300px;overflow:auto">
+        [2026-08-01 12:30:01] user_id=42 → 调用成功 耗时 230ms<br>
+        [2026-08-01 12:28:15] user_id=33 → 调用成功 耗时 180ms<br>
+        [2026-08-01 12:25:42] user_id=17 → 调用成功 耗时 210ms<br>
+        [2026-08-01 12:22:08] user_id=29 → 调用成功 耗时 195ms<br>
+        [2026-08-01 12:18:33] user_id=55 → 调用成功 耗时 240ms
+      </div>
+    </div>
+    <div data-pane="config" style="display:none">
+      <div class="form-row"><label>YAML 配置</label><textarea>name: ${sk.name}
+type: ${sk.type}
+description: ${sk.desc}
+triggers: ${JSON.stringify(sk.triggers)}
+enabled: ${sk.status === 'ok'}</textarea></div>
+    </div>
+  `;
+  $('#modal').classList.add('show');
+  $$('#modalBody .tab').forEach(t => t.addEventListener('click', () => {
+    $$('#modalBody .tab').forEach(x => x.classList.toggle('active', x === t));
+    const key = t.dataset.tab;
+    ['info','logs','config'].forEach(k => {
+      const pane = $('#modalBody [data-pane="' + k + '"]');
+      if (pane) pane.style.display = (k === key) ? '' : 'none';
+    });
+  }));
+}
+
+// 筛选
+$$('.filter-bar [data-cat]').forEach(b => b.addEventListener('click', () => {
+  $$('.filter-bar [data-cat]').forEach(x => x.classList.toggle('active', x === b));
+  curCat = b.dataset.cat;
+  render();
+}));
+$('#searchInput').addEventListener('input', e => { curSearch = e.target.value; render(); });
+
+// 创建
+$('#btnCreate').addEventListener('click', () => {
+  $('#modalTitle').textContent = '创建技能';
+  $('#modalBody').innerHTML = `
+    <div class="form-row"><label>名称</label><input id="f_name" placeholder="ddw.your_skill"></div>
+    <div class="form-row"><label>描述</label><textarea id="f_desc" placeholder="不超过 250 字"></textarea></div>
+    <div class="form-row"><label>类型</label><select id="f_type">${Object.entries(TYPE_NAMES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
+    <div class="form-row"><label>触发词</label><input id="f_tri" placeholder="逗号分隔"></div>
+    <div class="form-row"><label>YAML</label><textarea id="f_yaml">name: ddw.your_skill
+type: chat
+description: |
+  简短描述
+triggers: [示例]
+enabled: true</textarea></div>
+  `;
+  $('#modalOk').onclick = () => {
+    const name = $('#f_name').value.trim();
+    if (!name.startsWith('ddw.')) { toast('名称必须以 ddw. 开头'); return; }
+    const sk = { id: 's' + Date.now(), name, type: $('#f_type').value, desc: $('#f_desc').value.trim(), triggers: $('#f_tri').value.split(',').map(s => s.trim()).filter(Boolean), calls: 0, status: 'ok', updated: new Date().toISOString().slice(0, 16).replace('T', ' ') };
+    SKILLS.unshift(sk);
+    render(); toast('已创建');
+    $('#modal').classList.remove('show');
+  };
+  $('#modal').classList.add('show');
+});
+
+$('#modalClose').addEventListener('click', () => $('#modal').classList.remove('show'));
+$('#modalCancel').addEventListener('click', () => $('#modal').classList.remove('show'));
+$('#modalOk').onclick = () => $('#modal').classList.remove('show');
+
+// Mobile menu
+$('#menuToggle').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+
+// User chip (从 saas-admin 对齐)
+const TOKEN = localStorage.getItem('ddw_token');
+const USER_STR = localStorage.getItem('ddw_user');
+const USER = USER_STR ? JSON.parse(USER_STR) : { name: '?', role: 'member' };
+function roleLabel(role) {
+  const m = { superadmin: '超级管理员', owner: '公司管理员', admin: '部门管理员', partner: '经销商', member: '成员', user: '成员' };
+  return m[role] || role || '成员';
+}
+function renderUserChip(u) {
+  var name = u.name || '?';
+  var phoneTail = u.phone ? u.phone.slice(-6) : '';
+  var display = name + (phoneTail ? ' · ' + phoneTail : '');
+  $('#userChip').innerHTML =
+    '<div class="user-avatar">' + name.charAt(0) + '</div>' +
+    '<span>' + display + '</span>' +
+    '<a href="saas-admin.html#/overview">控制台</a>';
+}
+renderUserChip(USER);
+
+render();
+</script>
+</body>
+</html>

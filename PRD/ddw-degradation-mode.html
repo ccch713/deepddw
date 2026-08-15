@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>DDW AI Hub · 反盗版真实对策 · 降解模式</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#020617;color:#e2e8f0;padding:24px}
+  .container{max-width:960px;margin:0 auto}
+  .header{align-items:center;border-bottom:1px solid #1e293b;display:flex;gap:12px;margin-bottom:20px;padding-bottom:12px}
+  .header h1{color:#f1f5f9;font-size:16px;font-weight:700}
+  .header .sub{color:#94a3b8;font-size:11px;margin-left:auto}
+
+  .real-talk{background:rgba(251,113,133,0.08);border:1px solid #fb7185;border-radius:10px;margin-bottom:20px;padding:14px}
+  .real-talk p{color:#fda4af;font-size:11px;line-height:1.7}
+
+  .three-layer{display:grid;gap:14px;grid-template-columns:1fr 1fr 1fr;margin-bottom:20px}
+  .lcard{background:#0f172a;border:1px solid #1e293b;border-radius:8px;overflow:hidden}
+  .lcard-header{padding:6px 10px;font-size:10px;font-weight:700;border-bottom:1px solid}
+  .lcard-body{padding:10px}
+  .lcard-body p{font-size:9.5px;color:#cbd5e1;line-height:1.6}
+
+  .discard{background:rgba(71,85,105,0.2);border:1px solid #475569;border-radius:6px;color:#94a3b8;font-size:10px;margin:10px 0;padding:10px;text-decoration:line-through}
+  .discard span{text-decoration:none}
+
+  .strategy{background:#0f172a;border:1px solid #34d399;border-radius:10px;margin-bottom:20px;overflow:hidden}
+  .strategy-header{background:rgba(6,78,59,0.3);border-bottom:1px solid #34d399;color:#d1fae5;font-size:13px;font-weight:700;padding:12px 14px}
+  .strategy-body{padding:14px}
+
+  .deg-table{width:100%;border-collapse:collapse;font-size:10px;margin:10px 0}
+  .deg-table td{border-bottom:1px solid #1e293b;color:#cbd5e1;padding:8px 6px;vertical-align:top}
+  .deg-table td:first-child{color:#f1f5f9;font-weight:700;white-space:nowrap;width:100px}
+  .tag{background:rgba(34,211,238,0.1);border-radius:3px;color:#22d3ee;font-size:8px;font-weight:700;padding:1px 5px}
+
+  .code-block{background:#020617;border:1px solid #1e293b;border-radius:6px;color:#a5b4fc;font-family:monospace;font-size:9px;line-height:1.5;margin:8px 0;padding:10px;white-space:pre-wrap;word-break:break-all}
+
+  .pain-grid{display:grid;gap:12px;grid-template-columns:1fr 1fr;margin:12px 0}
+  .pain-card{border:1px solid #1e293b;border-radius:6px;padding:10px}
+  .pain-card h4{color:#f1f5f9;font-size:10px;font-weight:700;margin-bottom:4px}
+  .pain-card p{color:#94a3b8;font-size:9px;line-height:1.5}
+
+  .business-case{background:rgba(251,191,36,0.08);border:1px solid #fbbf24;border-radius:8px;margin:14px 0;padding:12px}
+  .business-case p{color:#fde68a;font-size:10px;line-height:1.6}
+
+  .final-box{border:1px solid #22d3ee;border-radius:10px;margin-top:16px;overflow:hidden}
+  .final-box-header{background:rgba(8,51,68,0.4);border-bottom:1px solid #22d3ee;color:#cffafe;font-size:12px;font-weight:700;padding:10px 14px}
+  .final-box-body{background:#0f172a;padding:14px}
+  .final-box-body p{color:#cbd5e1;font-size:10px;line-height:1.6}
+
+  .footer{color:#475569;font-size:9px;padding:16px 0 4px;text-align:center}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>DDW AI Hub · 反盗版：降解模式</h1>
+    <span class="sub">针对"老板让IT盗版省钱"的真实对策 · 一人公司可执行</span>
+  </div>
+
+  <div class="real-talk">
+    <p><strong>你说的是事实：</strong>中国很多中小企业的老板就是让 IT 盗版。POC 报告红字警告没用——老板不在意，IT 也被默许甚至鼓励。我们要面对的真实问题是：<strong>不是"怎么阻止盗版"，而是"怎么让盗版比付钱更疼"。</strong></p>
+  </div>
+
+  <!-- 旧方案→新方案 -->
+  <div class="discard">
+    <span>❌ 抛弃的方案：POC 报告红字警告 → 对"老板要求盗版"的场景完全无效</span>
+  </div>
+
+  <div class="three-layer">
+    <div class="lcard" style="border-color:#34d399">
+      <div class="lcard-header" style="background:rgba(6,78,59,0.3);border-color:#34d399;color:#6ee7b7">✅ 保留 ① 时间胶囊</div>
+      <div class="lcard-body"><p>RSA 签名时间戳 + 设备指纹。挡住 80% 顺手改时间的。一人公司用 Python cryptography 搞定，30 行代码。</p></div>
+    </div>
+    <div class="lcard" style="border-color:#fbbf24">
+      <div class="lcard-header" style="background:rgba(120,53,15,0.3);border-color:#fbbf24;color:#fde68a">✅ 保留 ② 设备指纹</div>
+      <div class="lcard-body"><p>MAC + 磁盘序列号 hash。挡住重装克隆重新试用的。一样 20 行代码。</p></div>
+    </div>
+    <div class="lcard" style="border-color:#fb7185">
+      <div class="lcard-header" style="background:rgba(136,19,55,0.3);border-color:#fb7185;color:#fecdd3">❌ 抛弃 ③ POC 报告红字</div>
+      <div class="lcard-body"><p>老板不关心报告颜色。所以 ③ 换成真正的杀手锏：<strong>降解模式</strong>↓</p></div>
+    </div>
+  </div>
+
+  <!-- ══════ 核心：降解模式 ══════ -->
+  <div class="strategy">
+    <div class="strategy-header">🔥 核心策略：试用到期 → 插件进入"降解模式"，不停止、不弹窗、让终端用户感到疼</div>
+    <div class="strategy-body">
+
+      <p style="color:#6ee7b7;font-size:11px;font-weight:700;margin-bottom:8px">设计理念：</p>
+      <p style="color:#cbd5e1;font-size:10px;line-height:1.7">
+      试用到期后，插件不停止工作（停了 IT 有理由重装），而是进入<strong style="color:#fda4af">"慢性降解"</strong>模式。<br>
+      降解模式不弹窗、不报错、不提示"试用到期"——让 IT 不好判断是破解失败还是系统 bug。<br><br>
+      <strong style="color:#fda4af">最终受影响的是终端用户（医生、护士、工人、操作员）</strong>——他们每天都用这个系统，降解让他们难受 → 他们找领导投诉 → 领导问 IT 怎么回事 → IT 才知道"原来破解的插件会这样" → 最后选择买正版。
+      </p>
+
+      <p style="color:#6ee7b7;font-size:11px;font-weight:700;margin:12px 0 8px">降解行为由插件作者在 manifest.yaml 中配置（灵活、按需）</p>
+
+      <div class="code-block" style="font-size:9px">
+# plugins/medical_records/manifest.yaml 中的试用配置
+trial:
+  duration_days: 7
+  expired_behavior: degraded     # stop | degraded | free_tier
+  degradation:
+    daily_limit: 20              # 每天最多 20 次操作
+    response_delay_ms: [3000, 8000]  # 随机延迟 3-8 秒
+    data_quality: 0.98           # 2% 概率插入乱码（可逆）
+    watermark: true              # 生成的 PDF/报告打水印
+    skip_probability: 0.1        # 10% 概率"跳过"本次操作
+    features:
+      - "auto_backup_disabled"   # 自动备份功能关闭
+      - "batch_import_disabled"  # 批量导入功能关闭
+      - "export_disabled"        # 导出功能关闭
+    notify_on_detect: true       # 检测到破解迹象时通知插件作者
+                      </div>
+
+      <table class="deg-table">
+        <tr>
+          <td>⏱ 随机延迟</td>
+          <td>每次操作延迟 3-8 秒。IT 难以判断是"系统慢"还是"破解被限制"。终端用户每天多等几分钟 → 烦躁 → 投诉</td>
+        </tr>
+        <tr>
+          <td>📉 每日限额</td>
+          <td>每天只能做 20 次操作。口腔诊所医生一天看 30-50 个病人 → 下午发现用不了 → 找老板 → 老板找 IT</td>
+        </tr>
+        <tr>
+          <td>🔢 数据降质</td>
+          <td>2% 概率病历 PDF 里出现乱码或水印。医生打印给患者时发现 → 丢面子 → 投诉系统</td>
+        </tr>
+        <tr>
+          <td>🔇 静默跳过</td>
+          <td>10% 概率"跳过"本次保存操作（数据不丢，但这次操作无效）。护士没注意以为保存了 → 下次找不着 → 认为是系统 bug</td>
+        </tr>
+        <tr>
+          <td>🔒 功能阉割</td>
+          <td>自动备份、批量导入、导出等功能在降解模式下隐藏或不可用。IT 发现"少了功能"但说不清少了什么</td>
+        </tr>
+      </table>
+
+    </div>
+  </div>
+
+  <!-- 为什么降解模式对一人公司可行 -->
+  <div class="pain-grid">
+    <div class="pain-card" style="border-left:3px solid #22d3ee">
+      <h4>🧑‍💼 对插件作者（你和其他开发者）</h4>
+      <p>
+        • 降解模式写在 <strong>manifest.yaml</strong> 里，约 10 行配置<br>
+        • Plugin SDK 提供 <code>trial_utils</code> 工具函数，开箱即用<br>
+        • 不需要写反破解代码，不需要懂逆向工程<br>
+        • 降解行为是"慢性"的，IT 难以确认是因为破解还是系统问题<br>
+        • 每个插件作者自己决定：病历插件加水印，生产看板加延迟
+      </p>
+    </div>
+    <div class="pain-card" style="border-left:3px solid #fbbf24">
+      <h4>🏢 对盗版企业（IT + 老板）</h4>
+      <p>
+        • IT 改了时间/改了源码 → 插件虽然能用但<strong>慢慢变难用</strong><br>
+        • IT 排查：是破解导致的还是系统本身的问题？——需要懂源码！<br>
+        • 终端用户每天抱怨：慢、乱码、丢失操作 → 管理层听到投诉<br>
+        • 老板最终要算账：员工因系统慢多花的时间 × 工资 = 远高于 ¥1.99-4.99/月<br>
+        • 最终决策：不如买正版省心
+      </p>
+    </div>
+    <div class="pain-card" style="border-left:3px solid #34d399">
+      <h4>🧑‍🔧 对一人公司（你本人）</h4>
+      <p>
+        • 你不需要做任何执法、追查、诉讼<br>
+        • SDK 的 <code>trial_utils.py</code> 写一次（约 80 行），永久生效<br>
+        • 降解行为在插件代码层执行，和平台开源代码分离<br>
+        • 插件作者（包括你自己）控制自己的插件怎么降解<br>
+        • 你不和盗版者对抗，让<strong>终端用户</strong>帮你去施压
+      </p>
+    </div>
+    <div class="pain-card" style="border-left:3px solid #a78bfa">
+      <h4>🎯 为什么这个策略在现实中有效</h4>
+      <p>
+        • 中国 SME 老板不怕法务、不怕红字、不怕协议条款<br>
+        • 但老板<strong>怕员工投诉 productivity 下降</strong><br>
+        • 降解模式的延迟 + 限额 + 乱码 = 真实的业务层面疼痛<br>
+        • 关键是：降解是<strong>渐进的、不易诊断的</strong>，IT 没法一句话说清"这是因为破解"<br>
+        • 3-6 个月后，老板自己受不了 → 主动问"能不能买正版"<br>
+        • 那时 ¥4.99/月对老板来说就是"解决投诉的钱"
+      </p>
+    </div>
+  </div>
+
+  <!-- 实际业务案例 -->
+  <div class="business-case">
+    <p><strong>🎬 真实场景推演：口腔诊所病历管理插件</strong><br><br>
+    第 1-7 天：试用期，全功能，dudu 觉得很好用。<br>
+    第 8 天：试用到期 → 降解模式启动。<br>
+    第 9 天：dudu 每次打开病历要等 5 秒，觉得"有点慢，可能系统在维护吧"<br>
+    第 14 天：dudu 发现每天只能处理 20 个病人记录，下午还有 15 个病人排着队 → 急！<br>
+    第 14 天下午：dudu 打印某个患者的病历，发现 PDF 上有个 "UNVERIFIED" 水印 → 患者质疑 → dudu 丢面子 → 怒了<br>
+    第 15 天：dudu 找诊所老板：这个系统越来越难用，影响我看病了<br>
+    老板问 IT：怎么回事？<br>
+    IT：……装的是试用版……<br>
+    老板：多少钱？<br>
+    IT：¥1.99/月<br>
+    老板：才两块钱一个月？买！<br><br>
+    <strong>¥1.99 解决了 14 天的投诉。这就是降解模式的商业逻辑。</strong>
+    </p>
+  </div>
+
+  <!-- 技术上如何防止被绕过的三个措施 -->
+  <div class="final-box">
+    <div class="final-box-header">🛠 技术上防止降解模式被 IT 绕过的三个措施</div>
+    <div class="final-box-body">
+      <table style="width:100%;border-collapse:collapse;font-size:9.5px">
+        <tr style="border-bottom:1px solid #1e293b">
+          <td style="padding:6px 4px;color:#22d3ee;font-weight:700;width:140px">IT 的尝试</td>
+          <td style="padding:6px 4px;color:#94a3b8">修改平台源码，注释掉许可证检查</td>
+          <td style="padding:6px 4px;color:#34d399;font-weight:700">平台层改源码不治本</td>
+        </tr>
+        <tr style="border-bottom:1px solid #1e293b">
+          <td style="padding:6px 4px"></td>
+          <td style="padding:6px 4px;color:#94a3b8">但降解逻辑在<strong style="color:#fda4af">插件层代码</strong>里，不在平台层。插件打包为 .ddwplugin，校验逻辑在插件 SDK 的 <code>trial_utils</code> 里。<br>IT 要绕过降解需要：① 解包 .ddwplugin ② 找到 trial_utils ③ 改掉逻辑 ④ 重新打包 — 每更新一次插件都要重新来一遍。</td>
+          <td style="padding:6px 4px;color:#fbbf24">对大多数 IT 来说成本太高</td>
+        </tr>
+        <tr style="border-bottom:1px solid #1e293b">
+          <td style="padding:6px 4px;color:#22d3ee;font-weight:700">IT 的尝试 2</td>
+          <td style="padding:6px 4px;color:#94a3b8">冻结时间（定时回拨）</td>
+          <td style="padding:6px 4px;color:#34d399;font-weight:700">时间胶囊防回拨</td>
+        </tr>
+        <tr style="border-bottom:1px solid #1e293b">
+          <td style="padding:6px 4px"></td>
+          <td style="padding:6px 4px;color:#94a3b8">时间胶囊的 trial_end 是市场 API 签名的时间，不是本地时间。平台每次起动时校验签名有效性。如果 IT 把时间跳到未来再跳回来 → 平台检测到时间异常 → 标记为破解 → 降解模式加剧（延迟翻倍、限额减半）。</td>
+          <td style="padding:6px 4px;color:#fbbf24">自动反制，不人工介入</td>
+        </tr>
+        <tr style="border-bottom:1px solid #1e293b">
+          <td style="padding:6px 4px;color:#22d3ee;font-weight:700">IT 的尝试 3</td>
+          <td style="padding:6px 4px;color:#94a3b8">每 7 天重置系统/新设备指纹</td>
+          <td style="padding:6px 4px;color:#34d399;font-weight:700">重复消耗 IT 时间</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 4px"></td>
+          <td style="padding:6px 4px;color:#94a3b8">IT 每 7 天要重装一次系统/改一次指纹。终端用户每 7 天要经历一次"重新配置"。IT 一次折腾半天。一个月 2 次 = 1 天白干。他的月薪 ¥8,000 = 日薪 ¥360。插件价格 ¥1.99-4.99/月。IT 一天工资够买 72-180 个月插件。<br><strong style="color:#fda4af">老板算账：与其让 IT 每月花一天折腾破解，不如 ¥1.99/月买正版。</strong></td>
+          <td style="padding:6px 4px;color:#34d399;font-weight:700">经济账算通了<br>盗版不划算</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">DDW AI Hub Platform · 反盗版降解模式 · 2026-06-27 · 一人公司不需要反破解团队</div>
+</div>
+</body>
+</html>

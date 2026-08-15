@@ -1,0 +1,12 @@
+name: ddw-clarify
+license: commercial
+tier: beta
+version: 1.0.0
+display_name: DDW 对话反问澄清
+description: 对话反问澄清层
+engine: ">=2.0.0"
+dependencies:
+  plugins: {}
+permissions:
+  - storage
+config: {}

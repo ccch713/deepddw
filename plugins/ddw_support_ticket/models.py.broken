@@ -1,0 +1,66 @@
+from __future__ import annotations
+"""DDW 售后工单插件 ORM 模型。
+
+继承 DDW 平台核心：
+- core.database.models.Base: DeclarativeBase 根
+- core.database.models.TenantMixin: 自动注入 tenant_id + 标记租户感知
+- core.database.models.TimestampMixin: 自动注入 created_at / updated_at
+
+表名：crm_support_tickets
+"""
+
+from datetime import datetime
+from typing import Optional
+
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
+
+from core.database.models import Base, TenantMixin, TimestampMixin
+
+# BigInteger 在 SQLite 不支持 -> 退化到 Integer
+BigInt = BigInteger().with_variant(Integer(), "sqlite")
+
+
+class SupportTicket(Base, TenantMixin, TimestampMixin):
+    """售后工单主表。
+
+    业务说明：
+    - ticket_no 自动生成（TKT-YYYYMMDD-NNN），全局唯一
+    - 状态机：open → in_progress → resolved → closed（不可跳）
+    - 与客户企业（crm_companies）、客户实例（crm_instances）关联
+      外键 ON DELETE SET NULL：关联对象删除时工单仍保留（审计价值）
+    - assigned_to 仅记录处理人 ID（人员管理由 ddw_employee_roster 提供）
+    """
+
+    __tablename__ = "crm_support_tickets"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[int] = mapped_column(BigInt, primary_key=True, autoincrement=True)
+
+    # ---- 业务关联（ON DELETE SET NULL：保留工单审计价值） ----
+    # use_alter=True：让 SQLAlchemy 在 CREATE TABLE 之后再 ALTER TABLE 加 FK，
+    # 避免 crm_companies / crm_instances 不在当前 metadata（如独立测试环境、
+    # 插件加载顺序）时 metadata.create_all 抛 NoReferencedTableError。
+    # 生产环境 PG 上 FK 仍按 ON DELETE SET NULL 正常生效。
+    company_id: Mapped[Optional[int]] = mapped_column(        BigInt,
+        ForeignKey("crm_companies.id", ondelete="SET NULL", use_alter=True),
+        nullable=True,
+        index=True,
+    instance_id: Mapped[Optional[int]] = mapped_column(        BigInt,
+        ForeignKey("crm_instances.id", ondelete="SET NULL", use_alter=True),
+        nullable=True,
+        index=True,
+
+    # ---- 单号 / 标题 ----
+    ticket_no: Mapped[Optional[str]] = mapped_column(String(30), nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+
+    # ---- 分类 / 优先级 ----
+    category: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
+    # bug / feature / question / complaint / other
+    priority: Mapped[Optional[str]] = mapped_column(        String(20), default="normal", nullable=False, index=True
+    # low / normal / high / urgent
+
+    # ---- 内容 ----
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    resolution: Mapped[Optional[str]] = mapped_column(# ---- 处理 ---- assigned_to: Mapped[Optional[int]] = mapped_column( # ---- 状态机 ---- status: Mapped[Optional[str]] = mapped_column(        String(20), default="open", nullable=False, index=True ) # open / in_progress / resolved / closed resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)  # ---- 审计 ---- created_by: Mapped[Optional[int]] = mapped_column(BigInt, nullable=True)  def __repr__(self) -> str:  # pragma: no cover return ( f"<SupportTicket id={self.id} no={self.ticket_no!r} " f"status={self.status!r} priority={self.priority!r}>" )   __all__ = ["SupportTicket"])

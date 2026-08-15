@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>质量管理 · DDW AI Hub</title>
+<link rel="icon" href="/company/assets/logo/logo-favicon.png">
+<link rel="stylesheet" href="/company/assets/css/base.css">
+<link rel="stylesheet" href="/company/assets/css/themes/standard.css">
+<style>
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  body.oa-embed { margin: 0; }
+
+  .qm-header {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .qm-header .title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .qm-header h1 {
+    font-size: 18px;
+    margin: 0;
+    color: var(--text-primary);
+  }
+  .qm-header .badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    font-weight: 600;
+  }
+
+  .qm-tabs {
+    display: flex;
+    gap: 0;
+    background: var(--bg-card);
+    border-bottom: 2px solid var(--border);
+    padding: 0 24px;
+  }
+  .qm-tabs .tab {
+    padding: 12px 20px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all .2s;
+    font-weight: 500;
+  }
+  .qm-tabs .tab.active {
+    color: var(--brand);
+    font-weight: 700;
+    border-bottom-color: var(--brand);
+  }
+  .qm-tabs .tab:hover { color: var(--text-primary); }
+
+  .qm-body { padding: 24px; max-width: 1100px; margin: 0 auto; }
+
+  .qm-panel { display: none; }
+  .qm-panel.active { display: block; }
+
+  /* 表单区 */
+  .qm-form {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .qm-form h3 { font-size: 15px; margin: 0 0 16px; color: var(--text-primary); }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-group label { font-size: 13px; color: var(--text-primary); font-weight: 600; }
+  .form-group input, .form-group select, .form-group textarea {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--bg-page);
+    color: var(--text-primary);
+    transition: border-color .2s;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px var(--brand-glow);
+  }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+
+  .btn-generate {
+    padding: 11px 28px;
+    background: var(--brand);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .btn-generate:hover { background: var(--brand-hover); }
+  .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* 结果区 */
+  .qm-result {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 16px;
+    display: none;
+  }
+  .qm-result.show { display: block; }
+  .qm-result h3 { font-size: 15px; margin: 0 0 12px; color: var(--text-primary); }
+  .qm-result .content {
+    background: var(--bg-page);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    max-height: 600px;
+    overflow-y: auto;
+  }
+  .qm-result .meta {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* 加载动画 */
+  .loading { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 13px; }
+  .loading .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--brand);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* 未登录提示 */
+  .auth-notice {
+    text-align: center;
+    padding: 48px 24px;
+  }
+  .auth-notice h2 { font-size: 18px; margin: 0 0 8px; }
+  .auth-notice p { font-size: 13px; color: var(--text-secondary); margin: 0 0 16px; }
+</style>
+</head>
+<body>
+
+<!-- 顶部导航 -->
+<div class="qm-header">
+  <div class="title-row">
+    <img src="/company/assets/logo/logo-icon.svg" style="height:22px;" alt="DDW">
+    <h1>质量管理 AI 助手</h1>
+    <span class="badge">泛微OA集成</span>
+  </div>
+  <div id="userInfo" style="display:none;font-size:13px;color:var(--text-secondary);">
+    <span id="userName"></span>
+    <a href="#" onclick="logout()" style="color:var(--text-muted);margin-left:12px;font-size:12px;">退出</a>
+  </div>
+</div>
+
+<!-- 未登录提示 -->
+<div id="authNotice" class="auth-notice" style="display:none;">
+  <h2>🔐 需要登录</h2>
+  <p>请通过泛微OA统一认证中心登录后使用质量管理功能</p>
+  <a href="/api/v1/sso/cas/login" class="btn-generate" style="text-decoration:none;display:inline-block;">OA账号登录</a>
+</div>
+
+<!-- Tab导航 -->
+<div class="qm-tabs" id="qmTabs">
+  <div class="tab active" data-panel="panel8d">📋 8D报告</div>
+  <div class="tab" data-panel="panelCAPA">🔧 CAPA</div>
+  <div class="tab" data-panel="panelDeviation">⚠️ 偏差调查</div>
+  <div class="tab" data-panel="panelComplaint">💬 投诉回复</div>
+  <div class="tab" data-panel="panel5Why">🔍 5Why分析</div>
+</div>
+
+<!-- 主内容 -->
+<div class="qm-body" id="qmBody" style="display:none;">
+
+  <!-- 8D报告 -->
+  <div class="qm-panel active" id="panel8d">
+    <div class="qm-form">
+      <h3>📋 AI辅助生成8D问题解决报告</h3>
+      <div class="form-row">
+        <div class="form-group full">
+          <label>问题描述 *</label>
+          <textarea id="d8Problem" placeholder="详细描述质量问题，如：产品X批次B2024001发现外观不良率超标..."></textarea>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>涉及产品</label>
+          <input type="text" id="d8Product" placeholder="产品名称/型号">
+        </div>
+        <div class="form-group">
+          <label>批次号</label>
+          <input type="text" id="d8Batch" placeholder="批次号">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>严重程度</label>
+          <select id="d8Severity">
+            <option value="minor">轻微</option>
+            <option value="major" selected>主要</option>
+            <option value="critical">严重</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>输出语言</label>
+          <select id="d8Lang">
+            <option value="zh-CN" selected>中文</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-generate" onclick="generate8D()" id="btn8D">🚀 生成8D报告</button>
+      <span class="loading" id="loading8D" style="display:none;"><span class="spinner"></span>AI正在生成...</span>
+    </div>
+    <div class="qm-result" id="result8D">
+      <h3>📄 生成结果</h3>
+      <div class="content" id="content8D"></div>
+      <div class="meta">
+        <span id="meta8DId"></span>
+        <span id="meta8DStatus"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CAPA -->
+  <div class="qm-panel" id="panelCAPA">
+    <div class="qm-form">
+      <h3>🔧 AI辅助生成CAPA（纠正预防措施）</h3>
+      <div class="form-row">
+        <div class="form-group full">
+          <label>不合格项描述 *</label>
+          <textarea id="capaDesc" placeholder="描述发现的不合格项..."></textarea>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>来源</label>
+          <select id="capaSource">
+            <option value="internal_audit">内部审核</option>
+            <option value="external_audit">外部审核</option>
+            <option value="customer_complaint">客户投诉</option>
+            <option value="process_deviation">过程偏差</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>严重程度</label>
+          <select id="capaSeverity">
+            <option value="minor">轻微</option>
+            <option value="major" selected>主要</option>
+            <option value="critical">严重</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-generate" onclick="generateCAPA()" id="btnCAPA">🚀 生成CAPA</button>
+      <span class="loading" id="loadingCAPA" style="display:none;"><span class="spinner"></span>AI正在生成...</span>
+    </div>
+    <div class="qm-result" id="resultCAPA">
+      <h3>📄 生成结果</h3>
+      <div class="content" id="contentCAPA"></div>
+      <div class="meta"><span id="metaCAPAId"></span><span id="metaCAPAStatus"></span></div>
+    </div>
+  </div>
+
+  <!-- 偏差调查 -->
+  <div class="qm-panel" id="panelDeviation">
+    <div class="qm-form">
+      <h3>⚠️ AI辅助生成偏差调查报告</h3>
+      <div class="form-row">
+        <div class="form-group full">
+          <label>偏差描述 *</label>
+          <textarea id="devDesc" placeholder="描述发现的偏差情况..."></textarea>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>涉及产品</label>
+          <input type="text" id="devProduct" placeholder="产品名称">
+        </div>
+        <div class="form-group">
+          <label>批次号</label>
+          <input type="text" id="devBatch" placeholder="批次号">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>过程步骤</label>
+          <input type="text" id="devStep" placeholder="如：灌装、包装、检验...">
+        </div>
+        <div class="form-group">
+          <label>输出语言</label>
+          <select id="devLang">
+            <option value="zh-CN" selected>中文</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-generate" onclick="generateDeviation()" id="btnDev">🚀 生成偏差报告</button>
+      <span class="loading" id="loadingDev" style="display:none;"><span class="spinner"></span>AI正在生成...</span>
+    </div>
+    <div class="qm-result" id="resultDev">
+      <h3>📄 生成结果</h3>
+      <div class="content" id="contentDev"></div>
+      <div class="meta"><span id="metaDevId"></span><span id="metaDevStatus"></span></div>
+    </div>
+  </div>
+
+  <!-- 投诉回复 -->
+  <div class="qm-panel" id="panelComplaint">
+    <div class="qm-form">
+      <h3>💬 AI辅助生成客户投诉回复</h3>
+      <div class="form-row">
+        <div class="form-group full">
+          <label>客户投诉内容 *</label>
+          <textarea id="compContent" placeholder="粘贴客户投诉内容..."></textarea>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>客户名称</label>
+          <input type="text" id="compCustomer" placeholder="客户名称">
+        </div>
+        <div class="form-group">
+          <label>涉及产品</label>
+          <input type="text" id="compProduct" placeholder="产品名称">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>回复语气</label>
+          <select id="compTone">
+            <option value="professional" selected>专业正式</option>
+            <option value="empathetic">同理关怀</option>
+            <option value="concise">简洁高效</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-generate" onclick="generateComplaint()" id="btnComp">🚀 生成回复</button>
+      <span class="loading" id="loadingComp" style="display:none;"><span class="spinner"></span>AI正在生成...</span>
+    </div>
+    <div class="qm-result" id="resultComp">
+      <h3>📄 生成结果</h3>
+      <div class="content" id="contentComp"></div>
+      <div class="meta"><span id="metaCompId"></span><span id="metaCompStatus"></span></div>
+    </div>
+  </div>
+
+  <!-- 5Why分析 -->
+  <div class="qm-panel" id="panel5Why">
+    <div class="qm-form">
+      <h3>🔍 AI辅助5Why根因分析</h3>
+      <div class="form-row">
+        <div class="form-group full">
+          <label>问题描述 *</label>
+          <textarea id="why5Problem" placeholder="描述需要分析根因的问题..."></textarea>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group full">
+          <label>背景信息</label>
+          <textarea id="why5Context" placeholder="补充相关背景信息（选填）..." style="min-height:60px;"></textarea>
+        </div>
+      </div>
+      <button class="btn-generate" onclick="generate5Why()" id="btn5Why">🚀 生成5Why分析</button>
+      <span class="loading" id="loading5Why" style="display:none;"><span class="spinner"></span>AI正在生成...</span>
+    </div>
+    <div class="qm-result" id="result5Why">
+      <h3>📄 生成结果</h3>
+      <div class="content" id="content5Why"></div>
+      <div class="meta"><span id="meta5WhyId"></span><span id="meta5WhyStatus"></span></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  // 检测嵌入模式
+  const isEmbed = new URLSearchParams(location.search).get('embed') === '1'
+    || (window.parent !== window);
+  if (isEmbed) document.body.classList.add('oa-embed');
+
+  // Token获取（支持SSO回调hash）
+  function getToken() {
+    const hash = location.hash;
+    if (hash && hash.includes('token=')) {
+      const params = new URLSearchParams(hash.substring(1));
+      const token = params.get('token');
+      if (token) {
+        localStorage.setItem('ddw_token', token);
+        history.replaceState(null, '', location.pathname + location.search);
+        return token;
+      }
+    }
+    return localStorage.getItem('ddw_token');
+  }
+
+  const token = getToken();
+
+  if (!token) {
+    document.getElementById('authNotice').style.display = 'block';
+    document.getElementById('qmTabs').style.display = 'none';
+    document.getElementById('qmBody').style.display = 'none';
+    return;
+  }
+
+  // 已登录
+  document.getElementById('qmBody').style.display = 'block';
+  document.getElementById('userInfo').style.display = 'block';
+
+  // 获取用户信息
+  fetch('/api/v1/auth/me', {
+    headers: { 'Authorization': 'Bearer ' + token }
+  }).then(r => r.ok ? r.json() : null).then(data => {
+    if (data) {
+      document.getElementById('userName').textContent = data.name || data.phone || '用户';
+    }
+  }).catch(() => {});
+
+  // Tab切换
+  document.querySelectorAll('.qm-tabs .tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.qm-tabs .tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.qm-panel').forEach(p => p.classList.remove('active'));
+      this.classList.add('active');
+      document.getElementById(this.dataset.panel).classList.add('active');
+    });
+  });
+
+  // API调用函数
+  async function callAPI(endpoint, data, btnId, loadingId, resultId, contentId, metaId, metaStatusId) {
+    const btn = document.getElementById(btnId);
+    const loading = document.getElementById(loadingId);
+    const result = document.getElementById(resultId);
+
+    btn.disabled = true;
+    loading.style.display = 'inline-flex';
+    result.classList.remove('show');
+
+    try {
+      const resp = await fetch('/api/v1/plugins/ddw-quality-assistant' + endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token,
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+        throw new Error(err.detail || '请求失败');
+      }
+
+      const r = await resp.json();
+      document.getElementById(contentId).textContent = r.content || JSON.stringify(r, null, 2);
+      document.getElementById(metaId).textContent = 'ID: ' + (r.id || '-');
+      document.getElementById(metaStatusId).textContent = '状态: ' + (r.status || '-');
+      result.classList.add('show');
+    } catch (e) {
+      document.getElementById(contentId).textContent = '❌ 错误: ' + e.message;
+      result.classList.add('show');
+    } finally {
+      btn.disabled = false;
+      loading.style.display = 'none';
+    }
+  }
+
+  // 全局函数
+  window.generate8D = () => callAPI('/8d', {
+    problem: document.getElementById('d8Problem').value,
+    product: document.getElementById('d8Product').value,
+    batch: document.getElementById('d8Batch').value,
+    severity: document.getElementById('d8Severity').value,
+    language: document.getElementById('d8Lang').value,
+  }, 'btn8D', 'loading8D', 'result8D', 'content8D', 'meta8DId', 'meta8DStatus');
+
+  window.generateCAPA = () => callAPI('/capa', {
+    nonconformity: document.getElementById('capaDesc').value,
+    source: document.getElementById('capaSource').value,
+    severity: document.getElementById('capaSeverity').value,
+  }, 'btnCAPA', 'loadingCAPA', 'resultCAPA', 'contentCAPA', 'metaCAPAId', 'metaCAPAStatus');
+
+  window.generateDeviation = () => callAPI('/deviation', {
+    description: document.getElementById('devDesc').value,
+    product: document.getElementById('devProduct').value,
+    batch: document.getElementById('devBatch').value,
+    process_step: document.getElementById('devStep').value,
+    language: document.getElementById('devLang').value,
+  }, 'btnDev', 'loadingDev', 'resultDev', 'contentDev', 'metaDevId', 'metaDevStatus');
+
+  window.generateComplaint = () => callAPI('/complaint-reply', {
+    complaint: document.getElementById('compContent').value,
+    customer: document.getElementById('compCustomer').value,
+    product: document.getElementById('compProduct').value,
+    tone: document.getElementById('compTone').value,
+  }, 'btnComp', 'loadingComp', 'resultComp', 'contentComp', 'metaCompId', 'metaCompStatus');
+
+  window.generate5Why = () => callAPI('/5why', {
+    problem: document.getElementById('why5Problem').value,
+    context: document.getElementById('why5Context').value,
+  }, 'btn5Why', 'loading5Why', 'result5Why', 'content5Why', 'meta5WhyId', 'meta5WhyStatus');
+
+  window.logout = function() {
+    localStorage.removeItem('ddw_token');
+    window.location.href = '/api/v1/sso/logout?redirect=' + encodeURIComponent(location.href);
+  };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+name: ddw-flow-designer
+license: free
+tier: beta
+version: 1.0.0
+display_name: 碳硅协同
+description: 零代码 DAG 流程设计器：拖拽编排数字员工与 Skill 协作流程，支持版本管理、跨部门审核、串行执行与公司级看板。
+engine: plugin_base
+isolation: inline
+
+permissions:
+  - database.read
+  - database.write
+
+dependencies:
+  plugins: []
+
+config_schema:
+  type: object
+  properties: {}
+
+router_prefix: /api/v1/flows

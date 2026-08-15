@@ -1,0 +1,84 @@
+type: periodontal
+name: 牙周病历
+version: "1.0"
+required_fields:
+  - chief_complaint
+  - present_illness
+  - pd_values
+  - bop_percentage
+  - bone_loss_pattern
+  - bone_loss_severity
+  - treatment_phase
+
+fields:
+  chief_complaint:
+    label: 主诉
+    type: text
+    max_length: 200
+    required: true
+  present_illness:
+    label: 现病史
+    type: text
+    max_length: 1000
+    required: true
+  past_history:
+    label: 既往史
+    type: text
+    max_length: 500
+    required: false
+  pd_values:
+    label: 牙周袋深度(mm)
+    type: text
+    required: true
+  bop_percentage:
+    label: 探诊出血阳性率(%)
+    type: number
+    required: true
+  mobility:
+    label: 牙齿松动度
+    type: select
+    options: ["0", "I", "II", "III"]
+    required: false
+  plaque_index:
+    label: 菌斑指数
+    type: select
+    options: ["0", "1", "2", "3"]
+    required: false
+  bone_loss_pattern:
+    label: 骨吸收类型
+    type: select
+    options: [horizontal, vertical, crater]
+    required: true
+  bone_loss_severity:
+    label: 骨丧失程度
+    type: select
+    options: [mild, moderate, severe]
+    required: true
+  treatment_phase:
+    label: 治疗阶段
+    type: select
+    options: [hygiene_phase, non_surgical, surgical, maintenance]
+    required: true
+  furcation_involvement:
+    label: 根分叉病变
+    type: select
+    options: [I, II, III]
+    required: false
+  smoking_status:
+    label: 吸烟史
+    type: text
+    required: false
+
+display_order:
+  - chief_complaint
+  - present_illness
+  - past_history
+  - pd_values
+  - bop_percentage
+  - mobility
+  - plaque_index
+  - bone_loss_pattern
+  - bone_loss_severity
+  - treatment_phase
+  - furcation_involvement
+  - smoking_status

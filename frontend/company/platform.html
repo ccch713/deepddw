@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DDW AI Hub 底座平台 — 企业级 AI 应用底座 | 锐果互动</title>
+<meta name="description" content="DDW AI Hub 底座：AI 模型网关、插件管理、事件总线、IM适配器、DataConnector、安全基线、计费分成、主题引擎——企业 AI 落地所需的基础设施，做成标准件。">
+<link rel="icon" href="assets/logo/favicon-64.svg">
+<link rel="stylesheet" href="assets/css/base.css">
+<script>window.SITE_BASE = '';</script>
+<script src="assets/js/site-common.js"></script>
+</head>
+<body>
+
+<!-- ==================== 顶部导航（共享布局引擎注入） ==================== -->
+<div id="site-header"></div>
+
+<!-- ==================== Hero ==================== -->
+<section class="hero">
+  <div class="container">
+    <span class="eyebrow">DDW AI HUB · 底座平台</span>
+    <h1>企业 AI 落地的基础设施，<br>做成标准件</h1>
+    <p class="subtitle">
+      数据接不通、模型被绑定、员工不会用、成本不可控——DDW 底座把这些 AI 落地最常见的障碍，逐项变成平台内置能力。插件共享底座，开发不用重复造轮子。
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-accent" href="plugins.html">查看插件市场</a>
+      <a class="btn btn-outline" href="products.html">返回产品中心</a>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 底座架构总览 ==================== -->
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div class="tag">ARCHITECTURE</div>
+      <h2>八项基础设施，一条完整能力链</h2>
+      <p>底座提供 AI 应用运行所需的全部公共服务，插件只写业务逻辑，不碰基础设施。</p>
+    </div>
+    <div class="grid grid-4">
+      <div class="card">
+        <div class="num">01</div>
+        <h3>AI 模型网关</h3>
+        <p>多模型统一接入：云端模型（MiniMax 等）与本地模型（Ollama 等）自由混用，三级降级保障业务不中断，成本感知路由自动选最省的模型干最合适的活。</p>
+      </div>
+      <div class="card">
+        <div class="num">02</div>
+        <h3>插件管理</h3>
+        <p>标准 .ddwplugin 包格式（manifest + 签名 + 生命周期），装、卸、升级、降级全自动，插件间通过事件总线解耦协作。</p>
+      </div>
+      <div class="card">
+        <div class="num">03</div>
+        <h3>事件总线</h3>
+        <p>业务动作自动触发后续流程：订单创建 → 通知销售 → 生成合同 → 提醒回款。支持通配符订阅与失败重试，插件之间不硬编码调用。</p>
+      </div>
+      <div class="card">
+        <div class="num">04</div>
+        <h3>IM 适配器</h3>
+        <p>钉钉、飞书、企业微信统一消息接口。机器人、消息卡片、审批流开箱即用，员工在熟悉的 IM 里完成工作，零学习成本。</p>
+      </div>
+      <div class="card">
+        <div class="num">05</div>
+        <h3>DataConnector</h3>
+        <p>直连 ERP/MES/LIMS/QMS 等现有系统，支持 PostgreSQL、Oracle 等 6 种数据库引擎。不改造、不迁移，数据孤岛就地打通。</p>
+      </div>
+      <div class="card">
+        <div class="num">06</div>
+        <h3>安全基线</h3>
+        <p>三层防破解、许可证校验、AI 爬虫防护、供应链投毒防护、数据隐私合规。企业数据资产安全可控，独立部署数据不出内网。</p>
+      </div>
+      <div class="card">
+        <div class="num">07</div>
+        <h3>计费与分成</h3>
+        <p>Token / API 调用 / 插件激活 / 业务结果四类计量模型，渠道分润透明可查，为 AI-RaaS 按结果付费模式提供支撑。</p>
+      </div>
+      <div class="card">
+        <div class="num">08</div>
+        <h3>主题引擎</h3>
+        <p>全平台风格模版（标准/节日/素色）由管理后台统一切换，快速响应节假日与重大事件；官网主题同样由底座下发，全站统一管理。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 底座设计原则 ==================== -->
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-head">
+      <div class="tag">DESIGN PRINCIPLES</div>
+      <h2>三个设计原则</h2>
+      <p>底座不是功能堆砌，而是围绕企业 AI 落地的真实障碍设计。</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card">
+        <div class="num">原则 01</div>
+        <h3>不绑定</h3>
+        <p>不挑 AI 模型、不挑数据库、不挑 IM——企业已有的投资不被推翻，未来的选择不被锁死。</p>
+      </div>
+      <div class="card">
+        <div class="num">原则 02</div>
+        <h3>插件化</h3>
+        <p>每个插件是最小可用单元，客户业务场景 = 多个插件的组合装配。小客户选 5 个插件，大客户选 27 个，丰俭由人。</p>
+      </div>
+      <div class="card">
+        <div class="num">原则 03</div>
+        <h3>结果导向</h3>
+        <p>从工具交付走向结果交付：CNC 良率保障、ESG 合规保障等按业务结果付费，效果与费用挂钩。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 部署模式 ==================== -->
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div class="tag">DEPLOYMENT</div>
+      <h2>四种部署方式，丰俭由人</h2>
+      <p>充分利用贵司现有计算资源。前期用 CPU 跑 AI 完全可用，确有管理提升后再决定是否投入 GPU 算力，投资节奏由企业自己掌握。</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>部署模式</th><th>适用场景</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><b>Standalone 单机</b></td><td>小微企业、验证试用</td><td>单机部署，随装随用</td></tr>
+          <tr><td><b>Cloud 云端</b></td><td>中小企业生产环境</td><td>云服务器托管，无需自建机房</td></tr>
+          <tr><td><b>Hybrid 混合</b></td><td>数据敏感型企业</td><td>核心数据本地、通用计算云端</td></tr>
+          <tr><td><b>FDE 实施</b></td><td>定制化需求客户</td><td>环境检查、部署、定制开发、运维陪跑</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="text-align:center;margin-top:36px;">
+      <a class="btn btn-primary" href="services.html#ddw">了解 DDW 实施服务 →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== CTA ==================== -->
+<section class="cta-band">
+  <div class="container">
+    <h2>先看插件，再谈部署</h2>
+    <p>底座能力已经就绪，真正决定价值的是业务插件。去插件市场看看哪些场景适合你。</p>
+    <div class="hero-actions">
+      <a class="btn btn-accent" href="plugins.html">浏览插件市场</a>
+      <a class="btn btn-outline" href="https://ddw.9cio.com/login" target="_blank" rel="noopener" style="border-color:var(--cta-text);color:var(--cta-text);">登录AI HUB</a>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 页脚（共享布局引擎注入） ==================== -->
+<div id="site-footer"></div>
+
+</body>
+</html>

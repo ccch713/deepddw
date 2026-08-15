@@ -1,0 +1,393 @@
+/* ============================================================
+   DDW Theme Engine — CSS Variables (Light / Dark)
+   所有DDW页面共享此文件，通过 data-theme 属性切换主题。
+   用户偏好存储在 localStorage('ddw-theme')。
+   
+   实现方式：
+   - :root 定义CSS变量
+   - [data-theme="dark"] 用 !important 覆盖现有硬编码颜色
+   - 不需要修改任何页面的内联样式
+   ============================================================ */
+
+/* ---- CSS Variables ---- */
+:root,
+[data-theme="light"] {
+  --ddw-bg-0: #f9fafb;
+  --ddw-bg-1: #ffffff;
+  --ddw-bg-2: #f3f4f6;
+  --ddw-bg-3: #e5e7eb;
+  --ddw-border: #e5e7eb;
+  --ddw-ink: #111827;
+  --ddw-ink-secondary: #4b5563;
+  --ddw-ink-muted: #6b7280;
+  --ddw-accent: #1E3A8A;
+  --ddw-accent-dark: #152c6b;
+  --ddw-signal: #d97706;
+  --ddw-success: #059669;
+  --ddw-danger: #dc2626;
+  --ddw-info: #2563eb;
+}
+
+[data-theme="dark"] {
+  --ddw-bg-0: #050816;
+  --ddw-bg-1: #0a0f24;
+  --ddw-bg-2: #111a3a;
+  --ddw-bg-3: #1a2348;
+  --ddw-border: rgba(0, 229, 255, 0.15);
+  --ddw-ink: #e6f1ff;
+  --ddw-ink-secondary: #8892b0;
+  --ddw-ink-muted: #5a6789;
+  --ddw-accent: #00e5ff;
+  --ddw-accent-dark: #00b8d4;
+  --ddw-signal: #ffb454;
+  --ddw-success: #00ff9d;
+  --ddw-danger: #ff5e7e;
+  --ddw-info: #4f9eff;
+}
+
+/* ============================================================
+   Dark Theme Override — 用 !important 覆盖现有硬编码颜色
+   不需要修改任何页面的内联样式，这个文件自动生效。
+   ============================================================ */
+[data-theme="dark"] {
+  /* ---- Page backgrounds ---- */
+  background: #050816 !important;
+  color: #e6f1ff !important;
+}
+[data-theme="dark"] body,
+[data-theme="dark"] .app {
+  background: #050816 !important;
+  color: #e6f1ff !important;
+}
+
+/* ---- Navigation bar ---- */
+[data-theme="dark"] .topbar,
+[data-theme="dark"] header,
+[data-theme="dark"] .nav,
+[data-theme="dark"] nav {
+  background: #0a0f24 !important;
+  border-color: rgba(0, 229, 255, 0.15) !important;
+}
+[data-theme="dark"] .topbar *,
+[data-theme="dark"] header *,
+[data-theme="dark"] nav * {
+  color: #e6f1ff !important;
+}
+[data-theme="dark"] .topbar-right,
+[data-theme="dark"] .header-meta {
+  color: #8892b0 !important;
+}
+
+/* ---- Sidebar ---- */
+[data-theme="dark"] aside,
+[data-theme="dark"] .sidebar {
+  background: #0a0f24 !important;
+  border-color: rgba(0, 229, 255, 0.15) !important;
+}
+[data-theme="dark"] aside a,
+[data-theme="dark"] .sidebar a,
+[data-theme="dark"] .nav-item {
+  color: #8892b0 !important;
+  border-color: transparent !important;
+}
+[data-theme="dark"] aside a:hover,
+[data-theme="dark"] .sidebar a:hover,
+[data-theme="dark"] .nav-item:hover {
+  background: #111a3a !important;
+  border-color: rgba(0, 229, 255, 0.15) !important;
+  color: #e6f1ff !important;
+}
+[data-theme="dark"] aside a.active,
+[data-theme="dark"] .sidebar a.active,
+[data-theme="dark"] .nav-item.active {
+  background: rgba(0, 229, 255, 0.08) !important;
+  border-color: #00e5ff !important;
+  color: #00e5ff !important;
+}
+
+/* ---- Cards, panels, boxes ---- */
+[data-theme="dark"] .card,
+[data-theme="dark"] .panel,
+[data-theme="dark"] .box,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .progress-card,
+[data-theme="dark"] [class*="card"],
+[data-theme="dark"] [class*="panel"] {
+  background: #0a0f24 !important;
+  border-color: rgba(0, 229, 255, 0.15) !important;
+}
+[data-theme="dark"] .card:hover,
+[data-theme="dark"] [class*="card"]:hover {
+  border-color: rgba(0, 229, 255, 0.4) !important;
+}
+
+/* ---- Tables ---- */
+[data-theme="dark"] table {
+  background: #0a0f24 !important;
+  border-color: rgba(0, 229, 255, 0.15) !important;
+}
+[data-theme="dark"] th {
+  background: #111a3a !important;
+  color: #8892b0 !important;
+  border-color: rgba(0, 229, 255, 0.15) !important;
+}
+[data-theme="dark"] td {
+  color: #8892b0 !important;
+  border-color: rgba(0, 229, 255, 0.08) !important;
+}
+[data-theme="dark"] tr:hover td {
+  background: rgba(0, 229, 255, 0.04) !important;
+}
+
+/* ---- Forms ---- */
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background: #050816 !important;
+  border-color: rgba(0, 229, 255, 0.15) !important;
+  color: #e6f1ff !important;
+}
+[data-theme="dark"] input:focus,
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] select:focus {
+  border-color: #00e5ff !important;
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.15) !important;
+}
+[data-theme="dark"] label,
+[data-theme="dark"] .form-label {
+  color: #8892b0 !important;
+}
+
+/* ---- Buttons ---- */
+[data-theme="dark"] button,
+[data-theme="dark"] .btn {
+  background: #111a3a !important;
+  border-color: rgba(0, 229, 255, 0.15) !important;
+  color: #e6f1ff !important;
+}
+[data-theme="dark"] button:hover,
+[data-theme="dark"] .btn:hover {
+  border-color: #00e5ff !important;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.2) !important;
+}
+/* Primary buttons keep accent */
+[data-theme="dark"] .btn-primary,
+[data-theme="dark"] button[class*="primary"],
+[data-theme="dark"] button[style*="background: #1890ff"],
+[data-theme="dark"] button[style*="background:#1890ff"],
+[data-theme="dark"] a[style*="background: #1890ff"],
+[data-theme="dark"] a[style*="background:#1890ff"] {
+  background: linear-gradient(135deg, #00e5ff, #4f9eff) !important;
+  color: #050816 !important;
+  border: none !important;
+}
+
+/* ---- Text colors ---- */
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5 {
+  color: #e6f1ff !important;
+}
+[data-theme="dark"] p,
+[data-theme="dark"] span,
+[data-theme="dark"] li,
+[data-theme="dark"] td {
+  color: #8892b0 !important;
+}
+[data-theme="dark"] a {
+  color: #00e5ff !important;
+}
+[data-theme="dark"] a:hover {
+  color: #4f9eff !important;
+}
+[data-theme="dark"] small,
+[data-theme="dark"] .text-muted,
+[data-theme="dark"] .sub {
+  color: #5a6789 !important;
+}
+
+/* ---- Specific color overrides ---- */
+/* Primary blue text → cyan */
+[data-theme="dark"] [style*="color: #1890ff"],
+[data-theme="dark"] [style*="color:#1890ff"],
+[data-theme="dark"] [style*="color: #40a9ff"],
+[data-theme="dark"] [style*="color:#40a9ff"] {
+  color: #00e5ff !important;
+}
+/* Dark text → light text */
+[data-theme="dark"] [style*="color: #333"],
+[data-theme="dark"] [style*="color:#333"],
+[data-theme="dark"] [style*="color: #222"],
+[data-theme="dark"] [style*="color:#222"],
+[data-theme="dark"] [style*="color: #000"],
+[data-theme="dark"] [style*="color:#000"] {
+  color: #e6f1ff !important;
+}
+/* Secondary text */
+[data-theme="dark"] [style*="color: #666"],
+[data-theme="dark"] [style*="color:#666"],
+[data-theme="dark"] [style*="color: #555"],
+[data-theme="dark"] [style*="color:#555"] {
+  color: #8892b0 !important;
+}
+/* Muted text */
+[data-theme="dark"] [style*="color: #999"],
+[data-theme="dark"] [style*="color:#999"],
+[data-theme="dark"] [style*="color: #bbb"],
+[data-theme="dark"] [style*="color:#bbb"],
+[data-theme="dark"] [style*="color: #bfbfbf"],
+[data-theme="dark"] [style*="color:#bfbfbf"] {
+  color: #5a6789 !important;
+}
+/* White backgrounds → dark */
+[data-theme="dark"] [style*="background: #fff"],
+[data-theme="dark"] [style*="background:#fff"],
+[data-theme="dark"] [style*="background: #ffffff"],
+[data-theme="dark"] [style*="background:#ffffff"],
+[data-theme="dark"] [style*="background: white"],
+[data-theme="dark"] [style*="background:white"],
+[data-theme="dark"] [style*="background-color: #fff"],
+[data-theme="dark"] [style*="background-color:#fff"] {
+  background-color: #0a0f24 !important;
+}
+/* Light gray backgrounds */
+[data-theme="dark"] [style*="background: #f"],
+[data-theme="dark"] [style*="background:#f"],
+[data-theme="dark"] [style*="background: #F"],
+[data-theme="dark"] [style*="background:#F"],
+[data-theme="dark"] [style*="background-color: #f"],
+[data-theme="dark"] [style*="background-color:#f"] {
+  background-color: #111a3a !important;
+}
+/* Dark nav backgrounds */
+[data-theme="dark"] [style*="background: #001529"],
+[data-theme="dark"] [style*="background:#001529"],
+[data-theme="dark"] [style*="background: #00152"],
+[data-theme="dark"] [style*="background: #141414"],
+[data-theme="dark"] [style*="background:#141414"] {
+  background-color: #0a0f24 !important;
+}
+/* Primary blue backgrounds */
+[data-theme="dark"] [style*="background: #1890ff"],
+[data-theme="dark"] [style*="background:#1890ff"],
+[data-theme="dark"] [style*="background: #40a9ff"],
+[data-theme="dark"] [style*="background:#40a9ff"],
+[data-theme="dark"] [style*="background-color: #1890ff"],
+[data-theme="dark"] [style*="background-color:#1890ff"] {
+  background-color: #00e5ff !important;
+}
+/* Borders */
+[data-theme="dark"] [style*="border: 1px solid #e8e8e8"],
+[data-theme="dark"] [style*="border:1px solid #e8e8e8"],
+[data-theme="dark"] [style*="border-color: #e8e8e8"],
+[data-theme="dark"] [style*="border: 1px solid #d9d9d9"],
+[data-theme="dark"] [style*="border:1px solid #d9d9d9"],
+[data-theme="dark"] [style*="border-color: #d9d9d9"],
+[data-theme="dark"] [style*="border: 1px solid #f0f0f0"],
+[data-theme="dark"] [style*="border:1px solid #f0f0f0"] {
+  border-color: rgba(0, 229, 255, 0.15) !important;
+}
+/* Green (success) */
+[data-theme="dark"] [style*="color: #52c41a"],
+[data-theme="dark"] [style*="color:#52c41a"],
+[data-theme="dark"] [style*="background: #52c41a"],
+[data-theme="dark"] [style*="background:#52c41a"] {
+  color: #00ff9d !important;
+}
+/* Red (danger) */
+[data-theme="dark"] [style*="color: #f5222d"],
+[data-theme="dark"] [style*="color:#f5222d"],
+[data-theme="dark"] [style*="color: #ff4d4f"],
+[data-theme="dark"] [style*="color:#ff4d4f"] {
+  color: #ff5e7e !important;
+}
+/* Yellow/amber (warning) */
+[data-theme="dark"] [style*="color: #faad14"],
+[data-theme="dark"] [style*="color:#faad14"] {
+  color: #ffb454 !important;
+}
+/* Shadows → glow */
+[data-theme="dark"] [style*="box-shadow"] {
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.1) !important;
+}
+
+/* ---- Welcome hero section ---- */
+[data-theme="dark"] .welcome-hero,
+[data-theme="dark"] [class*="hero"] {
+  background: linear-gradient(135deg, #0a0f24 0%, #111a3a 100%) !important;
+}
+
+/* ---- Welcome emoji ---- */
+[data-theme="dark"] .welcome-emoji {
+  filter: brightness(0.8);
+}
+
+/* ---- Progress steps ---- */
+[data-theme="dark"] .step-dot {
+  background: #0a0f24 !important;
+  border-color: rgba(0, 229, 255, 0.3) !important;
+  color: #8892b0 !important;
+}
+[data-theme="dark"] .step-dot.active {
+  background: #00e5ff !important;
+  color: #050816 !important;
+  border-color: #00e5ff !important;
+}
+
+/* ---- Module cards (dashboard) ---- */
+[data-theme="dark"] .module-card,
+[data-theme="dark"] [class*="module"] {
+  background: #0a0f24 !important;
+  border-color: rgba(0, 229, 255, 0.15) !important;
+}
+[data-theme="dark"] .module-card:hover,
+[data-theme="dark"] [class*="module"]:hover {
+  border-color: rgba(0, 229, 255, 0.4) !important;
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.15) !important;
+}
+
+/* ---- Scrollbar (dark theme) ---- */
+[data-theme="dark"] ::-webkit-scrollbar {
+  width: 6px;
+}
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #050816;
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 229, 255, 0.2);
+  border-radius: 3px;
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 229, 255, 0.4);
+}
+
+/* ---- Theme Switcher Button ---- */
+.ddw-theme-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid rgba(255,255,255,0.2) !important;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.08) !important;
+  color: rgba(255,255,255,0.7) !important;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+.ddw-theme-toggle:hover {
+  background: rgba(255,255,255,0.15) !important;
+  color: #fff !important;
+}
+.ddw-theme-toggle .toggle-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+.ddw-theme-toggle .toggle-label {
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}

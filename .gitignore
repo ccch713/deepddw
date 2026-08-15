@@ -1,0 +1,27 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.venv/
+node_modules/
+.env
+
+# IDE / Agent tools
+.ahe/
+.mimocode/
+.env.deploy
+.env.local
+
+# OS
+.DS_Store
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Secrets
+*.pem
+*.key
+.env.production

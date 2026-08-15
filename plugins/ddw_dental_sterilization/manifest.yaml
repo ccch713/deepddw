@@ -1,0 +1,23 @@
+name: ddw_dental_sterilization
+license: commercial
+tier: beta
+version: "0.1.0"
+description: 消毒追溯
+author: DDW Team
+endpoints:
+  - path: /api/v1/plugins/ddw_dental_sterilization/health
+    method: GET
+  - path: /api/v1/plugins/ddw_dental_sterilization/sterilizers
+    method: POST
+  - path: /api/v1/plugins/ddw_dental_sterilization/sterilizers
+    method: GET
+  - path: /api/v1/plugins/ddw_dental_sterilization/batches
+    method: POST
+  - path: /api/v1/plugins/ddw_dental_sterilization/batches
+    method: GET
+  - path: /api/v1/plugins/ddw_dental_sterilization/batches/{id}/trace
+    method: GET
+  - path: /api/v1/plugins/ddw_dental_sterilization/expiring
+    method: GET
+  - path: /api/v1/plugins/ddw_dental_sterilization/compliance
+    method: GET

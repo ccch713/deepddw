@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>DDW AI Hub · 试用防破解 & 开发者联调机制</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#020617;color:#e2e8f0;min-height:100vh;padding:24px}
+  .container{max-width:1080px;margin:0 auto}
+  .header{align-items:center;border-bottom:1px solid #1e293b;display:flex;gap:12px;margin-bottom:20px;padding-bottom:12px}
+  .header h1{color:#f1f5f9;font-size:17px;font-weight:700}
+  .sub{color:#94a3b8;font-size:11px;margin-left:auto}
+  .ver{background:rgba(34,211,238,0.1);border:1px solid #22d3ee;border-radius:4px;color:#22d3ee;font-size:10px;font-weight:700;padding:2px 8px}
+
+  .q-box{border-radius:10px;margin-bottom:24px;overflow:hidden}
+  .q-title{border-bottom:1px solid;font-size:14px;font-weight:700;padding:14px 16px}
+  .q-body{padding:14px 16px}
+  .q1 .q-title{background:rgba(34,211,238,0.1);border-color:#22d3ee;color:#cffafe}
+  .q1 .q-body{background:rgba(15,23,42,0.6);border:1px solid #1e293b;border-top:0}
+  .q2 .q-title{background:rgba(251,191,36,0.1);border-color:#fbbf24;color:#fef3c7}
+  .q2 .q-body{background:rgba(15,23,42,0.6);border:1px solid #1e293b;border-top:0}
+
+  .threat-box{border:1px solid #fb7185;border-radius:8px;margin:12px 0;overflow:hidden}
+  .threat-title{background:rgba(251,113,133,0.1);color:#fecdd3;font-size:11px;font-weight:700;padding:8px 12px}
+  .threat-body{color:#fda4af;font-size:10px;line-height:1.6;padding:8px 12px}
+
+  .grid-3{display:grid;gap:12px;grid-template-columns:1fr 1fr 1fr;margin:10px 0}
+  .card{border:1px solid #1e293b;border-radius:8px;padding:12px;background:rgba(15,23,42,0.5)}
+  .card-title{color:#f1f5f9;font-size:11px;font-weight:700;margin-bottom:6px}
+  .card-body{color:#cbd5e1;font-size:10px;line-height:1.6}
+  .card-body li{color:#94a3b8;font-size:9.5px;list-style:none;padding:2px 0 2px 10px;position:relative}
+  .card-body li::before{content:"▸";left:0;position:absolute;color:#64748b}
+
+  .flow-row{align-items:center;display:flex;gap:8px;justify-content:center;margin:14px 0}
+  .fbox{background:#0f172a;border:1px solid #1e293b;border-radius:6px;font-size:9.5px;padding:8px 12px;text-align:center}
+  .fbox.cyan{border-color:#22d3ee}
+  .fbox.green{border-color:#34d399}
+  .fbox.amber{border-color:#fbbf24}
+  .fbox.rose{border-color:#fb7185}
+  .farr{color:#64748b;font-size:16px}
+
+  .code-block{background:#020617;border:1px solid #1e293b;border-radius:6px;color:#a5b4fc;font-family:monospace;font-size:9px;line-height:1.5;margin:6px 0;padding:10px;white-space:pre-wrap;word-break:break-all}
+
+  .conclusion{border:1px solid #34d399;border-radius:8px;margin:14px 0}
+  .conclusion-title{background:rgba(52,211,153,0.1);color:#d1fae5;font-size:11px;font-weight:700;padding:8px 12px}
+  .conclusion-body{color:#a7f3d0;font-size:10px;line-height:1.6;padding:8px 12px}
+
+  .footer{color:#475569;font-size:9px;padding:16px 0 4px;text-align:center}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>DDW AI Hub · 试用防破解 & 开发者联调架构</h1>
+    <span class="ver">DeepSeek V4 Pro 深度思考</span>
+    <span class="sub">一人公司可落地 · 2026-06-27</span>
+  </div>
+
+  <!-- ═══════════════ 问题 1 ═══════════════ -->
+  <div class="q-box q1">
+    <div class="q-title">🛡️ 问题 1：7 天免费试用 · 防服务器时间篡改 + 自动生成 POC 报告</div>
+    <div class="q-body">
+
+      <div class="grid-3">
+        <div class="card" style="border-left:3px solid #22d3ee">
+          <div class="card-title">业务需求</div>
+          <div class="card-body">
+            <ul>
+              <li>市场所有付费插件支持 7 天免费试用</li>
+              <li>插件在试用期内全功能可用</li>
+              <li>试用到期自动停止，提示购买</li>
+              <li>无需任何人工审批，IT 人员自助操作</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card" style="border-left:3px solid #34d399">
+          <div class="card-title">POC 测试报告 PDF</div>
+          <div class="card-body">
+            <ul>
+              <li>试用期间自动记录 POC 验证数据</li>
+              <li>支持企业 IT 一键导出可下载 PDF</li>
+              <li>PDF 成为内部预算审批、立项的正式文件</li>
+              <li>含：验证日期、插件版本、测试结论、环境信息</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card" style="border-left:3px solid #fb7185">
+          <div class="card-title">攻击场景</div>
+          <div class="card-body">
+            <ul>
+              <li>IT 人员改服务器系统时间（date 命令）</li>
+              <li>容器内改 TZ 环境变量 + 系统时间</li>
+              <li>修改 Docker 容器的时间偏移</li>
+              <li>试用到期后重装系统重新计时</li>
+              <li>删除许可证文件重新申请试用</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="threat-box">
+        <div class="threat-title">🔒 核心原则——不信任本地时钟，信任密码学签名</div>
+        <div class="threat-body">
+          一人公司不需要反破解团队对抗全世界的黑客。你只需要做到：<strong>让"绕过试用"的代价比"直接买"更高</strong>。<br>
+          以下是三层防线，递进保护。第一层挡住 80% 的顺手改时间，第二层挡住认真尝试，第三层让违规者无法拿到 POC 报告（等于拿不到预算审批文件）。
+        </div>
+      </div>
+
+      <!-- 三层防线 -->
+      <div style="margin-top:14px;font-size:12px;color:#f1f5f9;font-weight:700;margin-bottom:6px">第一层：安装时冻结 → 时间胶囊签名</div>
+      <div class="flow-row">
+        <div class="fbox cyan">用户安装插件<br>点击"7 天免费试用"</div>
+        <span class="farr">→</span>
+        <div class="fbox green">平台向市场 API<br>发送设备指纹</div>
+        <span class="farr">→</span>
+        <div class="fbox amber">市场 API 记录<br>开始时间（API 自己的时钟）</div>
+        <span class="farr">→</span>
+        <div class="fbox rose">返回 RSA 签名<br><strong>时间胶囊</strong><br>含 start_at, valid_until</div>
+      </div>
+      <div class="code-block">
+# 时间胶囊结构（JWT 格式，RSA 签名）
+{
+  "plugin_id": "medical_records@1.2.0",
+  "device_fingerprint": "a1b2c3d4e5f6...",
+  "trial_start": "2026-06-27T10:00:00Z",   # ← 市场 API 时钟
+  "trial_end":   "2026-07-04T10:00:00Z",   # ← 市场 API 时钟
+  "signature":   "RSA-SHA256(...)"           # ← 你的私钥签名
+}
+                      </div>
+
+      <div style="margin-top:12px;font-size:12px;color:#f1f5f9;font-weight:700;margin-bottom:6px">第二层：每次加载校验 → 本地签名验证</div>
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-title">攻击 1：改服务器时间</div>
+          <div class="card-body">
+            平台不信任本地时间。<br>
+            每次插件加载时校验：<br>
+            <code>RSA.verify(时间胶囊)</code><br>
+            取当前时间 → 只和 <code>trial_end</code> 比较。<br>
+            <strong>如果时间被改到过去：</strong>平台从市场 API 获取"最新服务器时间戳"做二次校验 → 检测到时间跳变 → 立即标记为"异常试用" → 停止插件运行 + 通知插件作者。<br>
+            <strong>如果时间被改到未来：</strong>trial_end 被超过 → 试用到期，停用。
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">攻击 2：重装系统/删文件</div>
+          <div class="card-body">
+            设备指纹包含：<br>
+            <code>sha256(mac + disk_serial + hostname + uuid)</code><br><br>
+            重装系统后 MAC 地址不变、磁盘序列号不变 → 设备指纹相同 → 再次向市场 API 申请试用 → API 发现该设备已试用过 → 拒绝。<br><br>
+            <strong>虚拟机克隆攻击：</strong>克隆后的 MAC 地址可能相同 → 同样被设备指纹锁定。
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">攻击 3：改源码绕过</div>
+          <div class="card-body">
+            这是最难防的。开源源码改掉校验逻辑？<br><br>
+            <strong>反制：</strong>插件本身也是打包的 .ddwplugin，校验逻辑在 <strong>Plugin SDK 里</strong>。如果用户改了平台源码跳过了许可证检查，但<strong>插件的代码</strong>在加载时会调用 market API 校验自己的许可证。<br><br>
+            插件作者可以在插件代码里加一层校验：<br>
+            <code>LicenseValidator.assert_valid(plugin_id)</code><br>
+            这层校验在插件进程内跑，不在平台代码里。
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;font-size:12px;color:#f1f5f9;font-weight:700;margin-bottom:6px">第三层（杀手锏）：POC 测试报告就是最好的"禁止违规"机制</div>
+      <div class="card" style="border:1px solid #22d3ee">
+        <div class="card-title">📄 POC 报告自动生成 + 防篡改设计</div>
+        <div class="card-body">
+          <div class="grid-3" style="margin:0">
+            <div>
+              <strong>正常试用 → 标准 POC 报告（适合审批）：</strong>
+              <div class="code-block" style="margin-top:4px;font-size:8px">
+DDW AI Hub · POC 验证报告
+══════════════════════
+插件名称：病历管理 v1.2.0
+测试环境：企业私有化部署
+验证日期：2026-06-27 ~ 2026-07-04
+验证状态：✅ 正常（7 天试用期）
+验证编号：DDW-POC-20260704-001
+可在线核验：https://hub.ddw.ai/verify/xxx
+
+测试结论：
+  ✓ 数据对接正常
+  ✓ 业务功能正常
+  ✓ 数据链完整
+  ✓ 性能达标
+
+IT 签字：__________  日期：__________
+              </div>
+            </div>
+            <div>
+              <strong>时间被篡改 → POC 报告显示违规警告：</strong>
+              <div class="code-block" style="margin-top:4px;border-color:#fb7185;font-size:8px">
+DDW AI Hub · POC 验证报告
+══════════════════════
+插件名称：病历管理 v1.2.0
+测试环境：企业私有化部署
+验证日期：2026-06-27 ~ 2026-07-04
+验证状态：⚠️ 试用验证失败
+原因：系统时间异常（检测到时间跳变）
+验证编号：DDW-POC-20260704-XXX
+
+⚠️ 本报告不可作为立项审批文件
+⚠️ 请联系管理员获取正版验证
+              </div>
+            </div>
+            <div>
+              <strong>为什么这对一人公司有效：</strong>
+              <ul style="margin-top:4px">
+                <li>IT 人员改时间绕过了试用 → 但拿不到干净的 POC 报告</li>
+                <li>没有干净 POC 报告 → 无法走内部预算审批流程</li>
+                <li>无法走预算审批 → 买不了正版 → 项目无法推进</li>
+                <li><strong>违规的 IT 人员自己也没办法向老板交差</strong></li>
+                <li>POC 报告的在线核验链接：财务/法务一扫就知真假</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="conclusion">
+        <div class="conclusion-title">✅ 问题 1 结论：防破解就靠 3 样东西——不用你派人对抗</div>
+        <div class="conclusion-body">
+          ① <strong>时间胶囊 RSA 签名</strong>（不信任本地时钟，市场 API 给你签名时间）<br>
+          ② <strong>设备指纹</strong>（屏蔽重装、克隆、重新试用）<br>
+          ③ <strong>POC 报告在线核验</strong>（违规者拿不到预算审批所需的干净报告）<br><br>
+          三条全部靠 Python 标准库（cryptography/hashlib/uuid）实现，不需要反作弊团队。一人公司完全撑得住。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ 问题 2 ═══════════════ -->
+  <div class="q-box q2">
+    <div class="q-title">🔗 问题 2：开发者间联调授权 · "向原插件作者申请"机制</div>
+    <div class="q-body">
+
+      <div class="grid-3">
+        <div class="card" style="border-left:3px solid #fbbf24">
+          <div class="card-title">业务场景</div>
+          <div class="card-body">
+            <ul>
+              <li>开发者 B 开发新插件需要集成付费插件 A</li>
+              <li>开发者 B 不应为"联调开发"购买完整企业授权</li>
+              <li>需要一个"开发者联调许可证"机制</li>
+              <li>原插件作者控制：给谁、给多久、能否续期</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card" style="border-left:3px solid #34d399">
+          <div class="card-title">流程设计</div>
+          <div class="card-body">
+            <ul>
+              <li>开发者 B 在市场找到插件 A → 点击"申请联调授权"</li>
+              <li>平台向插件作者 A 发送私信通知（平台内消息）</li>
+              <li>插件作者 A 在管理后台看到申请详情（B 的开发者档案、计划开发的插件）</li>
+              <li>A 决定授权 → 选择授权期限（14 天 / 30 天 / 自定义）</li>
+              <li>B 的设备收到联调许可证 → 插件 A 在 B 的开发环境中激活</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card" style="border-left:3px solid #a78bfa">
+          <div class="card-title">续期与终止</div>
+          <div class="card-body">
+            <ul>
+              <li>授权到期前 3 天 → 平台自动发送续期提醒给双方</li>
+              <li>插件作者 A 可选择：同意续期 / 不同意 / 要求升级为付费</li>
+              <li>授权到期后 → 插件 A 在 B 的环境自动停用</li>
+              <li>如果 B 的插件已上架市场 → 可申请"相互授权"（互免）</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="threat-box" style="border-color:#fbbf24">
+        <div class="threat-title">⚖️ 为什么这个机制不会被滥用？</div>
+        <div class="threat-body">
+          ① 每个开发者都有实名信誉体系（插件发布记录、评价、下载量）→ 乱申请的会被其他开发者拉黑<br>
+          ② 联调许可证绑定设备指纹 + 社区版用户限制（≤3 人）→ 不能用于生产环境<br>
+          ③ 插件作者完全控制授权——不想给可以拒绝，没有强制义务<br>
+          ④ 联调许可证的插件内会显示"⚡ DEV 联调模式"水印，提醒这不是正式授权<br>
+          ⑤ 在平台私信里交流，所有对话留痕，防止纠纷
+        </div>
+      </div>
+
+      <div style="margin-top:12px;font-size:13px;color:#f1f5f9;font-weight:700;margin-bottom:8px">管理后台的操作界面示意</div>
+      <div class="code-block" style="font-size:9.5px">
+┌─ 插件作者 A 的管理后台 ─────────────────────────────────────┐
+│  🔔 联调授权申请 (1)                                          │
+│                                                              │
+│  开发者: 陈工 (dev_chen@example.com)                          │
+│  申请插件: Medical Records v1.2.0                            │
+│  用途: 集成开发"语音病历"插件，需要对接病历数据              │
+│  开发者信用: ⭐⭐⭐⭐⭐ (3 个插件已上架)                       │
+│                                                              │
+│  ┌─ 操作 ───────────────────────────────────────────┐        │
+│  │  [✅ 授权]  [⏱ 14天] [⏱ 30天] [⏱ 自定义] [❌ 拒绝] │  │
+│  │  [🔁 续签期限]                                    │        │
+│  └───────────────────────────────────────────────────┘        │
+│                                                              │
+│  最近授权记录:                                                │
+│  2026-06-20 → 授权 张工 "Stock Connector" → 30天 → ✅ 已激活  │
+│  2026-06-15 → 授权 李工 "ERP Reader" → 14天 → ⏳ 已到期      │
+└──────────────────────────────────────────────────────────────┘
+                      </div>
+
+      <div class="conclusion">
+        <div class="conclusion-title">✅ 问题 2 结论：授权流程 + 技术执行都简单</div>
+        <div class="conclusion-body">
+          <strong>技术层面：</strong>复用"时间胶囊"签名机制。Plugin Author 的"授权" = 用 market API 私钥签发一个"联调许可证"，和试用许可证是同一套基础设施。<br><br>
+          <strong>业务层面：</strong>插件作者完全掌控授权。平台只做通知 + 签名执行。"开发者互信"拉动生态——我让你联调，你上架后也可能让我联调。<br><br>
+          <strong>开发者不可绕过：</strong>联调许可证也绑定设备指纹 + 时间签名。不能复制给别人用、不能无限续期。<br><br>
+          <strong>对一人公司的意义：</strong>这个机制零人工成本——平台自动发通知、自动生成授权、自动停用。你不需要参与任何一次授权决策，全交给插件作者们自己玩。
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════ 技术实现清单 ═══════════════ -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">🧰 一人公司技术实现清单（两个问题的代码共用量）</div>
+    <div class="card-body">
+      <table style="width:100%;border-collapse:collapse;font-size:9.5px;color:#cbd5e1;margin-top:6px">
+        <tr style="border-bottom:1px solid #1e293b"><td style="padding:6px 4px;font-weight:700">#</td><td style="padding:6px 4px;font-weight:700">组件</td><td style="padding:6px 4px;font-weight:700">代码量</td><td style="padding:6px 4px;font-weight:700">依赖</td><td style="padding:6px 4px;font-weight:700">用于问题</td></tr>
+        <tr style="border-bottom:1px solid #1e293b"><td style="padding:6px 4px">1</td><td style="padding:6px 4px">RSA 密钥对生成 + JWT 签名</td><td>~30 行</td><td>cryptography</td><td>Q1+Q2</td></tr>
+        <tr style="border-bottom:1px solid #1e293b"><td style="padding:6px 4px">2</td><td style="padding:6px 4px">设备指纹采集</td><td>~20 行</td><td>uuid + hashlib</td><td>Q1+Q2</td></tr>
+        <tr style="border-bottom:1px solid #1e293b"><td style="padding:6px 4px">3</td><td style="padding:6px 4px">时间胶囊签发 API（市场 API）</td><td>~60 行</td><td>FastAPI + JWT</td><td>Q1</td></tr>
+        <tr style="border-bottom:1px solid #1e293b"><td style="padding:6px 4px">4</td><td style="padding:6px 4px">本地许可证校验（Plugin SDK）</td><td>~40 行</td><td>cryptography</td><td>Q1+Q2</td></tr>
+        <tr style="border-bottom:1px solid #1e293b"><td style="padding:6px 4px">5</td><td style="padding:6px 4px">POC 报告自动生成（WeasyPrint）</td><td>~80 行</td><td>weasyprint/pdfkit</td><td>Q1</td></tr>
+        <tr style="border-bottom:1px solid #1e293b"><td style="padding:6px 4px">6</td><td style="padding:6px 4px">联调授权 API + 通知</td><td>~80 行</td><td>FastAPI + 平台内消息</td><td>Q2</td></tr>
+        <tr><td style="padding:6px 4px;font-weight:700" colspan="5">总新增代码：约 310 行（复用许可证框架）</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">DDW AI Hub Platform · 试用防破解 & 联调机制 · DeepSeek V4 Pro · 一人公司技术实现清单已就绪</div>
+</div>
+</body>
+</html>

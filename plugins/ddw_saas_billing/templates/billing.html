@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>DDW SaaS 计费</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; background: #f0f2f5; color: #262626; }
+    .header { background: linear-gradient(135deg, #52c41a 0%, #1890ff 100%); color: white; padding: 24px 32px; }
+    .header h1 { font-size: 24px; margin-bottom: 4px; }
+    .header .subtitle { opacity: 0.85; font-size: 14px; }
+    .container { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
+    .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .card h2 { font-size: 18px; margin-bottom: 16px; color: #52c41a; }
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+    .metric { background: white; padding: 16px; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .metric .value { font-size: 32px; font-weight: 600; color: #52c41a; }
+    .metric .label { font-size: 12px; color: #8c8c8c; margin-top: 4px; }
+    .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .plan { background: white; padding: 24px; border-radius: 8px; text-align: center; border: 2px solid #f0f0f0; }
+    .plan.featured { border-color: #52c41a; transform: scale(1.05); }
+    .plan .name { font-size: 18px; font-weight: 600; }
+    .plan .price { font-size: 32px; font-weight: 700; color: #52c41a; margin: 12px 0; }
+    .plan ul { list-style: none; padding: 12px 0; text-align: left; font-size: 14px; color: #595959; }
+    .plan li { padding: 4px 0; }
+    .plan button { width: 100%; padding: 12px; background: #52c41a; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-top: 12px; }
+    .plan button:hover { background: #73d13d; }
+    .quota-bar { background: #f0f0f0; border-radius: 4px; overflow: hidden; height: 16px; margin: 8px 0; }
+    .quota-fill { background: linear-gradient(90deg, #52c41a 0%, #1890ff 100%); height: 100%; transition: width 0.5s; }
+    .api-endpoints { background: #fafafa; padding: 12px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+    .api-endpoints code { display: block; padding: 4px 0; }
+    .api-endpoints .method-GET { color: #52c41a; font-weight: 600; }
+    .api-endpoints .method-POST { color: #1890ff; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>💳 DDW SaaS 计费</h1>
+    <div class="subtitle">订阅管理 · 用量计量 · 微信支付/支付宝 · 续费提醒</div>
+  </div>
+
+  <div class="container">
+    <div class="metrics">
+      <div class="metric"><div class="value">3</div><div class="label">活跃订阅</div></div>
+      <div class="metric"><div class="value">¥3,288</div><div class="label">本月收入</div></div>
+      <div class="metric"><div class="value">125K</div><div class="label">已用 Token</div></div>
+      <div class="metric"><div class="value">100K</div><div class="label">月度限额</div></div>
+    </div>
+
+    <div class="card">
+      <h2>📊 当前用量</h2>
+      <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px;">
+        <span>已用：125,000 / 100,000</span>
+        <span style="color: #ff4d4f; font-weight: 600;">⚠️ 超出 25%</span>
+      </div>
+      <div class="quota-bar"><div class="quota-fill" style="width: 100%; background: linear-gradient(90deg, #ff4d4f 0%, #fa541c 100%);"></div></div>
+    </div>
+
+    <div class="card">
+      <h2>💼 订阅方案</h2>
+      <div class="plans">
+        <div class="plan">
+          <div class="name">免费版</div>
+          <div class="price">¥0<span style="font-size: 14px; color: #8c8c8c;">/月</span></div>
+          <ul>
+            <li>✅ 10K Token/月</li>
+            <li>✅ 基础报表</li>
+            <li>✅ 1 学科</li>
+            <li>❌ 多媒体课件</li>
+            <li>❌ 微信推送</li>
+          </ul>
+          <button>当前方案</button>
+        </div>
+        <div class="plan featured">
+          <div class="name">Pro 推荐</div>
+          <div class="price">¥99<span style="font-size: 14px; color: #8c8c8c;">/月</span></div>
+          <ul>
+            <li>✅ 100K Token/月</li>
+            <li>✅ 完整报表 + PDF</li>
+            <li>✅ 全部学科</li>
+            <li>✅ 多媒体课件（10 种）</li>
+            <li>✅ 微信推送</li>
+          </ul>
+          <button>立即升级</button>
+        </div>
+        <div class="plan">
+          <div class="name">企业版</div>
+          <div class="price">¥999<span style="font-size: 14px; color: #8c8c8c;">/月</span></div>
+          <ul>
+            <li>✅ 1M Token/月</li>
+            <li>✅ HRIS 集成</li>
+            <li>✅ KPI 看板</li>
+            <li>✅ 多租户</li>
+            <li>✅ 专属支持</li>
+          </ul>
+          <button>联系销售</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🔌 API 端点</h2>
+      <div class="api-endpoints">
+        <code><span class="method-GET">GET</span>   /api/v1/plugins/ddw-saas-billing/subscriptions             订阅列表</code>
+        <code><span class="method-POST">POST</span>  /api/v1/plugins/ddw-saas-billing/subscriptions             创建订阅</code>
+        <code><span class="method-POST">POST</span>  /api/v1/plugins/ddw-saas-billing/subscriptions/{id}/cancel 取消订阅</code>
+        <code><span class="method-POST">POST</span>  /api/v1/plugins/ddw-saas-billing/usage                     记录用量</code>
+        <code><span class="method-GET">GET</span>   /api/v1/plugins/ddw-saas-billing/usage/{tenant_id}        查询用量</code>
+        <code><span class="method-GET">GET</span>   /api/v1/plugins/ddw-saas-billing/quota/{tenant_id}        检查配额</code>
+        <code><span class="method-POST">POST</span>  /api/v1/plugins/ddw-saas-billing/webhook/wechat           微信支付回调</code>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

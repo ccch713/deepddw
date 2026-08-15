@@ -1,0 +1,90 @@
+from __future__ import annotations
+"""DDW 客户报备与归属插件 ORM 模型。
+
+继承 DDW 平台核心：
+- core.database.models.Base: DeclarativeBase 根
+- core.database.models.TenantMixin: 自动注入 tenant_id + 标记租户感知
+- core.database.models.TimestampMixin: 自动注入 created_at / updated_at
+
+业务含义：
+- 一条 LeadClaim = 一个渠道/销售对某客户企业的报备保护记录
+- protection_days：保护期天数（默认 60 天），决定 expire_at
+- expire_at = claim_date + protection_days（由服务端在 create 时计算）
+- status：active（保护中）/ expired（保护期已过）/ won（赢单）/ lost（丢单）/ released（主动释放）
+"""
+
+from datetime import datetime
+from decimal import Decimal
+from typing import Optional
+
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    func,
+from sqlalchemy.orm import Mapped, mapped_column
+
+from core.database.models import Base, TenantMixin, TimestampMixin
+
+# BigInteger 在 SQLite 不支持 -> 退化到 Integer
+BigInt = BigInteger().with_variant(Integer(), "sqlite")
+
+
+class LeadClaim(Base, TenantMixin, TimestampMixin):
+    """客户报备主表。
+
+    关联（外键 ON DELETE SET NULL，关联对象删除不级联删报备）：
+    - partner_id -> crm_partners.id  （由 P2-1 ddw_partner_directory 提供；本插件独立测试用 stub）
+    - company_id -> crm_companies.id （由 P0-1 ddw_company_profile 提供）
+
+    use_alter=True 让 FK 在 metadata.create_all 时不要求目标表已注册，
+    避免与本插件初始化顺序产生依赖。
+    """
+
+    __tablename__ = "crm_lead_claims"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[int] = mapped_column(BigInt, primary_key=True, autoincrement=True)
+
+    # ---- 业务关联 ----
+    partner_id: Mapped[Optional[int]] = mapped_column(        BigInt,
+        ForeignKey("crm_partners.id", ondelete="SET NULL", use_alter=True),
+        nullable=True,
+        index=True,
+    company_id: Mapped[Optional[int]] = mapped_column(        BigInt,
+        ForeignKey("crm_companies.id", ondelete="SET NULL", use_alter=True),
+        nullable=True,
+        index=True,
+
+    # ---- 时间 ----
+    claim_date: Mapped[Optional[datetime]] = mapped_column(        DateTime, server_default=func.now(), nullable=False, index=True
+    protection_days: Mapped[Optional[int]] = mapped_column(        Integer, default=60, nullable=False
+    )  # 保护期天数（默认 60）
+    expire_at: Mapped[Optional[datetime]] = mapped_column(        DateTime, nullable=True, index=True
+    )  # 保护期截止时间（claim_date + protection_days）
+
+    # ---- 联系人 / 来源信息 ----
+    contact_person: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    contact_phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    opportunity_source: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    )  # 商机来源：网站/微信/电话/转介绍/...
+
+    # ---- 商机信息 ----
+    expected_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
+    follow_up_notes: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    last_follow_up_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    # ---- 状态 ----
+    status: Mapped[Optional[str]] = mapped_column(        String(20), default="active", nullable=False, index=True
+    # active / expired / won / lost / released
+
+    # ---- 释放信息 ----
+    release_reason: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    released_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    # ---- 通用 ----
+    notes: Mapped[Optional[str]] = mapped_column(# ---- 审计 ---- created_by: Mapped[Optional[int]] = mapped_column(BigInt, nullable=True) updated_by: Mapped[Optional[int]] = mapped_column(BigInt, nullable=True)  def __repr__(self) -> str:  # pragma: no cover return ( f"<LeadClaim id={self.id} partner_id={self.partner_id} " f"company_id={self.company_id} status={self.status!r} " f"expire_at={self.expire_at!r}>" )   __all__ = ["LeadClaim"])

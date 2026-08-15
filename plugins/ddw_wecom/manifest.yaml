@@ -1,0 +1,12 @@
+name: ddw-wecom
+license: free
+tier: beta
+version: 1.0.0
+display_name: DDW 企业微信集成
+description: 企业微信OAuth免登+JIT建号
+engine: ">=2.0.0"
+dependencies:
+  plugins: {}
+permissions:
+  - storage
+config: {}

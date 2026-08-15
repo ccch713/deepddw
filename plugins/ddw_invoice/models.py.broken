@@ -1,0 +1,77 @@
+from __future__ import annotations
+"""DDW 发票管理插件 ORM 模型。
+
+继承 DDW 平台核心：
+- core.database.models.Base: DeclarativeBase 根
+- core.database.models.TenantMixin: 自动注入 tenant_id + 标记租户感知
+- core.database.models.TimestampMixin: 自动注入 created_at / updated_at
+"""
+
+from datetime import date
+from decimal import Decimal
+from typing import Optional
+
+from sqlalchemy import (
+    BigInteger,
+    Date,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+from sqlalchemy.orm import Mapped, mapped_column
+
+from core.database.models import Base, TenantMixin, TimestampMixin
+
+# BigInteger 在 SQLite 不支持 -> 退化到 Integer
+BigInt = BigInteger().with_variant(Integer(), "sqlite")
+
+
+class Invoice(Base, TenantMixin, TimestampMixin):
+    """发票主表。
+
+    业务含义：
+    - 每条记录代表一张发票的申请 → 开具 → 作废全生命周期
+    - 状态机：requested（已申请）→ issued（已开具）→ voided（已作废）
+    - 金额三件套：amount（金额，不含税）/ tax_amount（税额）/ total_amount（价税合计 = amount + tax_amount）
+    - invoice_type：special（专票）/ normal（普票）
+    - 关联：company_id（crm_companies）/ order_id（crm_orders），ON DELETE SET NULL
+    """
+
+    __tablename__ = "crm_invoices"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[int] = mapped_column(BigInt, primary_key=True, autoincrement=True)
+
+    # ---- 业务关联（外键 ON DELETE SET NULL：关联对象删除不级联删发票） ----
+    # use_alter=True：让 SQLAlchemy 在 CREATE TABLE 之后再 ALTER TABLE 加 FK，
+    # 避免 crm_companies / crm_orders 表不在当前 metadata（如独立测试环境、插件加载
+    # 顺序）时 metadata.create_all 抛 NoReferencedTableError。生产环境 PG 上 FK
+    # 仍按 ON DELETE SET NULL 正常生效。
+    company_id: Mapped[Optional[int]] = mapped_column(        BigInt,
+        ForeignKey("crm_companies.id", ondelete="SET NULL", use_alter=True),
+        nullable=True,
+        index=True,
+    order_id: Mapped[Optional[int]] = mapped_column(        BigInt,
+        ForeignKey("crm_orders.id", ondelete="SET NULL", use_alter=True),
+        nullable=True,
+        index=True,
+
+    # ---- 单号 / 类型 ----
+    invoice_no: Mapped[Optional[str]] = mapped_column(        String(50), index=True
+    )  # 发票号（开具后由人工填入）
+    invoice_type: Mapped[Optional[str]] = mapped_column(        String(20), nullable=False, index=True
+    )  # special / normal
+
+    # ---- 金额三件套（Numeric(12, 2) 配 Decimal） ----
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)  # 不含税金额
+    tax_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)  # 税额
+    total_amount: Mapped[Optional[Decimal]] = mapped_column(        Numeric(12, 2), nullable=False
+    )  # 价税合计
+
+    # ---- 抬头 / 税号 ----
+    invoice_title: Mapped[str] = mapped_column(String(200), nullable=False)  # 发票抬头
+    tax_id: Mapped[str] = mapped_column(String(20), nullable=False)  # 税号
+
+    # ---- 发票文件 ----
+    invoice_url: Mapped[Optional[str]] = mapped_column(# ---- 时间 ---- issued_at: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)  # 开票日期  # ---- 状态 ---- status: Mapped[Optional[str]] = mapped_column(        String(20), default="requested", nullable=False, index=True ) # requested / issued / voided  # ---- 备注 / 审计 ---- notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True) created_by: Mapped[Optional[int]] = mapped_column(BigInt, nullable=True)  def __repr__(self) -> str:  # pragma: no cover return ( f"<Invoice id={self.id} type={self.invoice_type!r} " f"amount={self.amount} tax={self.tax_amount} total={self.total_amount} " f"status={self.status!r}>" )   __all__ = ["Invoice"])

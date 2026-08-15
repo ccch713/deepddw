@@ -1,0 +1,54 @@
+# DDW AI Hub — Python 依赖（2026-08-02 锁定）
+# Python >= 3.11, < 3.14
+# 复用 16G 已有实现，不引入新框架
+
+# --- Web 框架 ---
+fastapi>=0.110.0,<0.116.0
+uvicorn[standard]>=0.23.0,<0.30.0
+starlette>=0.36.0
+
+# --- 数据层（async SQLAlchemy 2.0 + SQLite async driver） ---
+sqlalchemy>=2.0.30,<2.1.0
+aiosqlite>=0.19.0
+
+# --- 数据校验 ---
+pydantic>=2.6.0,<3.0.0
+
+# --- 认证 / 安全 ---
+pyjwt>=2.8.0
+bcrypt>=4.0.0
+redis>=5.0.0
+itsdangerous>=2.1.0
+
+# --- 表单 / 校验 ---
+python-multipart>=0.0.9
+
+# --- 社交登录 OAuth ---
+senweaver-oauth>=0.1.0
+
+# --- 异步 HTTP 客户端（HRIS 适配器、embedded LLM） ---
+httpx>=0.24.0
+aiohttp>=3.9.0  # embedded_llm 备用
+
+# --- 配置 / YAML ---
+pyyaml>=6.0
+
+# --- ESG 报告（PDF 图表渲染） ---
+reportlab>=4.0.0
+matplotlib>=3.8.0
+
+# --- CLI ---
+click>=8.1.0
+psutil>=5.9.0
+
+# --- 表单 / 文件上传（FastAPI Form/File 需要） ---
+python-multipart>=0.0.6
+
+# --- 验证码 ---
+captcha>=0.5
+Pillow>=10
+
+# --- 测试 ---
+pytest>=8.0.0
+pytest-asyncio>=0.21.0
+mcp

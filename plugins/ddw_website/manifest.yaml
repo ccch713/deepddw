@@ -1,0 +1,22 @@
+name: ddw-website
+tier: beta
+version: 1.0.0
+description: "DDW 官网插件 — 主题模版/站点信息/页面清单统一管理，主题由底座后台切换"
+author: "DDW Team"
+license: free
+type: plugin
+adapter:
+  type: "website"
+  vendor: "ddw"
+  protocol: "internal"
+dependencies:
+  plugins:
+    ddw-core: ">=2.0.0"
+config:
+  optional:
+    current_theme:
+      default: "standard"
+      description: "当前主题模版: standard/holiday/mourning"
+routes:
+  - prefix: /api/v1/plugins/ddw-website
+    router: router:router

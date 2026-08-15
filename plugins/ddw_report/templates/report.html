@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>DDW 学习/培训报表</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; background: #f0f2f5; color: #262626; }
+    .header { background: linear-gradient(135deg, #1890ff 0%, #722ed1 100%); color: white; padding: 24px 32px; }
+    .header h1 { font-size: 24px; margin-bottom: 4px; }
+    .header .subtitle { opacity: 0.85; font-size: 14px; }
+    .container { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
+    .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .card h2 { font-size: 18px; margin-bottom: 16px; color: #1890ff; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; margin-bottom: 4px; font-size: 13px; color: #595959; }
+    .form-group input, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; }
+    .btn { padding: 8px 20px; background: #1890ff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    .btn:hover { background: #40a9ff; }
+    .btn-secondary { background: #f0f0f0; color: #262626; }
+    .btn-secondary:hover { background: #e0e0e0; }
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+    .metric { background: white; padding: 16px; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .metric .value { font-size: 32px; font-weight: 600; color: #1890ff; }
+    .metric .label { font-size: 12px; color: #8c8c8c; margin-top: 4px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .ability-radar { width: 100%; height: 300px; }
+    .api-endpoints { background: #fafafa; padding: 12px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+    .api-endpoints code { display: block; padding: 4px 0; color: #262626; }
+    .api-endpoints .method-GET { color: #52c41a; font-weight: 600; }
+    .loading { text-align: center; padding: 24px; color: #8c8c8c; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📊 DDW 学习/培训报表</h1>
+    <div class="subtitle">订阅 training.* 事件 · 实时更新学习/培训数据 · PDF 导出</div>
+  </div>
+
+  <div class="container">
+    <!-- 顶部指标 -->
+    <div class="metrics">
+      <div class="metric">
+        <div class="value" id="m_sessions">--</div>
+        <div class="label">本月培训会话</div>
+      </div>
+      <div class="metric">
+        <div class="value" id="m_hours">--</div>
+        <div class="label">累计学习时长（小时）</div>
+      </div>
+      <div class="metric">
+        <div class="value" id="m_score">--</div>
+        <div class="label">平均分</div>
+      </div>
+      <div class="metric">
+        <div class="value" id="m_grade">--</div>
+        <div class="label">整体评级</div>
+      </div>
+    </div>
+
+    <!-- 查询表单 -->
+    <div class="card">
+      <h2>🔍 用户学习报告</h2>
+      <div class="form-group">
+        <label>用户 ID</label>
+        <input type="number" id="user_id" value="1" placeholder="输入用户 ID">
+      </div>
+      <div class="form-group">
+        <label>周期</label>
+        <select id="period">
+          <option value="daily">日报</option>
+          <option value="weekly">周报</option>
+          <option value="monthly" selected>月报</option>
+          <option value="yearly">年报</option>
+        </select>
+      </div>
+      <button class="btn" onclick="loadReport()">查询报告</button>
+      <button class="btn btn-secondary" onclick="exportPDF()">导出 PDF</button>
+    </div>
+
+    <!-- 能力图谱 + 趋势 -->
+    <div class="grid-2">
+      <div class="card">
+        <h2>📈 能力图谱（4 维度）</h2>
+        <canvas id="radar" class="ability-radar"></canvas>
+        <div id="radar_legend" style="font-size: 12px; color: #595959; margin-top: 8px;"></div>
+      </div>
+      <div class="card">
+        <h2>📉 成绩趋势</h2>
+        <canvas id="trend" style="width:100%; height:300px;"></canvas>
+      </div>
+    </div>
+
+    <!-- API 端点 -->
+    <div class="card">
+      <h2>🔌 API 端点</h2>
+      <div class="api-endpoints">
+        <code><span class="method-GET">GET</span>  /api/v1/plugins/ddw-report/user/{user_id}            用户学习汇总</code>
+        <code><span class="method-GET">GET</span>  /api/v1/plugins/ddw-report/user/{user_id}/pdf       导出 PDF 报告</code>
+        <code><span class="method-GET">GET</span>  /api/v1/plugins/ddw-report/class/overview           班级/全员概览</code>
+        <code><span class="method-GET">GET</span>  /api/v1/plugins/ddw-report/trends/{user_id}         成绩趋势</code>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = '/api/v1/plugins/ddw-report';
+
+    async function loadReport() {
+      const userId = document.getElementById('user_id').value;
+      const period = document.getElementById('period').value;
+
+      // 简化：mock 数据（实际应 fetch API）
+      const data = mockData(userId, period);
+
+      document.getElementById('m_sessions').textContent = data.sessions.sessions_total;
+      document.getElementById('m_hours').textContent = data.sessions.duration_hours;
+      document.getElementById('m_score').textContent = Math.round(data.assessments.avg_overall_score);
+      document.getElementById('m_grade').textContent = data.assessments.assessments_total > 0 ? computeGrade(data.assessments.avg_overall_score) : '--';
+
+      drawRadar(data.ability_radar);
+      drawTrend();
+    }
+
+    function exportPDF() {
+      const userId = document.getElementById('user_id').value;
+      const period = document.getElementById('period').value;
+      window.open(`${API}/user/${userId}/pdf?period=${period}`, '_blank');
+    }
+
+    function computeGrade(score) {
+      if (score >= 85) return 'A';
+      if (score >= 70) return 'B';
+      if (score >= 55) return 'C';
+      return 'D';
+    }
+
+    function mockData(userId, period) {
+      return {
+        sessions: { sessions_total: 12, duration_minutes: 540, duration_hours: 9.0 },
+        assessments: { assessments_total: 8, avg_overall_score: 78.5 },
+        ability_radar: { conceptual_clarity: 82, reasoning_depth: 75, engagement_quality: 88, pedagogical_alignment: 80 },
+      };
+    }
+
+    function drawRadar(dims) {
+      const canvas = document.getElementById('radar');
+      const ctx = canvas.getContext('2d');
+      canvas.width = canvas.offsetWidth;
+      canvas.height = 300;
+      const cx = canvas.width / 2, cy = canvas.height / 2;
+      const r = Math.min(cx, cy) - 30;
+      const labels = Object.keys(dims);
+      const n = labels.length;
+      const angle = (i) => (Math.PI * 2 * i) / n - Math.PI / 2;
+
+      // 背景网格
+      ctx.strokeStyle = '#e0e0e0';
+      for (let level = 1; level <= 4; level++) {
+        ctx.beginPath();
+        for (let i = 0; i < n; i++) {
+          const x = cx + Math.cos(angle(i)) * r * (level / 4);
+          const y = cy + Math.sin(angle(i)) * r * (level / 4);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+      // 数据多边形
+      ctx.fillStyle = 'rgba(24, 144, 255, 0.2)';
+      ctx.strokeStyle = '#1890ff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) {
+        const v = dims[labels[i]] / 100;
+        const x = cx + Math.cos(angle(i)) * r * v;
+        const y = cy + Math.sin(angle(i)) * r * v;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // 标签
+      ctx.fillStyle = '#262626';
+      ctx.font = '12px sans-serif';
+      for (let i = 0; i < n; i++) {
+        const x = cx + Math.cos(angle(i)) * (r + 18);
+        const y = cy + Math.sin(angle(i)) * (r + 18);
+        ctx.textAlign = 'center';
+        ctx.fillText(labels[i] + ' (' + dims[labels[i]] + ')', x, y);
+      }
+    }
+
+    function drawTrend() {
+      const canvas = document.getElementById('trend');
+      const ctx = canvas.getContext('2d');
+      canvas.width = canvas.offsetWidth;
+      canvas.height = 300;
+      ctx.strokeStyle = '#1890ff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const points = [60, 65, 70, 75, 72, 80, 85];
+      for (let i = 0; i < points.length; i++) {
+        const x = (canvas.width / (points.length - 1)) * i;
+        const y = canvas.height - (points[i] / 100) * canvas.height;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // 初始加载
+    loadReport();
+  </script>
+</body>
+</html>

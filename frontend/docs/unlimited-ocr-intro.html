@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unlimited-OCR 本地文档解析引擎 · 能力介绍</title>
+<style>
+:root{
+  --bg-base:#050816;--bg-page:#0a0f24;--bg-card:#111a3a;--bg-elevated:#16204a;
+  --text-primary:#e8ecf8;--text-secondary:#a8b3d0;--text-muted:#6b7899;
+  --brand:#00e5ff;--brand-hover:#33ecff;--brand-glow:rgba(0,229,255,.25);
+  --accent-green:#00ff9d;--accent-blue:#4f9eff;--accent-purple:#b388ff;--accent-orange:#ffab40;
+  --border:#233052;--border-hover:#00e5ff;
+  --success:#00ff9d;--warning:#ffab40;--danger:#ff6b6b;--info:#4f9eff;
+  --shadow:0 4px 24px rgba(0,0,0,.35);--shadow-lg:0 8px 40px rgba(0,0,0,.5);
+  --shadow-glow:0 0 24px var(--brand-glow);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg-base);color:var(--text-primary);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+/* 顶部导航 */
+.nav{position:sticky;top:0;z-index:50;background:rgba(5,8,22,.85);backdrop-filter:blur(18px) saturate(160%);border-bottom:1px solid var(--border)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+.nav-brand{font-weight:700;font-size:17px;color:var(--text-primary)}
+.nav-brand b{color:var(--brand)}
+.nav-links a{color:var(--text-secondary);text-decoration:none;margin-left:26px;font-size:14px}
+.nav-links a:hover{color:var(--brand)}
+/* Hero */
+.hero{padding:80px 0 56px;text-align:center;background:radial-gradient(ellipse 70% 60% at 50% 0%,rgba(0,229,255,.10),transparent)}
+.hero .tag{display:inline-block;padding:5px 16px;border:1px solid var(--border-hover);border-radius:999px;color:var(--brand);font-size:13px;letter-spacing:1px;margin-bottom:22px;background:rgba(0,229,255,.06)}
+.hero h1{font-size:40px;line-height:1.3;font-weight:800;margin-bottom:18px}
+.hero h1 span{color:var(--brand)}
+.hero p.sub{color:var(--text-secondary);font-size:18px;max-width:760px;margin:0 auto 34px}
+.btn{display:inline-block;padding:13px 34px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;transition:all .3s}
+.btn-primary{background:linear-gradient(135deg,var(--brand),var(--accent-blue));color:#03121a}
+.btn-primary:hover{box-shadow:0 6px 24px var(--brand-glow);transform:translateY(-2px)}
+.btn-ghost{border:1px solid var(--border);color:var(--text-secondary);margin-left:14px}
+.btn-ghost:hover{border-color:var(--border-hover);color:var(--brand)}
+/* 区块 */
+section{padding:64px 0}
+.section-title{font-size:28px;font-weight:800;text-align:center;margin-bottom:12px}
+.section-sub{text-align:center;color:var(--text-muted);font-size:15px;margin-bottom:44px}
+/* 痛点 */
+.pain{background:var(--bg-page)}
+.pain-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.pain-item{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;text-align:center;transition:all .3s}
+.pain-item:hover{border-color:var(--border-hover);box-shadow:var(--shadow-glow)}
+.pain-item .num{font-size:34px;font-weight:800;color:var(--brand);margin-bottom:8px}
+.pain-item .label{color:var(--text-secondary);font-size:14px}
+/* 能力卡片 */
+.cap-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.cap-item{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:26px;transition:all .3s}
+.cap-item:hover{border-color:var(--border-hover);transform:translateY(-3px)}
+.cap-item .icon{font-size:28px;margin-bottom:12px}
+.cap-item h3{font-size:17px;margin-bottom:10px;color:var(--text-primary)}
+.cap-item p{color:var(--text-secondary);font-size:14px}
+.cap-item .metric{color:var(--accent-green);font-weight:700;font-size:15px;margin-top:10px;display:block}
+/* 榜单 */
+.bench{background:var(--bg-page)}
+.bench-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:32px;margin-bottom:20px}
+.bench-card h3{color:var(--brand);font-size:18px;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--border)}
+th{color:var(--text-muted);font-weight:600;font-size:13px}
+td.hl{color:var(--accent-green);font-weight:700}
+/* 价值 */
+.value-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.value-item{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:26px}
+.value-item h3{font-size:16px;margin-bottom:10px;color:var(--text-primary)}
+.value-item p{color:var(--text-secondary);font-size:14px}
+/* GPU 需求 */
+.gpu{background:var(--bg-page)}
+.gpu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.gpu-item{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:26px;text-align:center}
+.gpu-item.best{border-color:var(--border-hover);box-shadow:var(--shadow-glow)}
+.gpu-item .tier{font-size:13px;color:var(--text-muted);letter-spacing:1px;margin-bottom:8px}
+.gpu-item .mem{font-size:30px;font-weight:800;color:var(--brand)}
+.gpu-item .desc{color:var(--text-secondary);font-size:13px;margin-top:10px;line-height:1.6}
+/* 场景 */
+.scene-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.scene-item{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center}
+.scene-item .icon{font-size:26px;margin-bottom:10px}
+.scene-item h4{font-size:15px;margin-bottom:6px}
+.scene-item p{color:var(--text-muted);font-size:13px}
+/* 对比 */
+.cmp{background:var(--bg-page)}
+.cmp-item{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:26px;margin-bottom:14px}
+.cmp-item h4{font-size:15px;margin-bottom:8px}
+.cmp-item p{color:var(--text-secondary);font-size:14px}
+.cmp-item .bad{color:var(--danger)}
+.cmp-item .good{color:var(--accent-green)}
+/* 页脚 */
+footer{border-top:1px solid var(--border);padding:34px 0;text-align:center;color:var(--text-muted);font-size:13px}
+@media(max-width:900px){
+  .pain-grid,.cap-grid,.value-grid,.gpu-grid,.scene-grid{grid-template-columns:1fr 1fr}
+  .hero h1{font-size:30px}
+}
+@media(max-width:560px){
+  .pain-grid,.cap-grid,.value-grid,.gpu-grid,.scene-grid{grid-template-columns:1fr}
+  .nav-links a{margin-left:14px;font-size:13px}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav"><div class="wrap">
+  <div class="nav-brand">锐果互动 · <b>文档智能</b></div>
+  <div class="nav-links">
+    <a href="unlimited-ocr-intro.html">能力介绍</a>
+    <a href="unlimited-ocr-demo-sop.html">现场演示 SOP</a>
+    <a href="unlimited-ocr-deploy.html">快速部署指南</a>
+  </div>
+</div></nav>
+
+<div class="hero"><div class="wrap">
+  <span class="tag">本地私有化部署 · 开源 · MIT 商用协议</span>
+  <h1>让企业沉睡的 <span>PDF 数据</span> 真正活起来</h1>
+  <p class="sub">Unlimited-OCR 端到端文档解析引擎：一次推理完整解析数十页扫描件、合同、报表与书籍，将非结构化文档直接转化为结构化数据，为企业 RAG 知识库注入高质量内容。</p>
+  <a class="btn btn-primary" href="unlimited-ocr-demo-sop.html">预约现场演示流程</a>
+  <a class="btn btn-ghost" href="unlimited-ocr-deploy.html">查看部署要求</a>
+</div></div>
+
+<section class="pain"><div class="wrap">
+  <h2 class="section-title">企业文档的现状：数据在，价值不在</h2>
+  <p class="section-sub">绝大多数企业的核心知识沉淀在无法被检索、无法被系统读取的文档里</p>
+  <div class="pain-grid">
+    <div class="pain-item"><div class="num">80%</div><div class="label">企业数据以非结构化文档形式存在</div></div>
+    <div class="pain-item"><div class="num">数万份</div><div class="label">合同、票据、报表、图纸的扫描件堆积在文件服务器</div></div>
+    <div class="pain-item"><div class="num">≈0</div><div class="label">这些文档无法被现有知识库检索与问答</div></div>
+    <div class="pain-item"><div class="num">逐页拼接</div><div class="label">传统 OCR 拆页识别，跨页表格断裂、内容错位</div></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="section-title">一次推理，解析整本文档</h2>
+  <p class="section-sub">无需分页、无需拼接——这是与所有传统 OCR 方案的本质区别</p>
+  <div class="cap-grid">
+    <div class="cap-item"><div class="icon">📄</div><h3>长文档一次解析</h3><p>单次推理完整转写 40 页以上的合同、书籍与扫描件，跨页表格不断裂、章节不串位。</p><span class="metric">已实测 40+ 页稳定输出</span></div>
+    <div class="cap-item"><div class="icon">∑</div><h3>公式与表格还原</h3><p>复杂数理公式一键导出 LaTeX，表格结构高保真还原，适合科研、技术资料与财务报表。</p><span class="metric">表格还原 TEDS 94.07</span></div>
+    <div class="cap-item"><div class="icon">🔤</div><h3>版式与阅读顺序</h3><p>自动识别标题层级、栏位、脚注与阅读顺序，输出与原文一致的 Markdown 结构化文本。</p><span class="metric">阅读顺序还原率领先</span></div>
+    <div class="cap-item"><div class="icon">🌐</div><h3>多语言混合文档</h3><p>中英混排、印刷体与扫描件均支持，适合外企往来文件、双语合同与国际化资料。</p><span class="metric">中英混排原生支持</span></div>
+    <div class="cap-item"><div class="icon">🚀</div><h3>越长的文档越快</h3><p>专利 R-SWA 注意力机制使解码速度恒定——文档越长，相对传统方案的性能优势越大。</p><span class="metric">同规模对比提速 35%</span></div>
+    <div class="cap-item"><div class="icon">🔒</div><h3>本地私有化运行</h3><p>模型部署在企业内部服务器，文档数据不出企业网络，满足数据安全与合规要求。</p><span class="metric">数据不出域 · 可离线运行</span></div>
+  </div>
+</div></section>
+
+<section class="bench"><div class="wrap">
+  <h2 class="section-title">权威评测：行业第一的解析能力</h2>
+  <p class="section-sub">OmniDocBench 是全球权威的文档解析基准测试（涵盖文本、公式、表格、阅读顺序四大维度）</p>
+  <div class="bench-card">
+    <h3>OmniDocBench v1.5 · 端到端文档解析模型总榜</h3>
+    <table>
+      <tr><th>模型</th><th>参数规模</th><th>综合得分</th></tr>
+      <tr><td class="hl">Unlimited-OCR（本方案）</td><td>30 亿（激活 5 亿）</td><td class="hl">93.23（第一）</td></tr>
+      <tr><td>Qwen3-VL</td><td>2350 亿</td><td>89.15</td></tr>
+      <tr><td>Gemini-2.5 Pro（闭源）</td><td>—</td><td>88.03</td></tr>
+      <tr><td>Qwen2.5-VL</td><td>720 亿</td><td>87.02</td></tr>
+      <tr><td>DeepSeek-OCR（基线）</td><td>30 亿</td><td>87.01</td></tr>
+    </table>
+    <p style="color:var(--text-muted);font-size:13px;margin-top:12px">* 数据来源：OmniDocBench 官方榜单（2026-08）。以 30 亿小参数超越 2350 亿大模型的解析精度——架构创新而非参数堆砌。</p>
+  </div>
+  <div class="bench-card">
+    <h3>OmniDocBench v1.6 · 单页解析总分</h3>
+    <table>
+      <tr><th>排名</th><th>模型</th><th>得分</th></tr>
+      <tr><td class="hl">1</td><td class="hl">Unlimited-OCR</td><td class="hl">93.92</td></tr>
+      <tr><td>2</td><td>千帆 OCR</td><td>93.90</td></tr>
+      <tr><td>3</td><td>DeepSeek-OCR 2</td><td>90.25</td></tr>
+      <tr><td>4</td><td>混元 OCR</td><td>89.95</td></tr>
+    </table>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="section-title">对企业 RAG 的价值：知识库质量的源头保障</h2>
+  <p class="section-sub">RAG 系统的上限取决于入库内容的质量——解析精度决定了检索与问答的含金量</p>
+  <div class="value-grid">
+    <div class="value-item">
+      <h3>📈 检索命中率显著提升</h3>
+      <p>传统方式把扫描件"识别成错乱的文字"入库，检索时大量关键信息丢失；Unlimited-OCR 输出结构化 Markdown，章节、表格、数字完整保留，检索命中率与答案准确性同步提升。</p>
+    </div>
+    <div class="value-item">
+      <h3>🧩 跨页信息不丢失</h3>
+      <p>传统逐页 OCR 的拼接错误（表格断裂、脚注丢失、标题串页）在整篇解析方案中不存在——跨页表格被还原为一张完整表格，法律条款、财务报表连续完整。</p>
+    </div>
+    <div class="value-item">
+      <h3>⚙️ 自动化文档处理流水线</h3>
+      <p>扫描件 → 本地解析引擎 → 结构化数据 → 知识库，全程自动化。支持 API 对接现有系统，合同审查、票据核验、档案数字化均可批量处理。</p>
+    </div>
+    <div class="value-item">
+      <h3>💡 数据资产真正被利用</h3>
+      <p>当历史档案可以被检索、被问答、被统计，企业沉淀多年的数据资产开始产生业务价值——这是数字化转型中投入产出比最高的环节之一。</p>
+    </div>
+  </div>
+</div></section>
+
+<section class="gpu"><div class="wrap">
+  <h2 class="section-title">部署要求：一台 GPU 服务器即可</h2>
+  <p class="section-sub">模型权重仅 6.3GB，单台服务器独立承载，无需分布式集群</p>
+  <div class="gpu-grid">
+    <div class="gpu-item">
+      <div class="tier">最低配置</div>
+      <div class="mem">16 GB</div>
+      <div class="desc">NVIDIA RTX 4060 Ti / 4070 Ti Super 等<br>适用于演示验证与小批量单页解析</div>
+    </div>
+    <div class="gpu-item best">
+      <div class="tier" style="color:var(--accent-green)">★ 推荐配置</div>
+      <div class="mem">24 GB+</div>
+      <div class="desc">NVIDIA RTX 4090 / A10 / A100 等<br>生产级批量解析、多页文档、多并发，推荐企业采购</div>
+    </div>
+    <div class="gpu-item">
+      <div class="tier">高吞吐</div>
+      <div class="mem">48 GB+</div>
+      <div class="desc">A6000 / A100 40G / H100<br>日均处理万页级文档的大型场景</div>
+    </div>
+  </div>
+  <p style="text-align:center;color:var(--text-muted);font-size:14px;margin-top:26px">系统要求：Linux（Ubuntu 22.04+）/ NVIDIA 驱动 535+ / CUDA 12.1+ / 内存 32GB+ / 磁盘 20GB+</p>
+</div></section>
+
+<section class="bench"><div class="wrap">
+  <h2 class="section-title">典型应用场景</h2>
+  <p class="section-sub">凡是有非结构化文档的企业，都能从这里获得价值</p>
+  <div class="scene-grid">
+    <div class="scene-item"><div class="icon">📑</div><h4>合同与招投标</h4><p>整本文件 → 条款清单、金额、期限结构化提取</p></div>
+    <div class="scene-item"><div class="icon">🧾</div><h4>票据与单据</h4><p>批量扫描票据 → 可检索、可统计的结构化数据</p></div>
+    <div class="scene-item"><div class="icon">📊</div><h4>财务报表年报</h4><p>多页报表 → Markdown 表格 → 直接进入 BI 分析</p></div>
+    <div class="scene-item"><div class="icon">📐</div><h4>图纸与说明书</h4><p>扫描说明书 → 全文可检索，售后查询秒级响应</p></div>
+    <div class="scene-item"><div class="icon">📚</div><h4>图书与档案</h4><p>整本扫描书 → 电子化知识库，档案价值再激活</p></div>
+    <div class="scene-item"><div class="icon">🏭</div><h4>质检与合规</h4><p>质检报告、法规文件 → 合规审查智能辅助</p></div>
+    <div class="scene-item"><div class="icon">🏥</div><h4>医疗与教育</h4><p>病历、试卷、教材 → 结构化检索与再利用</p></div>
+    <div class="scene-item"><div class="icon">🗂️</div><h4>历史档案数字化</h4><p>海量存量扫描件 → 一次性批量电子化</p></div>
+  </div>
+</div></section>
+
+<section class="cmp"><div class="wrap">
+  <h2 class="section-title">与传统方案的本质区别</h2>
+  <p class="section-sub">"逐页识别再拼接"是工程妥协，"整篇理解"才是文档智能</p>
+  <div class="cmp-item">
+    <h4>传统 OCR 流水线（PaddleOCR 等）</h4>
+    <p><span class="bad">✗ 逐页拆解、逐页识别、人工拼接</span>　<span class="bad">✗ 跨页表格断裂、脚注丢失</span>　<span class="bad">✗ 无版面理解、无阅读顺序</span>　<span class="bad">✗ 公式、复杂版式识别率低</span></p>
+  </div>
+  <div class="cmp-item">
+    <h4>Unlimited-OCR（本方案）</h4>
+    <p><span class="good">✓ 整篇文档一次解析，跨页完整</span>　<span class="good">✓ 版面结构 + 阅读顺序还原</span>　<span class="good">✓ 公式 LaTeX 导出、表格高保真</span>　<span class="good">✓ 输出即 Markdown，直接入库</span>　<span class="good">✓ 本地部署，数据不出域</span></p>
+  </div>
+</div></section>
+
+<footer>
+  <div class="wrap">
+    <p>锐果互动 · 企业文档智能解决方案 · 本页面为内部演示物料，仅供客户现场沟通使用</p>
+    <p style="margin-top:8px">武汉锐果互动信息技术有限公司</p>
+  </div>
+</footer>
+
+</body>
+</html>

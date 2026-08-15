@@ -1,0 +1,293 @@
+"""DDW AI Hub 核心配置（v5.4）。
+
+加载 ``config/deployment.yaml``，合并环境变量覆盖。
+与 v0.1 的 ``deployment.yaml`` 字段保持兼容（mode / server / databases / llm_gateway / auth / events）。
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+import yaml
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# 默认配置（如果 deployment.yaml 缺失）
+# ---------------------------------------------------------------------------
+
+DEFAULTS: Dict[str, Any] = {
+    "mode": "standalone",
+    "server": {
+        "host": "0.0.0.0",
+        "port": 8500,
+        "workers": 1,
+        "debug": True,
+        "secret_key": "dev-secret-change-me",
+    },
+    "databases": {
+        "main": {"engine": "sqlite", "path": "./data/ddw_main.db", "pool_size": 5, "echo": False},
+    },
+    "llm_gateway": {
+        "default_provider": "minimax",
+        "providers": {
+            "minimax": {
+                "base_url": "https://api.minimaxi.com/v1",
+                "api_key": "${MINIMAX_API_KEY}",
+                "default_model": "MiniMax-M3",
+                "timeout": 30,
+            },
+        },
+    },
+    "auth": {
+        "jwt": {
+            "algorithm": "HS256",
+            "secret": "${DDW_JWT_SECRET}",
+            "expires_minutes": 720,
+            "issuer": "ddw-ai-hub",
+        },
+        "password_max_age_days": 90,
+    },
+    "events": {"backend": "inprocess"},
+    "billing": {"enabled": False},
+    "plugins": {"root_dir": "./plugins", "sandbox_timeout": 30},
+    "logging": {"level": "INFO", "path": "./data/logs"},
+    "doctor": {"canary": 1},
+    # 泛微OA统一认证中心 SSO 配置
+    # 在 deployment.yaml 中覆盖此配置以启用
+    "weaver_sso": {
+        "enabled": False,
+        "active_protocol": "cas",  # cas 或 oauth2
+        "auto_register": True,     # OA用户首次SSO登录自动创建DDW账号
+        "default_tenant_id": 1,    # SSO自动注册用户的默认租户ID
+        "embed_shared_secret": "",  # OA嵌入iframe模式的共享密钥
+        "cas": {
+            "enabled": False,
+            "oa_url": "",          # 泛微OA访问地址，如 http://192.168.1.100:8080
+            "appid": "",           # OA「认证应用管理」中注册的应用标识
+            "callback_url": "",    # DDW的CAS回调地址，如 https://ddw.example.com/api/v1/sso/cas/callback
+        },
+        "oauth2": {
+            "enabled": False,
+            "oa_url": "",
+            "client_id": "",       # OA「认证应用管理」中的应用标识
+            "client_secret": "",   # OA「认证应用管理」中的应用密钥
+            "callback_url": "",    # DDW的OAuth2回调地址
+        },
+    },
+    "saas": {
+        "plans": {
+            "free": {"name": "免费版", "price_cny": 0, "user_limit": 5, "features": ["基础 LLM 对话", "社区支持"]},
+            "standard": {"name": "标准版", "price_cny": 4999, "user_limit": 50, "features": ["全部插件", "邮件支持"]},
+            "enterprise": {"name": "企业版", "price_cny": 19999, "user_limit": 200, "features": ["FDE 现场", "7×12 工单"]},
+        }
+    },
+}
+
+
+def _resolve_env(value: Any) -> Any:
+    """递归替换 ``${VAR}`` 占位符为环境变量。"""
+    if isinstance(value, str) and value.startswith("${") and value.endswith("}"):
+        var = value[2:-1]
+        return os.environ.get(var, value)
+    if isinstance(value, dict):
+        return {k: _resolve_env(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_resolve_env(v) for v in value]
+    return value
+
+
+@dataclass
+class Settings:
+    """全局配置（注入到 FastAPI app.state.settings）。"""
+
+    raw: Dict[str, Any] = field(default_factory=dict)
+    deployment_yaml_path: Optional[Path] = None
+
+    @classmethod
+    def load(cls, deployment_yaml: Optional[Path] = None) -> "Settings":
+        merged: Dict[str, Any] = dict(DEFAULTS)
+        if deployment_yaml is None:
+            candidate = Path(__file__).resolve().parent.parent / "config" / "deployment.yaml"
+            if candidate.exists():
+                deployment_yaml = candidate
+        if deployment_yaml and Path(deployment_yaml).exists():
+            try:
+                with open(deployment_yaml, "r", encoding="utf-8") as f:
+                    on_disk = yaml.safe_load(f) or {}
+                _deep_merge(merged, on_disk)
+                logger.info("loaded deployment.yaml from %s", deployment_yaml)
+            except Exception as e:  # noqa: BLE001
+                logger.warning("failed to load deployment.yaml: %s, using defaults", e)
+        merged = _resolve_env(merged)
+        return cls(raw=merged, deployment_yaml_path=deployment_yaml)
+
+    # ---------- 便捷属性 ----------
+    @property
+    def mode(self) -> str:
+        return self.raw.get("mode", "standalone")
+
+    @property
+    def env(self) -> str:
+        """部署环境（DDW_ENV）：production=生产（license fail-closed 门控），
+        其余按开发/演示处理。"""
+        return os.environ.get("DDW_ENV", "development")
+
+    @property
+    def license_broker(self) -> Dict[str, Any]:
+        """跨机授权广播 Broker 配置（P4）：enabled / url / token / ttl_seconds。
+
+        权威节点配置 broker 端点；业务节点配置 url + token 拉取权威 state。
+        token 也可由环境变量 ``DDW_LICENSE_BROKER_TOKEN`` 注入（优先级更高）。
+        """
+        return self.raw.get("license", {}).get("broker", {})
+
+    @property
+    def server(self) -> Dict[str, Any]:
+        return self.raw.get("server", {})
+
+    @property
+    def databases(self) -> Dict[str, Any]:
+        return self.raw.get("databases", {})
+
+    @property
+    def main_db_url(self) -> str:
+        cfg = self.databases.get("main", {})
+        if cfg.get("engine") == "sqlite":
+            path = cfg.get("path", "./data/ddw_main.db")
+            return f"sqlite+aiosqlite:///{path}"
+        # postgresql
+        return cfg.get("url", "postgresql+asyncpg://localhost/ddw")
+
+    @property
+    def llm(self) -> Dict[str, Any]:
+        return self.raw.get("llm_gateway", {})
+
+    @property
+    def jwt(self) -> Dict[str, Any]:
+        return self.raw.get("auth", {}).get("jwt", {})
+
+    @property
+    def jwt_secret(self) -> str:
+        sec = self.jwt.get("secret") or self.server.get("secret_key") or "ddw-ai-hub-default-jwt-secret-2026-change-in-production-32bytes"
+        if isinstance(sec, str) and sec.startswith("${"):
+            return os.environ.get(sec[2:-1], "ddw-ai-hub-default-jwt-secret-2026-change-in-production-32bytes")
+        return str(sec)
+
+    @property
+    def jwt_algorithm(self) -> str:
+        return self.jwt.get("algorithm", "HS256")
+
+    @property
+    def jwt_expires_minutes(self) -> int:
+        return int(self.jwt.get("expires_minutes", 720))
+
+    @property
+    def saas_plans(self) -> Dict[str, Any]:
+        return self.raw.get("saas", {}).get("plans", {})
+
+    @property
+    def password_max_age_days(self) -> int:
+        """密码有效期天数（环境变量 DDW_PASSWORD_MAX_AGE_DAYS 可覆盖）。"""
+        env_val = os.environ.get("DDW_PASSWORD_MAX_AGE_DAYS")
+        if env_val is not None:
+            try:
+                return int(env_val)
+            except ValueError:
+                pass
+        return int(self.raw.get("auth", {}).get("password_max_age_days", 90))
+
+    @property
+    def plugin_root(self) -> Path:
+        p = self.raw.get("plugins", {}).get("root_dir", "./plugins")
+        return Path(p).resolve()
+
+
+def _deep_merge(a: Dict[str, Any], b: Dict[str, Any]) -> Dict[str, Any]:
+    """in-place 深合并 b → a。"""
+    for k, v in b.items():
+        if k in a and isinstance(a[k], dict) and isinstance(v, dict):
+            _deep_merge(a[k], v)
+        else:
+            a[k] = v
+    return a
+
+
+_settings: Optional[Settings] = None
+
+
+def get_settings() -> Settings:
+    """全局单例 Settings。"""
+    global _settings
+    if _settings is None:
+        _settings = Settings.load()
+    return _settings
+
+
+def reload_settings() -> Settings:
+    """重载（测试用）。"""
+    global _settings
+    _settings = Settings.load()
+    return _settings
+
+
+def get_deployment() -> "DeploymentProxy":
+    """返回一个带 llm 属性的对象，供 llm_gateway 模块使用。"""
+    return DeploymentProxy(get_settings())
+
+
+class LLMRouteRule:
+    """LLM 路由规则（llm_gateway 依赖）。"""
+
+    def __init__(self, name: str = "", provider: str = "", model: str = "", cost_per_call: float = 0.0, **_: Any) -> None:
+        self.name = name
+        self.provider = provider
+        self.model = model
+        self.cost_per_call = cost_per_call
+
+
+class _LLMProxy:
+    """让 llm 配置 dict 可通过属性访问（routing_rules / default_provider / fallback_chain）。"""
+
+    def __init__(self, raw: Dict[str, Any]) -> None:
+        self._raw = raw
+
+    @property
+    def default_provider(self) -> str:
+        return self._raw.get("default_provider", "minimax")
+
+    @property
+    def fallback_chain(self) -> list:
+        return self._raw.get("fallback_chain", ["minimax", "deepseek", "ollama"])
+
+    @property
+    def routing_rules(self) -> list:
+        rules = self._raw.get("routing_rules", [])
+        return [LLMRouteRule(**r) if isinstance(r, dict) else r for r in rules]
+
+    @property
+    def providers(self) -> Dict[str, Any]:
+        return self._raw.get("providers", {})
+
+
+class DeploymentProxy:
+    """包裹 Settings，让 llm 属性返回可属性访问的代理对象（供 llm_gateway 使用）。"""
+
+    def __init__(self, settings: "Settings") -> None:
+        self._settings = settings
+        self._llm = _LLMProxy(settings.raw.get("llm_gateway", {}))
+
+    @property
+    def llm(self) -> _LLMProxy:
+        return self._llm
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._settings, name)
+
+
+__all__ = ["Settings", "get_settings", "reload_settings", "get_deployment", "LLMRouteRule"]

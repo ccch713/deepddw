@@ -1,0 +1,45 @@
+name: ddw-docs-portal
+license: free
+tier: core
+version: 0.1.0
+display_name: 产品文档栏目
+description: 企业级记忆（ENTERPRISE）的前端显现层 —— 正式文档资产（白皮书/手册/方案/规章制度）的统一存放、展示、检索、版本管理与发布。目录树 + 可见性（public/tenant/draft）+ 版本管理 + publish 联动 enterprise 记忆 + 检索聚合 API + 离线部署包（export/import）。
+engine: plugin_base
+isolation: inline
+
+permissions:
+  - database.read
+  - database.write
+  - api:ddw-llm-gateway:read
+
+dependencies:
+  plugins:
+    - ddw-doc-assistant: ">=1.0.0"
+    - ddw-memory: ">=2.0.0"
+    - ddw-llm-gateway: ">=1.0.0"
+    - ddw-online-cs: ">=1.0.0"
+  python:
+    - fastapi>=0.110
+    - sqlalchemy>=2.0
+    - pydantic>=2.0
+
+events:
+  produces:
+    - "docs.portal.published"
+    - "docs.portal.archived"
+    - "docs.portal.searched"
+  consumes: []
+
+config_schema:
+  type: object
+  properties:
+    memory_upsert_enabled:
+      type: boolean
+      default: true
+      description: publish 时是否写 enterprise 记忆（失败不阻塞发布）
+    export_dir:
+      type: string
+      default: "data/docs_portal_exports"
+      description: export 快照输出目录
+
+router_prefix: /api/v1/plugins/ddw-docs-portal

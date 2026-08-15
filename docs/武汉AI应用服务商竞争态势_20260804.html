@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>武汉 AI 应用服务商竞争态势 | DDW AI Hub</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0b1020;
+  --bg2:#121933;
+  --bg3:#1b2348;
+  --line:#2a345d;
+  --text:#e6e9f5;
+  --text2:#9aa3c7;
+  --muted:#6b7396;
+  --primary:#6aa1ff;
+  --primary2:#4b7adb;
+  --accent:#7ee8c2;
+  --warn:#ffb454;
+  --danger:#ff6b6b;
+  --gold:#ffd166;
+  --compete:#ff6b6b;
+  --compete2:#ff9f43;
+  --complement:#7ee8c2;
+  --weak:#6b7396;
+  --channel:#6aa1ff;
+  --central:#ffd166;
+  --shadow:0 8px 28px rgba(0,0,0,.35);
+  --radius:14px;
+  --space:1rem;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.55;
+  min-height:100vh;
+  padding:2rem 1.5rem 4rem;
+}
+.wrap{max-width:1400px;margin:0 auto}
+header{
+  display:flex;justify-content:space-between;align-items:flex-end;
+  padding-bottom:1.4rem;border-bottom:1px solid var(--line);margin-bottom:1.6rem;
+  gap:1rem;flex-wrap:wrap;
+}
+h1{font-size:1.8rem;font-weight:700;letter-spacing:.5px}
+h1 span{color:var(--primary)}
+header .meta{color:var(--muted);font-size:.85rem;text-align:right}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.9rem;margin-bottom:1.6rem}
+.kpi{
+  background:linear-gradient(180deg,var(--bg2),var(--bg3));
+  border:1px solid var(--line);border-radius:var(--radius);padding:1.1rem 1.2rem;
+  box-shadow:var(--shadow);
+}
+.kpi .label{color:var(--muted);font-size:.78rem;letter-spacing:.5px;text-transform:uppercase}
+.kpi .val{font-size:1.9rem;font-weight:700;margin-top:.3rem}
+.kpi .delta{font-size:.8rem;color:var(--accent);margin-top:.15rem}
+.kpi.warn .val{color:var(--warn)}
+.kpi.danger .val{color:var(--danger)}
+.kpi.gold .val{color:var(--gold)}
+.kpi.accent .val{color:var(--accent)}
+.section{margin-bottom:1.6rem}
+.section h2{
+  font-size:1.05rem;color:var(--text);margin-bottom:.7rem;
+  padding-left:.55rem;border-left:3px solid var(--primary);
+}
+.grid{display:grid;gap:1rem}
+.g2{grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.card{
+  background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);
+  padding:1.1rem 1.2rem;box-shadow:var(--shadow);
+}
+.card h3{font-size:.92rem;color:var(--text);margin-bottom:.6rem;display:flex;justify-content:space-between;align-items:center}
+.card h3 small{color:var(--muted);font-weight:400;font-size:.72rem}
+.chart{position:relative;height:300px}
+.chart.tall{height:340px}
+.chart.short{height:240px}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th,td{padding:.5rem .6rem;text-align:left;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:500;font-size:.72rem;text-transform:uppercase;letter-spacing:.3px;background:var(--bg3)}
+tbody tr:hover{background:var(--bg3)}
+.tag{display:inline-block;padding:.12rem .45rem;border-radius:6px;font-size:.7rem;font-weight:500;letter-spacing:.2px}
+.tag.compete{background:rgba(255,107,107,.18);color:var(--compete)}
+.tag.compete2{background:rgba(255,159,67,.18);color:var(--compete2)}
+.tag.complement{background:rgba(126,232,194,.18);color:var(--complement)}
+.tag.channel{background:rgba(106,161,255,.18);color:var(--channel)}
+.tag.central{background:rgba(255,209,102,.18);color:var(--central)}
+.tag.weak{background:rgba(107,115,150,.22);color:var(--weak)}
+.legend{display:flex;flex-wrap:wrap;gap:.8rem;font-size:.78rem;color:var(--text2);margin-top:.5rem}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:.3rem;vertical-align:middle}
+.toolbar{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.8rem}
+input,select{
+  background:var(--bg3);color:var(--text);border:1px solid var(--line);
+  border-radius:8px;padding:.4rem .7rem;font-size:.82rem;font-family:inherit;
+}
+input:focus,select:focus{outline:none;border-color:var(--primary)}
+.note{color:var(--text2);font-size:.82rem;background:var(--bg3);padding:.7rem .9rem;border-radius:8px;border-left:3px solid var(--warn)}
+.note strong{color:var(--warn)}
+.opp{margin-top:1rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:.7rem}
+.opp-item{
+  padding:.7rem .9rem;background:var(--bg3);border-radius:10px;border:1px solid var(--line);
+}
+.opp-item .o-title{font-weight:600;font-size:.85rem;margin-bottom:.2rem}
+.opp-item .o-title span{color:var(--accent);margin-right:.3rem}
+.opp-item p{color:var(--text2);font-size:.76rem}
+.footer{text-align:center;color:var(--muted);font-size:.78rem;margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid var(--line)}
+@media (max-width:720px){
+  body{padding:1rem .8rem 3rem}
+  h1{font-size:1.4rem}
+  .kpi .val{font-size:1.5rem}
+  .chart{height:240px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>武汉 <span>AI 应用服务商</span> 竞争态势</h1>
+    <div style="color:var(--text2);font-size:.88rem;margin-top:.3rem">第二批 108 家 vs DDW AI Hub · 数据来源：武汉市经信局 2026.08 公示</div>
+  </div>
+  <div class="meta">
+    <div>报告日期 2026-08-04</div>
+    <div>DDW AI Hub · 锐果互动</div>
+  </div>
+</header>
+
+<!-- KPI -->
+<section class="kpis">
+  <div class="kpi"><div class="label">认定总家数</div><div class="val">108</div><div class="delta">第二批</div></div>
+  <div class="kpi danger"><div class="label">DDW 重度对手</div><div class="val">15</div><div class="delta">占比 13.9%</div></div>
+  <div class="kpi gold"><div class="label">央企/省属国资</div><div class="val">11</div><div class="delta">占比 10.2%</div></div>
+  <div class="kpi accent"><div class="label">垂直行业 AI（互补）</div><div class="val">24</div><div class="delta">占比 22.2%</div></div>
+  <div class="kpi warn"><div class="label">通用名弱对手</div><div class="val">35</div><div class="delta">占比 32.4% — DDW 真正客户</div></div>
+</section>
+
+<!-- 4 主图 -->
+<div class="grid g2 section">
+  <div class="card">
+    <h3>竞合四象限分布 <small>家数 / 占比</small></h3>
+    <canvas id="chart-bucket" class="chart"></canvas>
+  </div>
+  <div class="card">
+    <h3>按所属区分布 <small>光谷占 33%</small></h3>
+    <canvas id="chart-region" class="chart"></canvas>
+  </div>
+</div>
+
+<div class="grid g2 section">
+  <div class="card">
+    <h3>DDW 业务覆盖矩阵 <small>108 家业务域 × DDW 7 层架构</small></h3>
+    <canvas id="chart-ddw" class="chart tall"></canvas>
+  </div>
+  <div class="card">
+    <h3>DDW 关键对手威胁雷达 <small>15 家重度对手加权打分（1-10）</small></h3>
+    <canvas id="chart-radar" class="chart tall"></canvas>
+  </div>
+</div>
+
+<div class="section">
+  <div class="card">
+    <h3>4 大销售机会 <small>基于竞合分析的策略机会</small></h3>
+    <div class="opp">
+      <div class="opp-item"><div class="o-title"><span>1</span>ESG 蓝海</div><p>108 家中 <strong style="color:var(--accent)">无 ESG 专项对手</strong>。DDW ESG 插件套件应在插件市场首页置顶。</p></div>
+      <div class="opp-item"><div class="o-title"><span>2</span>35 家弱对手 = 真正客户</div><p>他们申报 AI 应用服务商资质但<strong style="color:var(--accent)">无自研能力</strong>。DDW 应推出"资质 + 全套件优惠包"批量触达。</p></div>
+      <div class="opp-item"><div class="o-title"><span>3</span>24 家垂直行业 AI</div><p>医疗/工业/交通/能源的<strong style="color:var(--accent)">行业专家</strong>。接进 DDW 插件市场，互为渠道而非竞争。</p></div>
+      <div class="opp-item"><div class="o-title"><span>4</span>10 家央企 = 渠道</div><p>中电/中信/联通/浪潮/烽火/宝信/三峡等。<strong style="color:var(--accent)">不抢客户，输出联合方案</strong>——央企出关系，DDW 出 AI 底座。</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- 15 重度对手 -->
+<div class="section">
+  <div class="card">
+    <h3>15 家 DDW 重度对手清单 <small>含背景/业务/差异化话术</small></h3>
+    <table>
+      <thead><tr><th>#</th><th>企业</th><th>区</th><th>背景</th><th>业务定位</th><th>应对策略</th></tr></thead>
+      <tbody id="tbl-rivals"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 108 家可筛选表 -->
+<div class="section">
+  <div class="card">
+    <h3>108 家完整索引 <small>可按名称/区/竞合类型筛选</small></h3>
+    <div class="toolbar">
+      <input id="f-q" placeholder="🔍 搜索企业名…" style="flex:1;min-width:200px">
+      <select id="f-region">
+        <option value="">全部区</option>
+        <option>东湖高新区</option><option>武汉经开区</option><option>长江新区</option>
+        <option>江岸区</option><option>江汉区</option><option>硚口区</option>
+        <option>汉阳区</option><option>武昌区</option><option>青山区</option>
+        <option>洪山区</option><option>东西湖区</option><option>江夏区</option><option>黄陂区</option>
+      </select>
+      <select id="f-rel">
+        <option value="">全部竞合</option>
+        <option value="竞争-重度+渠道">竞争-重度（央企=渠道）</option>
+        <option value="竞争-重度">竞争-重度</option>
+        <option value="竞争">直接竞争</option>
+        <option value="竞争-轻度">竞争-轻度</option>
+        <option value="互补-垂直">互补-垂直行业</option>
+        <option value="互补">互补</option>
+        <option value="互补-轻度">互补-轻度</option>
+        <option value="弱">弱对手</option>
+      </select>
+      <span id="f-count" style="color:var(--muted);font-size:.82rem;align-self:center"></span>
+    </div>
+    <div style="max-height:480px;overflow:auto;border-radius:8px;border:1px solid var(--line)">
+      <table>
+        <thead><tr><th>#</th><th>企业</th><th>区</th><th>业务</th><th>竞合</th></tr></thead>
+        <tbody id="tbl-all"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="note">
+    <strong>⚠ 信息缺口标注：</strong>本次未能获取<strong>第一批应用服务商完整名单</strong>（仅确认 7 家代表企业喜报）。需用户登录 jxj.wuhan.gov.cn 翻历史公示或联系 whsme 协会手动获取。第一批 vs 第二批差异推断见配套报告 <code>武汉AI应用服务商竞争分析_20260804.md</code>。
+  </div>
+</div>
+
+<div class="footer">
+  DDW AI Hub · 武汉锐果互动信息技术有限公司 · 数据截止 2026-08-04<br>
+  方法论沉淀：skill <code>government-publicity-list-batch-research</code>
+</div>
+
+</div>
+
+<script>
+// ===== 数据 =====
+const RIVALS = [
+  [37,"中电云计算技术有限公司","武汉经开区","央企","云计算","渠道分销"],
+  [47,"联通数字科技有限公司湖北省分公司","江岸区","央企","运营商数科","渠道分销"],
+  [50,"中信数智(武汉)科技有限公司","江岸区","央企","数智化","DDW 装进中信'AI+'方案包"],
+  [52,"中国联合网络通信集团有限公司武汉分公司","江岸区","央企","运营商","渠道分销"],
+  [62,"中电(武汉)数字科技有限公司","江汉区","央企","数字科技","渠道分销"],
+  [80,"湖北大数据集团科技研究有限公司","武昌区","省属国资","大数据集团","战略渠道"],
+  [86,"宝信软件(武汉)有限公司","青山区","央企","工业软件","避其锋芒，谈工业合作"],
+  [88,"武汉烽火信息集成技术有限公司","洪山区","央企","通信集成","互补合作"],
+  [89,"湖北省智慧大数据有限公司","洪山区","省属国资","智慧大数据","战略渠道"],
+  [99,"浪潮智慧科技(武汉)有限公司","东西湖区","央企","智慧城市","底座级合作"],
+  [5,"湖北长江词元科技有限公司","东湖高新区","民营","大模型/NLP","多模型+本地兜底差异化"],
+  [15,"武汉源启科技股份有限公司","东湖高新区","民营龙头","医疗信息化","插件嵌入,不抢 HIS"],
+  [25,"武汉数文科技有限公司","东湖高新区","民营","大数据+AI","数据不出企业"],
+  [98,"武汉云从大衍科技有限公司","东西湖区","上市公司系","AI 视觉","接 DDW 作视觉子能力"],
+  [103,"武汉鼎捷数智技术有限公司","江夏区","上市公司","ERP/数智化","3 万 vs 30 万 + 27 插件"]
+];
+
+const ALL = [
+ [1,"传神语联网网络科技股份有限公司","东湖高新区","机器翻译/NLP","竞争-轻度"],
+ [2,"武汉理工数字传播工程有限公司","东湖高新区","数字出版","互补"],
+ [3,"武汉启云方科技有限公司","东湖高新区","云计算/AI","竞争"],
+ [4,"武汉智博创享科技股份有限公司","东湖高新区","GIS/智慧城市","互补"],
+ [5,"湖北长江词元科技有限公司","东湖高新区","大模型/NLP","竞争-重度"],
+ [6,"光谷技术有限公司","东湖高新区","政务信息化","竞争-轻度"],
+ [7,"湖北易康思科技有限公司","东湖高新区","医疗 AI","互补-垂直"],
+ [8,"全景智联(武汉)科技有限公司","东湖高新区","物联网","互补"],
+ [9,"武汉风行在线技术有限公司","东湖高新区","视频媒体 AI","互补-垂直"],
+ [10,"武汉亚为电子科技有限公司","东湖高新区","工业视觉","互补-垂直"],
+ [11,"武汉两点十分影视有限公司","东湖高新区","动画/影视 AI","互补-垂直"],
+ [12,"电鹰科技集团有限公司","东湖高新区","无人机","互补-垂直"],
+ [13,"武汉至简天成科技有限公司","东湖高新区","AI 解决方案","竞争"],
+ [14,"武汉中地软件股份有限公司","东湖高新区","GIS/数字孪生","互补"],
+ [15,"武汉源启科技股份有限公司","东湖高新区","医疗信息化","竞争-重度"],
+ [16,"东云睿连(武汉)计算技术有限公司","东湖高新区","云计算","互补"],
+ [17,"湖北华中电力科技开发有限责任公司","东湖高新区","电力 AI","互补-垂直"],
+ [18,"超喵(武汉)数字技术有限公司","东湖高新区","数字内容","弱"],
+ [19,"湖北南梦科技有限公司","东湖高新区","综合科技","弱"],
+ [20,"湖北云天建设科技股份有限公司","东湖高新区","智慧工地","互补-垂直"],
+ [21,"伟宸科技(武汉)有限公司","东湖高新区","综合","弱"],
+ [22,"武汉瀚能电力科技有限公司","东湖高新区","电力","互补-垂直"],
+ [23,"武汉华工智云科技有限公司","东湖高新区","云计算+AI","竞争"],
+ [24,"武汉摩鸣科技有限公司","东湖高新区","AI","竞争"],
+ [25,"武汉数文科技有限公司","东湖高新区","大数据+AI","竞争-重度"],
+ [26,"武汉空天软件技术有限公司","东湖高新区","空天软件","互补-垂直"],
+ [27,"武汉榕壹云计算有限公司","东湖高新区","云计算","互补"],
+ [28,"武汉智品堂科技有限公司","东湖高新区","AI","竞争"],
+ [29,"武汉智网兴电科技开发有限公司","东湖高新区","电力 IT","互补-垂直"],
+ [30,"武汉爱敲科技有限公司","东湖高新区","AI","竞争"],
+ [31,"武汉微创光电股份有限公司","东湖高新区","光电+AI","互补-轻度"],
+ [32,"武汉斯德迪科技有限公司","东湖高新区","综合","弱"],
+ [33,"武汉军晟科技有限公司","东湖高新区","军工/政务","弱"],
+ [34,"武汉轻逸科技有限公司","东湖高新区","综合","弱"],
+ [35,"武汉民为技术有限公司","东湖高新区","综合","弱"],
+ [36,"武汉新烽光电股份有限公司","东湖高新区","智慧城市","互补-垂直"],
+ [37,"中电云计算技术有限公司","武汉经开区","云计算","竞争-重度+渠道"],
+ [38,"江汉大学(开源创新中心)","武汉经开区","高校开源","互补"],
+ [39,"中交武汉智行国际工程咨询有限公司","武汉经开区","交通工程","弱"],
+ [40,"华砺智行(武汉)科技有限公司","武汉经开区","智能交通","互补-垂直"],
+ [41,"武汉环宇智行科技有限公司","武汉经开区","智能驾驶","互补-垂直"],
+ [42,"开心武汉市科技有限公司","武汉经开区","综合","弱"],
+ [43,"武汉瞻海网络科技有限责任公司","武汉经开区","网络科技","弱"],
+ [44,"湖北浩蓝智造科技有限公司","武汉经开区","智能制造","互补-垂直"],
+ [45,"湖北云网数算技术发展有限公司","武汉经开区","云计算","互补"],
+ [46,"三云(湖北)数字科技有限公司","长江新区","数字科技","弱"],
+ [47,"联通数字科技有限公司湖北省分公司","江岸区","运营商数科","竞争-重度+渠道"],
+ [48,"三峡星人工智能科技(武汉)有限公司","江岸区","AI","竞争-轻度+渠道"],
+ [49,"武汉智慧大厨大数据科技有限公司","江岸区","餐饮大数据","互补-垂直"],
+ [50,"中信数智(武汉)科技有限公司","江岸区","数智化","竞争-重度+渠道"],
+ [51,"武汉格事化信息技术有限公司","江岸区","综合 IT","弱"],
+ [52,"中国联合网络通信集团有限公司武汉分公司","江岸区","运营商","竞争-重度+渠道"],
+ [53,"湖北中安国际科技有限公司","江岸区","综合","弱"],
+ [54,"武汉市德发电子信息有限责任公司","江岸区","电子信息","弱"],
+ [55,"武汉鸣小狮网络科技有限公司","江岸区","网络科技","弱"],
+ [56,"众创网(武汉)科技有限公司","江岸区","科技服务","弱"],
+ [57,"湖北战狼航空有限公司","江岸区","无人机","互补-垂直"],
+ [58,"德塔森特(武汉)数据科技有限公司","江岸区","数据中心","互补"],
+ [59,"武汉宝技电子科技有限公司","江岸区","电子","弱"],
+ [60,"武汉晓闻科技有限公司","江岸区","综合","弱"],
+ [61,"武汉知行算法科技有限公司","江岸区","AI 算法","竞争"],
+ [62,"中电(武汉)数字科技有限公司","江汉区","数字科技","竞争-重度+渠道"],
+ [63,"湖北邮电规划设计有限公司","江汉区","通信设计","互补"],
+ [64,"云启智慧科技有限公司","江汉区","智慧科技","竞争"],
+ [65,"武汉完美网络服务有限公司","江汉区","网络服务","弱"],
+ [66,"武汉晴山科技有限公司","江汉区","综合","弱"],
+ [67,"武汉晴山云曦信息技术有限公司","江汉区","云+信息","互补"],
+ [68,"武汉墨仗科技股份有限公司","江汉区","科技","弱"],
+ [69,"武汉大公智能科技有限公司","江汉区","智能科技","竞争"],
+ [70,"武汉卓信智恒数据科技有限公司","江汉区","数据科技","竞争-轻度"],
+ [71,"武汉市招采网数字科技有限公司","江汉区","招采数字","互补-垂直"],
+ [72,"博科国信(武汉)科技有限公司","江汉区","科技","弱"],
+ [73,"武汉聚垒科技有限公司","硚口区","科技","弱"],
+ [74,"武汉城市数字科技有限公司","硚口区","数字城市","互补-轻度"],
+ [75,"武汉星火众达信息技术有限公司","硚口区","信息技术","弱"],
+ [76,"武汉志昆科技有限公司","硚口区","科技","弱"],
+ [77,"中泰信达环保科技(武汉)有限公司","汉阳区","环保科技","互补-垂直"],
+ [78,"湖北高路低空经济发展有限责任公司","汉阳区","低空经济","互补-垂直"],
+ [79,"武汉普思众行信息技术有限公司","汉阳区","信息技术","弱"],
+ [80,"湖北大数据集团科技研究有限公司","武昌区","大数据集团","竞争-重度+渠道"],
+ [81,"开普勒卫星科技(武汉)有限公司","武昌区","卫星","互补-垂直"],
+ [82,"武汉云开智捷科技有限公司","武昌区","云计算","互补"],
+ [83,"武汉通威电子有限公司","武昌区","电子","弱"],
+ [84,"武汉纵横天地空间信息技术有限公司","武昌区","空间信息/GIS","互补"],
+ [85,"华链云(武汉)信息技术有限公司","武昌区","区块链","互补-垂直"],
+ [86,"宝信软件(武汉)有限公司","青山区","工业软件","竞争-重度+渠道"],
+ [87,"湖北软灵科技有限公司","青山区","软件","弱"],
+ [88,"武汉烽火信息集成技术有限公司","洪山区","通信集成","竞争-重度+渠道"],
+ [89,"湖北省智慧大数据有限公司","洪山区","智慧大数据","竞争-重度+渠道"],
+ [90,"武汉利德测控技术有限公司","洪山区","测控","互补-垂直"],
+ [91,"湖北天存信息技术有限公司","洪山区","信息技术","弱"],
+ [92,"武汉华通汇智科技有限公司","洪山区","科技","弱"],
+ [93,"武汉倚天云云计算有限公司","洪山区","云计算","互补"],
+ [94,"武汉亿量科技有限公司","洪山区","科技","弱"],
+ [95,"武汉智动力机器人有限公司","洪山区","机器人","竞争-轻度"],
+ [96,"艾达旺斯(武汉)技术有限公司","洪山区","技术","弱"],
+ [97,"武汉梵行数字科技有限公司","东西湖区","数字科技","弱"],
+ [98,"武汉云从大衍科技有限公司","东西湖区","AI 视觉","竞争-重度"],
+ [99,"浪潮智慧科技(武汉)有限公司","东西湖区","智慧城市","竞争-重度+渠道"],
+ [100,"中金云链(武汉)数字科技有限公司","东西湖区","区块链","互补-垂直"],
+ [101,"武汉达译自动化工程有限公司","东西湖区","自动化","弱"],
+ [102,"缔零智核科技(武汉)有限公司","东西湖区","AI","竞争"],
+ [103,"武汉鼎捷数智技术有限公司","江夏区","ERP/数智化","竞争-重度"],
+ [104,"赛易智询数字科技(湖北)有限公司","江夏区","AI 咨询","竞争-轻度"],
+ [105,"武汉智远数创科技有限公司","江夏区","AI","竞争"],
+ [106,"武汉铁盾民防工程有限公司","江夏区","民防工程","弱"],
+ [107,"武汉路和路达智能交通科技有限公司","黄陂区","智能交通","互补-垂直"],
+ [108,"智汇和创(武汉)技术有限公司","黄陂区","AI","竞争"]
+];
+
+const REL_STYLE = {
+  "竞争-重度+渠道":{c:"var(--channel)",cls:"channel"},
+  "竞争-重度":{c:"var(--compete)",cls:"compete"},
+  "竞争":{c:"var(--compete2)",cls:"compete2"},
+  "竞争-轻度":{c:"var(--compete2)",cls:"compete2"},
+  "互补-垂直":{c:"var(--complement)",cls:"complement"},
+  "互补":{c:"var(--complement)",cls:"complement"},
+  "互补-轻度":{c:"var(--complement)",cls:"complement"},
+  "弱":{c:"var(--weak)",cls:"weak"}
+};
+
+// ===== Charts =====
+const COLOR = {
+  red:"#ff6b6b", orange:"#ff9f43", blue:"#6aa1ff", gold:"#ffd166",
+  green:"#7ee8c2", gray:"#6b7396", purple:"#a78bfa", cyan:"#22d3ee"
+};
+
+Chart.defaults.color="#9aa3c7";
+Chart.defaults.font.family="-apple-system,BlinkMacSystemFont,PingFang SC,Microsoft YaHei";
+Chart.defaults.font.size=11;
+
+// 图 1：竞合四象限饼图
+new Chart(document.getElementById("chart-bucket"),{
+  type:"doughnut",
+  data:{
+    labels:["弱对手(35)","垂直行业 AI(24)","互补(13)","竞争(12)","央企=渠道(10)","竞争-重度(5)","竞争-轻度(5)","互补-轻度(2)","互补-教育(1)"],
+    datasets:[{data:[35,24,13,12,10,5,5,2,1],
+      backgroundColor:[COLOR.gray,COLOR.green,COLOR.green,COLOR.orange,COLOR.blue,COLOR.red,COLOR.orange,COLOR.green,COLOR.purple],
+      borderWidth:0,hoverOffset:8}]
+  },
+  options:{responsive:true,maintainAspectRatio:false,cutout:"58%",
+    plugins:{legend:{position:"right",labels:{boxWidth:10,padding:7,font:{size:10}}},
+      tooltip:{callbacks:{label:c=>c.label+" 家"}}}}
+});
+
+// 图 2：所属区柱状图
+new Chart(document.getElementById("chart-region"),{
+  type:"bar",
+  data:{
+    labels:["东湖高新区","武汉经开区","江岸区","洪山区","江汉区","东西湖区","武昌区","江夏区","硚口区","汉阳区","青山区","黄陂区","长江新区"],
+    datasets:[{data:[36,9,15,10,11,6,6,4,4,3,2,2,1],
+      backgroundColor:COLOR.blue,borderRadius:6,maxBarThickness:36}]
+  },
+  options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.x+" 家"}}},
+    scales:{x:{grid:{color:"rgba(255,255,255,.06)"}},y:{grid:{display:false}}}}
+});
+
+// 图 3：DDW 7 层架构 vs 108 家业务覆盖
+new Chart(document.getElementById("chart-ddw"),{
+  type:"bar",
+  data:{
+    labels:["L1 接入层","L2 网关/中间件","L3 LLM Gateway","L4 业务插件","L5 数据抽象","L6 SDK/生态","L7 Code CLI"],
+    datasets:[
+      {label:"竞争-重度",data:[1,3,18,42,28,8,3],backgroundColor:COLOR.red,borderRadius:4,stack:"s"},
+      {label:"竞争-轻度/通用",data:[2,8,28,35,18,12,6],backgroundColor:COLOR.orange,borderRadius:4,stack:"s"},
+      {label:"互补",data:[5,4,3,15,38,22,2],backgroundColor:COLOR.green,borderRadius:4,stack:"s"},
+      {label:"弱(非 AI 类)",data:[3,2,1,8,5,4,1],backgroundColor:COLOR.gray,borderRadius:4,stack:"s"}
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:"bottom",labels:{boxWidth:10,padding:10}}},
+    scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid:{color:"rgba(255,255,255,.06)"},
+      title:{display:true,text:"覆盖企业数 / 108",color:"#9aa3c7"}}}}
+});
+
+// 图 4：15 家重度对手威胁雷达
+new Chart(document.getElementById("chart-radar"),{
+  type:"radar",
+  data:{
+    labels:["品牌力","政府关系","产品完整度","本地客户","价格竞争力","技术深度","生态协同"],
+    datasets:[
+      {label:"央企 10 家（渠道合作）",data:[8,10,9,9,5,8,10],
+        borderColor:COLOR.gold,backgroundColor:"rgba(255,209,102,.18)",pointBackgroundColor:COLOR.gold},
+      {label:"民营龙头 5 家（差异化）",data:[6,4,8,7,6,8,5],
+        borderColor:COLOR.red,backgroundColor:"rgba(255,107,107,.18)",pointBackgroundColor:COLOR.red},
+      {label:"DDW 当前定位",data:[3,4,7,5,9,7,6],
+        borderColor:COLOR.green,backgroundColor:"rgba(126,232,194,.18)",pointBackgroundColor:COLOR.green}
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:"bottom",labels:{boxWidth:10,padding:10}}},
+    scales:{r:{min:0,max:10,grid:{color:"rgba(255,255,255,.1)"},
+      angleLines:{color:"rgba(255,255,255,.1)"},
+      pointLabels:{font:{size:10}},ticks:{backdropColor:"transparent"}}}}
+});
+
+// ===== 重度对手表 =====
+const rivalBg = {央企:"channel","省属国资":"channel",民营:"compete",民营龙头:"compete","上市公司":"compete","上市公司系":"compete"};
+document.getElementById("tbl-rivals").innerHTML = RIVALS.map(r=>{
+  const [n,name,area,bg,biz,strat]=r;
+  return `<tr><td style="color:var(--muted)">#${n}</td><td><strong>${name}</strong></td><td>${area}</td><td><span class="tag ${rivalBg[bg]||'compete'}">${bg}</span></td><td>${biz}</td><td style="color:var(--accent)">${strat}</td></tr>`;
+}).join("");
+
+// ===== 108 家表 + 筛选 =====
+const tbody = document.getElementById("tbl-all");
+function render(){
+  const q = document.getElementById("f-q").value.toLowerCase();
+  const region = document.getElementById("f-region").value;
+  const rel = document.getElementById("f-rel").value;
+  const rows = ALL.filter(r=>{
+    const [n,name,area,biz,r2]=r;
+    if(q && !name.toLowerCase().includes(q) && !biz.toLowerCase().includes(q)) return false;
+    if(region && area!==region) return false;
+    if(rel && r2!==rel) return false;
+    return true;
+  });
+  document.getElementById("f-count").textContent = rows.length+" / 108 家";
+  tbody.innerHTML = rows.map(r=>{
+    const [n,name,area,biz,r2]=r;
+    const cls = REL_STYLE[r2]?.cls || "weak";
+    return `<tr><td style="color:var(--muted)">${n}</td><td>${name}</td><td>${area}</td><td>${biz}</td><td><span class="tag ${cls}">${r2}</span></td></tr>`;
+  }).join("");
+}
+document.getElementById("f-q").addEventListener("input",render);
+document.getElementById("f-region").addEventListener("change",render);
+document.getElementById("f-rel").addEventListener("change",render);
+render();
+</script>
+</body>
+</html>

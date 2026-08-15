@@ -1,0 +1,40 @@
+name: ddw-finance-dashboard
+license: commercial
+tier: beta
+version: 1.0.0
+display_name: DDW 财务看板
+description: 销售端 CRM 财务聚合查询插件。基于 P1-1 合同 / P1-3 应收 / P1-4 实收三张表的数据，提供财务仪表盘所需的统计指标：总览（合同金额 / 应收 / 实收 / 逾期）、逾期列表、最近 12 月趋势、按状态分布、按企业未收金额排行。
+engine: plugin_base
+isolation: inline
+
+permissions:
+  - database.read
+
+dependencies:
+  plugins:
+    - ddw-company-profile
+    - ddw-contract-core
+    - ddw-order
+    - ddw-receivable
+    - ddw-payment
+
+config_schema:
+  type: object
+  properties:
+    default_tenant_id:
+      type: integer
+      default: 1
+    trend_window_months:
+      type: integer
+      default: 12
+      description: 趋势接口默认回看月数
+    overdue_limit:
+      type: integer
+      default: 100
+      description: 逾期列表默认返回条数
+    contract_signed_statuses:
+      type: array
+      default: [signed, active, completed]
+      description: 合同"已签"统计覆盖的状态集合
+
+router_prefix: /api/v1/plugins/ddw-finance-dashboard

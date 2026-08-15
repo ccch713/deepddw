@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESG 合规 AI 落地方案 — 12 大标准框架自动适配 | 锐果互动</title>
+<meta name="description" content="DDW ESG 合规 AI 落地方案：以 7 个插件组合解决多标准切换、数据收集分散、报告编制耗时、证据链不完整四大痛点，覆盖 GRI/SASB/TCFD/CSRD 等 12 大框架。">
+<link rel="icon" href="/company/assets/logo/logo-favicon.png">
+<link rel="stylesheet" href="/company/assets/css/base.css">
+<script>window.SITE_BASE = '/company/';</script>
+<script src="/company/assets/js/site-common.js"></script>
+<style>
+  /* ---------- 行业方案自定义样式 ---------- */
+  .pain-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  .pain-card { background: var(--bg-card); border: 1px solid var(--border); border-left: 4px solid var(--accent-orange); border-radius: 12px; padding: 24px; }
+  .pain-card .pain-ico { font-size: 28px; margin-bottom: 10px; }
+  .pain-card h3 { font-size: 17px; margin: 0 0 8px; color: var(--text-primary); }
+  .pain-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.8; margin: 0; }
+  .pain-card .pain-stat { margin-top: 12px; font-size: 12.5px; color: var(--accent-orange); font-weight: 600; }
+
+  .combo-map { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 14px; padding: 28px; }
+  .combo-map h3 { font-size: 17px; margin: 0 0 18px; color: var(--text-primary); }
+  .combo-map ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .combo-map li { font-size: 13.5px; color: var(--text-primary); padding: 10px 14px; background: var(--bg-card); border-radius: 8px; border-left: 3px solid var(--brand); }
+  .combo-map li b { color: var(--brand); display: block; margin-bottom: 2px; font-size: 14px; }
+
+  .framework-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 24px; }
+  .framework-grid .fw-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; text-align: center; transition: all .25s; }
+  .framework-grid .fw-card:hover { border-color: var(--brand); transform: translateY(-2px); }
+  .framework-grid .fw-abbr { font-size: 22px; font-weight: 700; color: var(--brand); margin-bottom: 6px; }
+  .framework-grid .fw-name { font-size: 13px; color: var(--text-primary); line-height: 1.5; }
+  .framework-grid .fw-tag { font-size: 11px; color: var(--text-secondary); margin-top: 6px; }
+
+  .tier-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .tier-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 26px; display: flex; flex-direction: column; }
+  .tier-card.recommend { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-light, rgba(11,110,153,0.10)); position: relative; }
+  .tier-card .tier-tag { position: absolute; top: -12px; right: 20px; background: var(--brand); color: #fff; font-size: 12px; padding: 4px 12px; border-radius: 12px; font-weight: 600; }
+  .tier-card .tier-name { font-size: 18px; font-weight: 700; color: var(--text-primary); margin: 0 0 6px; }
+  .tier-card .tier-count { font-size: 13px; color: var(--brand); font-weight: 600; margin-bottom: 16px; }
+  .tier-card .tier-price { font-size: 22px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+  .tier-card .tier-unit { font-size: 13px; color: var(--text-secondary); margin-bottom: 14px; }
+  .tier-card ul { list-style: none; padding: 0; margin: 0 0 18px; }
+  .tier-card li { font-size: 13.5px; color: var(--text-primary); padding: 7px 0; border-bottom: 1px dashed var(--border); line-height: 1.7; }
+  .tier-card li:last-child { border-bottom: none; }
+  .tier-card li::before { content: "✓"; color: var(--success); font-weight: 700; margin-right: 8px; }
+  .tier-card .tier-cta { margin-top: auto; }
+
+  .roi-card { background: linear-gradient(135deg, var(--bg-card), var(--bg-elevated)); border: 1px solid var(--border); border-radius: 14px; padding: 32px; }
+  .roi-card .roi-headline { font-size: 22px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+  .roi-card .roi-formula { font-size: 18px; color: var(--brand); font-weight: 600; margin: 16px 0; padding: 14px 20px; background: var(--brand-light, rgba(11,110,153,0.08)); border-radius: 8px; }
+  .roi-card .roi-result { font-size: 28px; font-weight: 700; color: var(--accent); margin: 16px 0 8px; }
+  .roi-card .roi-meta { font-size: 13.5px; color: var(--text-secondary); }
+  .roi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 22px; }
+  .roi-grid .roi-cell { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
+  .roi-grid .roi-num { font-size: 22px; font-weight: 700; color: var(--brand); }
+  .roi-grid .roi-lab { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
+  @media (max-width: 960px) {
+    .pain-grid, .combo-map ul { grid-template-columns: 1fr; }
+    .framework-grid { grid-template-columns: repeat(2, 1fr); }
+    .tier-grid { grid-template-columns: 1fr; }
+    .roi-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<!-- ==================== Hero ==================== -->
+<section class="hero">
+  <div class="container">
+    <span class="eyebrow">INDUSTRY · ESG 合规</span>
+    <h1>ESG 合规 AI 落地方案</h1>
+    <p class="subtitle">
+      <b>12 大国际主流框架</b>一套内化：GRI、SASB、TCFD、CSRD、CDP、ISO 14001/45001、GB/T 36000 等——以 <b>7 个插件</b>的组合支撑多标准切换、数据自动汇集、报告 AI 编制与证据链管理。
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-accent" href="/company/contact.html">预约方案演示</a>
+      <a class="btn btn-outline" href="/company/industry.html">返回行业方案总览</a>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 痛点分析 ==================== -->
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div class="tag">WHY</div>
+      <h2>ESG 合规四大顽固痛点</h2>
+      <p>出海工厂面临的不是"做不做"，而是"能否持续、低成本、高质量地做"——AI 把一次性合规变成可复用资产。</p>
+    </div>
+    <div class="pain-grid">
+      <div class="pain-card">
+        <div class="pain-ico">🔀</div>
+        <h3>多标准框架切换</h3>
+        <p>客户要 EcoVadis、买家要 GRI、本地监管要 GB/T 36000——同一份数据为不同框架各做一份台账，工作量翻倍。</p>
+        <div class="pain-stat">每客户每年多耗 200 小时</div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-ico">📁</div>
+        <h3>数据收集分散</h3>
+        <p>能耗在 MES、考勤在 HR、原料批次在 ERP、碳排因子散在 Excel——跨系统调数靠人工抄送，月底报表周期 2 周起。</p>
+        <div class="pain-stat">月报周期 14 天+</div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-ico">📑</div>
+        <h3>报告编制耗时</h3>
+        <p>ESG 报告 60-80 页起步，写稿、画图、对数据、找证据——单次报告投入 4-6 周周期，每季度还要更新。</p>
+        <div class="pain-stat">单报告 4-6 周</div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-ico">🔗</div>
+        <h3>合规证据链不完整</h3>
+        <p>审计来核查时，某条数据找不到原始凭证、某个数字对不上——临时补材料，损失分数比丢分数更扎心。</p>
+        <div class="pain-stat">核查时找不到原始凭证</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== DDW 解决方案 ==================== -->
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-head">
+      <div class="tag">SOLUTION</div>
+      <h2>DDW 插件组合：7 个插件覆盖 ESG 全流程</h2>
+      <p>从评估、AI 客服、知识库到题库、报告生成、法规证据——一次性打通。</p>
+    </div>
+    <div class="combo-map">
+      <h3>📋 7 个插件分工一览</h3>
+      <ul>
+        <li><b>esg_assessment</b>ESG 评估引擎：评分、跳题逻辑、基准对标、多框架支持</li>
+        <li><b>esg_chatbot</b>ESG AI 客服：智能语义检索 + 会话管理 + 人工升级</li>
+        <li><b>esg_knowledge</b>ESG 知识库：文档管理、全文/语义检索、智能语义检索</li>
+        <li><b>esg_payment</b>ESG 支付：订单管理、推广/分成、支付网关框架</li>
+        <li><b>esg_question_bank</b>ESG 题库引擎：12 大框架题库统一管理</li>
+        <li><b>esg_report</b>ESG 报告生成：PDF 报告 + 雷达图 + 评分表 + Meta 分析</li>
+        <li><b>regulatory_evidence</b>法规证据索引：NHC / EU Novel Food / EFSA / FDA 条款检索与证据链</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 12 大标准框架 ==================== -->
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div class="tag">STANDARDS</div>
+      <h2>12 大国际主流框架，一套配置覆盖</h2>
+      <p>esg_question_bank 已内置 12 套体系的题库与评分模型，新框架接入只需配置，无需重写代码。</p>
+    </div>
+    <div class="framework-grid">
+      <div class="fw-card"><div class="fw-abbr">GRI</div><div class="fw-name">全球报告倡议组织</div><div class="fw-tag">通用标准 + 议题标准</div></div>
+      <div class="fw-card"><div class="fw-abbr">SASB</div><div class="fw-name">可持续会计准则</div><div class="fw-tag">行业 × 财务重要性</div></div>
+      <div class="fw-card"><div class="fw-abbr">TCFD</div><div class="fw-name">气候相关财务披露</div><div class="fw-tag">治理 · 战略 · 风险 · 指标</div></div>
+      <div class="fw-card"><div class="fw-abbr">CSRD</div><div class="fw-name">欧盟可持续发展报告指令</div><div class="fw-tag">ESRS 双重要性</div></div>
+      <div class="fw-card"><div class="fw-abbr">CDP</div><div class="fw-name">碳信息披露项目</div><div class="fw-tag">气候 · 水 · 森林</div></div>
+      <div class="fw-card"><div class="fw-abbr">MSCI</div><div class="fw-name">MSCI ESG 评级</div><div class="fw-tag">AAA-CCC 七级</div></div>
+      <div class="fw-card"><div class="fw-abbr">Sustainalytics</div><div class="fw-name">晨星 ESG 风险评级</div><div class="fw-tag">风险等级 + 暴露</div></div>
+      <div class="fw-card"><div class="fw-abbr">EcoVadis</div><div class="fw-name">企业可持续评级</div><div class="fw-tag">铜牌 → 铂金牌</div></div>
+      <div class="fw-card"><div class="fw-abbr">ISO 14001</div><div class="fw-name">环境管理体系</div><div class="fw-tag">PDCA · 合规义务</div></div>
+      <div class="fw-card"><div class="fw-abbr">ISO 45001</div><div class="fw-name">职业健康安全</div><div class="fw-tag">危险源 · 风险控制</div></div>
+      <div class="fw-card"><div class="fw-abbr">GB/T 36000</div><div class="fw-name">社会责任国标系列</div><div class="fw-tag">国内披露 + 报告</div></div>
+      <div class="fw-card"><div class="fw-abbr">DJSI</div><div class="fw-name">道琼斯可持续指数</div><div class="fw-tag">S&P Global ESG 评分</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 三档方案 ==================== -->
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-head">
+      <div class="tag">PACKAGES</div>
+      <h2>三档方案，按企业出海阶段挑选</h2>
+      <p>从单框架自评起步，到全框架 + 报告 + 支付的一站式 SaaS，渐进式启用。</p>
+    </div>
+    <div class="tier-grid">
+
+      <div class="tier-card">
+        <div class="tier-name">最小验证</div>
+        <div class="tier-count">3 个插件 · 2-4 周上线</div>
+        <div class="tier-price">¥ 3,800</div>
+        <div class="tier-unit">/月起 · 单工厂</div>
+        <ul>
+          <li><b>esg_assessment</b> · 自评估引擎</li>
+          <li><b>esg_question_bank</b> · 12 框架题库</li>
+          <li><b>esg_knowledge</b> · 知识库 + 智能检索</li>
+        </ul>
+        <div class="tier-cta"><a class="btn btn-outline" href="/company/contact.html">先试最小版本</a></div>
+      </div>
+
+      <div class="tier-card recommend">
+        <span class="tier-tag">推荐 · 80% 出海企业选这档</span>
+        <div class="tier-name">核心覆盖</div>
+        <div class="tier-count">5 个插件 · 6-8 周上线</div>
+        <div class="tier-price">¥ 8,800</div>
+        <div class="tier-unit">/月起 · 单工厂</div>
+        <ul>
+          <li>最小版 3 个 +</li>
+          <li><b>esg_chatbot</b> · 客户 ESG 问询承接</li>
+          <li><b>esg_report</b> · PDF 报告自动生成</li>
+        </ul>
+        <div class="tier-cta"><a class="btn btn-accent" href="/company/contact.html">选核心方案</a></div>
+      </div>
+
+      <div class="tier-card">
+        <div class="tier-name">全流程数字化</div>
+        <div class="tier-count">7 个插件 · 12 周上线</div>
+        <div class="tier-price">¥ 16,800</div>
+        <div class="tier-unit">/月起 · 单工厂</div>
+        <ul>
+          <li>核心版 5 个 +</li>
+          <li><b>esg_payment</b> · 订阅与支付商业化</li>
+          <li><b>regulatory_evidence</b> · 法规证据链</li>
+        </ul>
+        <div class="tier-cta"><a class="btn btn-outline" href="/company/contact.html">选全流程版</a></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ROI ==================== -->
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div class="tag">ROI</div>
+      <h2>投入回报，看得见</h2>
+      <p>从单次 ESG 自评、报告编制、咨询师替代三件高频事件测算 AI 替代价值。</p>
+    </div>
+    <div class="roi-card">
+      <div class="roi-headline">单工厂 ESG 报告从 6 周压到 1.5 周</div>
+      <div class="roi-formula">(6-1.5) 周 × 40h × 80 元/h × 4 次/年 ≈ 57,600 元/年/工厂</div>
+      <div class="roi-result">≈ 5.8 万元/年/工厂 · 仅报告一项</div>
+      <div class="roi-meta">叠加自评估人力、咨询师月度顾问费、审计响应等场景，年度节省通常达 15-30 万元/工厂。</div>
+      <div class="roi-grid">
+        <div class="roi-cell"><div class="roi-num">75%↓</div><div class="roi-lab">报告编制周期</div></div>
+        <div class="roi-cell"><div class="roi-num">12→1</div><div class="roi-lab">多框架维护人力</div></div>
+        <div class="roi-cell"><div class="roi-num">85%↑</div><div class="roi-lab">证据完整度</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== CTA ==================== -->
+<section class="cta-band">
+  <div class="container">
+    <h2>一次 30 分钟，给贵厂一份 ESG AI 化路径图</h2>
+    <p>告诉我们贵厂主要客户、市场分布、当前使用的评级方法论，我们输出按贵厂实际的优先级建议与一年节约估算。</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="/company/contact.html" style="background:var(--accent);">预约方案演示</a>
+      <a class="btn btn-outline" href="/company/service-esg.html" style="border-color:var(--cta-text);color:var(--cta-text);">查看 ESG 服务详情</a>
+    </div>
+  </div>
+</section>
+
+<div id="site-footer"></div>
+
+</body>
+</html>

@@ -1,0 +1,90 @@
+type: extraction
+name: 拔牙病历
+version: "1.0"
+required_fields:
+  - chief_complaint
+  - present_illness
+  - tooth_position
+  - extraction_reason
+  - difficulty_level
+  - anesthesia_type
+  - anticoagulant_use
+  - contraindications
+  - postop_instructions
+
+fields:
+  chief_complaint:
+    label: 主诉
+    type: text
+    max_length: 200
+    required: true
+  present_illness:
+    label: 现病史
+    type: text
+    max_length: 1000
+    required: true
+  past_history:
+    label: 既往史
+    type: text
+    max_length: 500
+    required: false
+  tooth_position:
+    label: 牙位
+    type: select
+    options:
+      - "右上1-8"
+      - "左上1-8"
+      - "右下1-8"
+      - "左下1-8"
+    required: true
+  extraction_reason:
+    label: 拔牙原因
+    type: select
+    options: [impaction, caries, periodontal, orthodontic, trauma]
+    required: true
+  difficulty_level:
+    label: 难度评估
+    type: select
+    options: [simple, surgical, complex]
+    required: true
+  anesthesia_type:
+    label: 麻醉方式
+    type: select
+    options: [local, intraligamentary, inferior_alveolar, general]
+    required: true
+  anticoagulant_use:
+    label: 抗凝药使用
+    type: boolean
+    required: true
+  anticoagulant_drug:
+    label: 抗凝药物名称
+    type: text
+    required_if: "anticoagulant_use == true"
+  contraindications:
+    label: 禁忌症检查
+    type: text
+    required: true
+  intraoperative_notes:
+    label: 术中记录
+    type: text
+    max_length: 1000
+    required: false
+  postop_instructions:
+    label: 术后医嘱
+    type: text
+    max_length: 500
+    required: true
+
+display_order:
+  - chief_complaint
+  - present_illness
+  - past_history
+  - tooth_position
+  - extraction_reason
+  - difficulty_level
+  - anesthesia_type
+  - anticoagulant_use
+  - anticoagulant_drug
+  - contraindications
+  - intraoperative_notes
+  - postop_instructions

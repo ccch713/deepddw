@@ -1,0 +1,77 @@
+from __future__ import annotations
+"""DDW 实收管理插件 ORM 模型。
+
+本插件仅含单表：
+- :class:`Payment` — 实收主表（继承 TenantMixin + TimestampMixin）
+
+继承 DDW 平台核心：
+- core.database.models.Base: DeclarativeBase 根
+- core.database.models.TenantMixin: 自动注入 tenant_id + 标记租户感知
+- core.database.models.TimestampMixin: 自动注入 created_at / updated_at
+
+核销相关字段（``status`` 中除 pending 外的状态、``matched_amount``）由
+P1-5 reconciliation 插件写入；本插件只负责创建、查询、统计。
+"""
+
+from datetime import date
+from decimal import Decimal
+from typing import Optional
+
+from sqlalchemy import (
+    BigInteger,
+    Date,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+from sqlalchemy.orm import Mapped, mapped_column
+
+from core.database.models import Base, TenantMixin, TimestampMixin
+
+# BigInteger 在 SQLite 不支持 -> 退化到 Integer
+BigInt = BigInteger().with_variant(Integer(), "sqlite")
+
+
+class Payment(Base, TenantMixin, TimestampMixin):
+    """实收主表。
+
+    字段：
+    - 单号 payment_no: ``PAY-YYYYMMDD-NNN``，服务端自动生成，唯一
+    - 付款方 payer_name: 必填，便于在没有 company_id 时仍能溯源
+    - 金额 amount: Numeric(12, 2)，必填
+    - 已核销金额 matched_amount: 由 P1-5 reconciliation 写入
+    - 状态 status: pending（默认）/ matched / partial / unmatched
+    """
+
+    __tablename__ = "crm_payments"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[int] = mapped_column(BigInt, primary_key=True, autoincrement=True)
+
+    # ---- 业务关联（外键 ON DELETE SET NULL：关联对象删除不级联删实收） ----
+    # use_alter=True：让 SQLAlchemy 在 CREATE TABLE 之后再 ALTER TABLE 加 FK，
+    # 避免 crm_companies 表不在当前 metadata（如独立测试环境、插件加载顺序）
+    # 时 metadata.create_all 抛 NoReferencedTableError。生产环境 PG 上 FK
+    # 仍按 ON DELETE SET NULL 正常生效。
+    company_id: Mapped[Optional[int]] = mapped_column(        BigInt,
+        ForeignKey("crm_companies.id", ondelete="SET NULL", use_alter=True),
+        nullable=True,
+        index=True,
+
+    # ---- 单号 / 付款方 ----
+    payment_no: Mapped[Optional[str]] = mapped_column(        String(30), unique=True, index=True, nullable=False
+    )  # PAY-YYYYMMDD-NNN
+    payer_name: Mapped[str] = mapped_column(String(200), nullable=False)  # 付款企业全名
+
+    # ---- 银行 / 流水 ----
+    bank_reference: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    bank_account: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    # ---- 金额 / 日期 / 方式 ----
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)  # 收款金额
+    payment_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    payment_method: Mapped[Optional[str]] = mapped_column(        String(30), nullable=False
+    )  # bank/cheque/cash/wechat/alipay
+
+    # ---- 备注 ----
+    notes: Mapped[Optional[str]] = mapped_column(# ---- 状态 / 核销 ---- status: Mapped[Optional[str]] = mapped_column(        String(20), default="pending", nullable=False, index=True ) # pending / matched / partial / unmatched matched_amount: Mapped[Optional[Decimal]] = mapped_column(        Numeric(12, 2), default=Decimal("0"), nullable=False ) # 已核销金额（由 P1-5 reconciliation 写入；本插件不修改）  # ---- 审计 ---- created_by: Mapped[Optional[int]] = mapped_column(BigInt, nullable=True)  def __repr__(self) -> str:  # pragma: no cover return f"<Payment id={self.id} no={self.payment_no!r} amount={self.amount} status={self.status!r}>"   __all__ = ["Payment"])

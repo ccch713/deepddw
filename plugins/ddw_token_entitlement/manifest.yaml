@@ -1,0 +1,31 @@
+name: ddw-token-entitlement
+license: free
+tier: beta
+version: 1.0.0
+display_name: DDW Token 额度管理
+description: 销售端客户企业 / 安装实例的 Token 额度分配、使用跟踪与超量控制。覆盖 platform/custom-key/local-llm 三类额度，支持分页筛选、消耗扣减、统计概览。
+engine: plugin_base
+isolation: inline
+
+permissions:
+  - database.read
+  - database.write
+
+dependencies:
+  plugins: []
+
+config_schema:
+  type: object
+  properties:
+    default_tenant_id:
+      type: integer
+      default: 1
+    default_page_size:
+      type: integer
+      default: 20
+    entitlement_types:
+      type: array
+      default: [platform, custom-key, local-llm]
+      description: 额度类型枚举
+
+router_prefix: /api/v1/plugins/ddw-token-entitlement

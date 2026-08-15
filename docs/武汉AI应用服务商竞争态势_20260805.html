@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>武汉 AI 应用服务商竞争态势 | DDW AI Hub</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b1020;--bg2:#121933;--bg3:#1b2348;--line:#2a345d;
+  --text:#e6e9f5;--text2:#9aa3c7;--muted:#6b7396;
+  --primary:#6aa1ff;--accent:#7ee8c2;--warn:#ffb454;--danger:#ff6b6b;--gold:#ffd166;
+  --compete:#ff6b6b;--compete2:#ff9f43;--complement:#7ee8c2;--weak:#6b7396;--channel:#6aa1ff;
+  --r:12px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.5;padding:1.5rem}
+.w{max-width:1320px;margin:0 auto}
+h1{font-size:1.6rem;font-weight:700}h1 b{color:var(--primary)}
+.sub{color:var(--text2);font-size:.84rem;margin-top:.2rem}
+.kpis{display:flex;gap:.7rem;flex-wrap:wrap;margin:1.2rem 0}
+.kpi{flex:1;min-width:140px;background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:.9rem 1rem}
+.kpi .l{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.3px}
+.kpi .v{font-size:1.7rem;font-weight:700;margin-top:.15rem}
+.kpi .d{font-size:.72rem;color:var(--accent);margin-top:.1rem}
+.kpi.w .v{color:var(--warn)} .kpi.d .v{color:var(--danger)} .kpi.g .v{color:var(--gold)} .kpi.a .v{color:var(--accent)}
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:1rem;margin-bottom:1rem;overflow:hidden}
+.card h2{font-size:.95rem;margin-bottom:.6rem;padding-left:.5rem;border-left:3px solid var(--primary)}
+.card h2 small{color:var(--muted);font-weight:400;font-size:.72rem;margin-left:.4rem}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:900px){.g2{grid-template-columns:1fr}}
+.bar-row{display:flex;align-items:center;margin-bottom:.35rem;font-size:.78rem}
+.bar-label{width:80px;flex-shrink:0;color:var(--text2);text-align:right;padding-right:.5rem}
+.bar-track{flex:1;height:22px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:.4rem;font-size:.7rem;color:#fff;font-weight:600}
+.bar-num{width:30px;flex-shrink:0;padding-left:.4rem;color:var(--muted);font-size:.76rem}
+.pie-wrap{display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap}
+.pie{width:180px;height:180px;border-radius:50%;flex-shrink:0}
+.pie-hole{position:absolute;top:28%;left:28%;width:44%;height:44%;border-radius:50%;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700}
+.pie-legend{flex:1;min-width:180px}
+.pie-legend-item{display:flex;align-items:center;gap:.4rem;margin-bottom:.35rem;font-size:.78rem}
+.pie-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.stack-row{margin-bottom:.6rem}
+.stack-title{font-size:.78rem;color:var(--text2);margin-bottom:.2rem}
+.stack-bar{display:flex;height:22px;border-radius:4px;overflow:hidden}
+.stack-seg{display:flex;align-items:center;justify-content:center;font-size:.63rem;color:#fff;font-weight:600;white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+th{padding:.4rem .5rem;text-align:left;color:var(--muted);font-weight:500;font-size:.7rem;text-transform:uppercase;border-bottom:1px solid var(--line);background:var(--bg3);position:sticky;top:0}
+td{padding:.35rem .5rem;border-bottom:1px solid rgba(255,255,255,.04)}
+tbody tr:hover{background:var(--bg3)}
+.tag{display:inline-block;padding:.1rem .4rem;border-radius:5px;font-size:.68rem;font-weight:500}
+.tag.ct{background:rgba(106,161,255,.18);color:var(--channel)}
+.tag.cd{background:rgba(255,107,107,.18);color:var(--compete)}
+.tag.cp{background:rgba(126,232,194,.18);color:var(--complement)}
+.tag.wk{background:rgba(107,115,150,.2);color:var(--weak)}
+.toolbar{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.6rem;align-items:center}
+.toolbar input,.toolbar select{background:var(--bg3);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:.35rem .6rem;font-size:.8rem;font-family:inherit}
+.toolbar input:focus,.toolbar select:focus{outline:none;border-color:var(--primary)}
+.toolbar .cnt{color:var(--muted);font-size:.8rem}
+.tbl-wrap{max-height:420px;overflow:auto;border-radius:8px;border:1px solid var(--line)}
+.opps{display:grid;grid-template-columns:repeat(2,1fr);gap:.7rem}
+@media(max-width:700px){.opps{grid-template-columns:1fr}}
+.opp{padding:.7rem .9rem;background:var(--bg3);border-radius:8px;border:1px solid var(--line)}
+.opp b{color:var(--accent)}
+.opp p{color:var(--text2);font-size:.78rem;margin-top:.2rem}
+.note{background:var(--bg3);padding:.6rem .8rem;border-radius:8px;border-left:3px solid var(--warn);color:var(--text2);font-size:.8rem;margin-top:1rem}
+.note strong{color:var(--warn)}
+.footer{text-align:center;color:var(--muted);font-size:.76rem;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--line)}
+/* 产品线对比矩阵 */
+.matrix-wrap{overflow-x:auto;margin-top:.5rem}
+.matrix{border-collapse:collapse;font-size:.72rem;width:100%;min-width:900px}
+.matrix th,.matrix td{padding:.3rem .4rem;border:1px solid var(--line);text-align:center;white-space:nowrap}
+.matrix th{background:var(--bg3);color:var(--muted);font-weight:600;position:sticky;top:0;z-index:2}
+.matrix .row-label{text-align:left;font-weight:600;background:var(--bg3);position:sticky;left:0;z-index:1;min-width:110px}
+.matrix .ddw-col{background:rgba(126,232,194,.08)}
+.matrix .cell-yes{background:rgba(255,107,107,.2);color:var(--compete);font-weight:700}
+.matrix .cell-no{color:var(--muted)}
+.matrix .cell-ddw{background:rgba(126,232,194,.15);color:var(--accent);font-weight:700}
+.matrix .cell-both{background:rgba(255,209,102,.15);color:var(--gold);font-weight:700}
+.legend-row{display:flex;flex-wrap:wrap;gap:.8rem;margin-top:.5rem;font-size:.75rem;color:var(--text2)}
+.legend-row span{display:flex;align-items:center;gap:.3rem}
+.legend-row i{display:inline-block;width:12px;height:12px;border-radius:3px}
+.radar-svg{display:block;margin:0 auto}
+</style>
+</head>
+<body>
+<div class="w">
+
+<div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:.5rem;border-bottom:1px solid var(--line);padding-bottom:1rem;margin-bottom:1rem">
+  <div><h1>武汉 <b>AI 应用服务商</b> 竞争态势</h1><div class="sub">第二批 108 家 vs DDW AI Hub · 武汉市经信局 2026.08 公示</div></div>
+  <div style="color:var(--muted);font-size:.82rem;text-align:right">报告日期 2026-08-05<br>DDW AI Hub · 锐果互动</div>
+</div>
+
+<!-- KPI -->
+<div class="kpis">
+  <div class="kpi"><div class="l">认定总家数</div><div class="v">108</div><div class="d">第二批</div></div>
+  <div class="kpi d"><div class="l">DDW 重度对手</div><div class="v">15</div><div class="d">13.9%</div></div>
+  <div class="kpi g"><div class="l">央企 / 省属国资</div><div class="v">11</div><div class="d">10.2%</div></div>
+  <div class="kpi a"><div class="l">垂直行业 AI（互补）</div><div class="v">24</div><div class="d">22.2%</div></div>
+  <div class="kpi w"><div class="l">通用名弱对手</div><div class="v">35</div><div class="d">32.4% = DDW 真正客户</div></div>
+</div>
+
+<!-- ====== 核心：产品线对比矩阵 ====== -->
+<div class="card">
+  <h2>15 家重度对手 × DDW 产品线对比矩阵 <small>🔴 重叠区 | 🟢 DDW独有 | ⚫ 对手独有 | 🔵 互补区</small></h2>
+  <div class="matrix-wrap">
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th class="row-label">对手 / 背景</th>
+          <th>L1<br>接入层</th>
+          <th>L2<br>网关</th>
+          <th>L3<br>LLM Gateway</th>
+          <th>L4<br>业务插件</th>
+          <th>L5<br>数据抽象</th>
+          <th>L6<br>SDK/Code CLI</th>
+          <th class="ddw-col">DDW<br>7层</th>
+          <th class="ddw-col">DDW<br>27插件</th>
+          <th class="ddw-col">DDW<br>ESG</th>
+          <th class="ddw-col">DDW<br>Code CLI</th>
+          <th>对手<br>独有能力</th>
+        </tr>
+      </thead>
+      <tbody id="m-body"></tbody>
+    </table>
+  </div>
+  <div class="legend-row">
+    <span><i style="background:rgba(255,107,107,.4)"></i> 红色=与DDW重叠</span>
+    <span><i style="background:rgba(126,232,194,.3)"></i> 绿色=DDW独有</span>
+    <span><i style="background:rgba(255,209,102,.3)"></i> 金色=双方均有(最危险)</span>
+    <span><i style="background:var(--bg3);border:1px solid var(--line)"></i> 空=对手无此能力</span>
+  </div>
+</div>
+
+<!-- DDW 绝对优势区 + 被威胁区 -->
+<div class="g2">
+  <div class="card">
+    <h2>DDW 绝对优势区 <small>15家对手均无的能力</small></h2>
+    <div style="padding:.4rem 0">
+      <div class="bar-row"><div class="bar-label">Code CLI</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--accent)">15/15 对手无此能力</div></div></div>
+      <div class="bar-row"><div class="bar-label">27插件矩阵</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--accent)">15/15 对手无此能力</div></div></div>
+      <div class="bar-row"><div class="bar-label">ESG 插件</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--accent)">15/15 对手无此能力</div></div></div>
+      <div class="bar-row"><div class="bar-label">IM 三端适配</div><div class="bar-track"><div class="bar-fill" style="width:73%;background:var(--accent)">11/15 对手无此能力</div></div></div>
+      <div class="bar-row"><div class="bar-label">多模型路由</div><div class="bar-track"><div class="bar-fill" style="width:67%;background:var(--accent)">10/15 对手无此能力</div></div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>DDW 被威胁区 <small>15家对手中重叠最多的层</small></h2>
+    <div style="padding:.4rem 0">
+      <div class="bar-row"><div class="bar-label">L3-LLM</div><div class="bar-track"><div class="bar-fill" style="width:80%;background:var(--danger)">12/15 对手有重叠</div></div></div>
+      <div class="bar-row"><div class="bar-label">L5-数据</div><div class="bar-track"><div class="bar-fill" style="width:73%;background:var(--danger)">11/15 对手有重叠</div></div></div>
+      <div class="bar-row"><div class="bar-label">L4-业务</div><div class="bar-track"><div class="bar-fill" style="width:47%;background:var(--warn)">7/15 对手有重叠</div></div></div>
+      <div class="bar-row"><div class="bar-label">L2-网关</div><div class="bar-track"><div class="bar-fill" style="width:27%;background:var(--warn)">4/15 对手有重叠</div></div></div>
+      <div class="bar-row"><div class="bar-label">L1-接入</div><div class="bar-track"><div class="bar-fill" style="width:20%;background:var(--complement)">3/15 对手有重叠</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 竞争定位图 -->
+<div class="card">
+  <h2>竞争定位矩阵 <small>X轴=产品完整度 Y轴=行业覆盖宽度</small></h2>
+  <svg viewBox="0 0 600 380" width="100%" style="max-width:600px;margin:0 auto;display:block">
+    <defs>
+      <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--danger)" stop-opacity=".12"/><stop offset="1" stop-color="var(--danger)" stop-opacity="0"/></linearGradient>
+      <linearGradient id="g2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--accent)" stop-opacity=".12"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient>
+    </defs>
+    <!-- 网格 -->
+    <rect x="60" y="20" width="520" height="300" fill="none" stroke="var(--line)" stroke-width="1"/>
+    <line x1="60" y1="170" x2="580" y2="170" stroke="var(--line)" stroke-width=".5" stroke-dasharray="4"/>
+    <line x1="320" y1="20" x2="320" y2="320" stroke="var(--line)" stroke-width=".5" stroke-dasharray="4"/>
+    <!-- 象限标签 -->
+    <text x="190" y="40" text-anchor="middle" fill="var(--muted)" font-size="10">宽覆盖 · 低完整</text>
+    <text x="450" y="40" text-anchor="middle" fill="var(--muted)" font-size="10">宽覆盖 · 高完整 ⭐</text>
+    <text x="190" y="310" text-anchor="middle" fill="var(--muted)" font-size="10">窄覆盖 · 低完整</text>
+    <text x="450" y="310" text-anchor="middle" fill="var(--muted)" font-size="10">窄覆盖 · 高完整</text>
+    <!-- 轴标签 -->
+    <text x="320" y="345" text-anchor="middle" fill="var(--text2)" font-size="10">产品完整度 →</text>
+    <text x="15" y="170" text-anchor="middle" fill="var(--text2)" font-size="10" transform="rotate(-90,15,170)">行业覆盖宽度 →</text>
+    <!-- 对手圆圈 -->
+    <!-- 央企：宽覆盖+高完整(右上) -->
+    <circle cx="420" cy="65" r="22" fill="rgba(106,161,255,.2)" stroke="var(--channel)" stroke-width="2"/>
+    <text x="420" y="69" text-anchor="middle" fill="var(--channel)" font-size="9" font-weight="600">浪潮</text>
+    <circle cx="480" cy="85" r="20" fill="rgba(106,161,255,.2)" stroke="var(--channel)" stroke-width="2"/>
+    <text x="480" y="89" text-anchor="middle" fill="var(--channel)" font-size="9" font-weight="600">中信</text>
+    <circle cx="360" cy="90" r="18" fill="rgba(106,161,255,.2)" stroke="var(--channel)" stroke-width="2"/>
+    <text x="360" y="94" text-anchor="middle" fill="var(--channel)" font-size="9" font-weight="600">联通</text>
+    <circle cx="440" cy="110" r="16" fill="rgba(106,161,255,.2)" stroke="var(--channel)" stroke-width="2"/>
+    <text x="440" y="114" text-anchor="middle" fill="var(--channel)" font-size="8" font-weight="600">烽火</text>
+    <circle cx="500" cy="130" r="15" fill="rgba(106,161,255,.2)" stroke="var(--channel)" stroke-width="2"/>
+    <text x="500" y="134" text-anchor="middle" fill="var(--channel)" font-size="8" font-weight="600">宝信</text>
+    <!-- 民营：窄覆盖+高完整(右下) -->
+    <circle cx="530" cy="210" r="20" fill="rgba(255,107,107,.2)" stroke="var(--compete)" stroke-width="2"/>
+    <text x="530" y="214" text-anchor="middle" fill="var(--compete)" font-size="9" font-weight="600">鼎捷</text>
+    <circle cx="490" cy="240" r="16" fill="rgba(255,107,107,.2)" stroke="var(--compete)" stroke-width="2"/>
+    <text x="490" y="244" text-anchor="middle" fill="var(--compete)" font-size="8" font-weight="600">源启</text>
+    <circle cx="450" cy="260" r="14" fill="rgba(255,107,107,.2)" stroke="var(--compete)" stroke-width="2"/>
+    <text x="450" y="264" text-anchor="middle" fill="var(--compete)" font-size="8" font-weight="600">云从</text>
+    <!-- 民营：宽覆盖+中等完整(左上) -->
+    <circle cx="250" cy="80" r="22" fill="rgba(255,159,67,.2)" stroke="var(--compete2)" stroke-width="2"/>
+    <text x="250" y="84" text-anchor="middle" fill="var(--compete2)" font-size="9" font-weight="600">长江词元</text>
+    <circle cx="280" cy="120" r="16" fill="rgba(255,159,67,.2)" stroke="var(--compete2)" stroke-width="2"/>
+    <text x="280" y="124" text-anchor="middle" fill="var(--compete2)" font-size="8" font-weight="600">数文</text>
+    <!-- DDW：宽覆盖+高完整(金色⭐) -->
+    <circle cx="460" cy="155" r="28" fill="rgba(126,232,194,.25)" stroke="var(--accent)" stroke-width="3"/>
+    <text x="460" y="151" text-anchor="middle" fill="var(--accent)" font-size="11" font-weight="700">DDW</text>
+    <text x="460" y="167" text-anchor="middle" fill="var(--accent)" font-size="8">AI Hub</text>
+    <text x="460" y="130" text-anchor="middle" fill="var(--gold)" font-size="14">⭐</text>
+  </svg>
+</div>
+
+<!-- 4 大机会 -->
+<div class="card">
+  <h2>4 大销售机会</h2>
+  <div class="opps">
+    <div class="opp"><p><b>1 ESG 蓝海</b></p><p>108 家中无 ESG 专项对手。DDW ESG 插件套件应在插件市场首页置顶。</p></div>
+    <div class="opp"><p><b>2 35 家弱对手 = 真正客户</b></p><p>他们申报 AI 资质但无自研能力。DDW 推出"资质 + 全套件优惠包"批量触达。</p></div>
+    <div class="opp"><p><b>3 24 家垂直行业 AI = 插件伙伴</b></p><p>医疗/工业/交通/能源的行业专家。接进 DDW 插件市场，互为渠道。</p></div>
+    <div class="opp"><p><b>4 10 家央企 = 渠道分销</b></p><p>中电/中信/联通/浪潮等。央企出关系，DDW 出 AI 底座，联合方案。</p></div>
+  </div>
+</div>
+
+<!-- 15 家重度对手 -->
+<div class="card">
+  <h2>15 家 DDW 重度对手 <small>按背景分组</small></h2>
+  <table>
+    <thead><tr><th>#</th><th>企业</th><th>区</th><th>背景</th><th>业务</th><th>差异化话术</th></tr></thead>
+    <tbody>
+      <tr><td style="color:var(--muted)">37</td><td><b>中电云计算技术有限公司</b></td><td>武汉经开区</td><td><span class="tag ct">央企</span></td><td>云计算</td><td style="color:var(--accent)">渠道分销</td></tr>
+      <tr><td style="color:var(--muted)">47</td><td><b>联通数字科技有限公司湖北省分公司</b></td><td>江岸区</td><td><span class="tag ct">央企</span></td><td>运营商数科</td><td style="color:var(--accent)">渠道分销</td></tr>
+      <tr><td style="color:var(--muted)">50</td><td><b>中信数智(武汉)科技有限公司</b></td><td>江岸区</td><td><span class="tag ct">央企</span></td><td>数智化</td><td style="color:var(--accent)">DDW 装进中信"AI+"方案包</td></tr>
+      <tr><td style="color:var(--muted)">52</td><td><b>中国联合网络通信集团有限公司武汉分公司</b></td><td>江岸区</td><td><span class="tag ct">央企</span></td><td>运营商</td><td style="color:var(--accent)">渠道分销</td></tr>
+      <tr><td style="color:var(--muted)">62</td><td><b>中电(武汉)数字科技有限公司</b></td><td>江汉区</td><td><span class="tag ct">央企</span></td><td>数字科技</td><td style="color:var(--accent)">渠道分销</td></tr>
+      <tr><td style="color:var(--muted)">80</td><td><b>湖北大数据集团科技研究有限公司</b></td><td>武昌区</td><td><span class="tag ct">省属国资</span></td><td>大数据集团</td><td style="color:var(--accent)">战略渠道</td></tr>
+      <tr><td style="color:var(--muted)">86</td><td><b>宝信软件(武汉)有限公司</b></td><td>青山区</td><td><span class="tag ct">央企</span></td><td>工业软件</td><td style="color:var(--accent)">避其锋芒，谈工业合作</td></tr>
+      <tr><td style="color:var(--muted)">88</td><td><b>武汉烽火信息集成技术有限公司</b></td><td>洪山区</td><td><span class="tag ct">央企</span></td><td>通信集成</td><td style="color:var(--accent)">互补合作</td></tr>
+      <tr><td style="color:var(--muted)">89</td><td><b>湖北省智慧大数据有限公司</b></td><td>洪山区</td><td><span class="tag ct">省属国资</span></td><td>智慧大数据</td><td style="color:var(--accent)">战略渠道</td></tr>
+      <tr><td style="color:var(--muted)">99</td><td><b>浪潮智慧科技(武汉)有限公司</b></td><td>东西湖区</td><td><span class="tag ct">央企</span></td><td>智慧城市</td><td style="color:var(--accent)">底座级合作</td></tr>
+      <tr><td style="color:var(--muted)">5</td><td><b>湖北长江词元科技有限公司</b></td><td>东湖高新区</td><td><span class="tag cd">民营</span></td><td>大模型/NLP</td><td style="color:var(--accent)">多模型+本地兜底 vs 单一云端</td></tr>
+      <tr><td style="color:var(--muted)">15</td><td><b>武汉源启科技股份有限公司</b></td><td>东湖高新区</td><td><span class="tag cd">民营龙头</span></td><td>医疗信息化</td><td style="color:var(--accent)">插件嵌入，不抢 HIS</td></tr>
+      <tr><td style="color:var(--muted)">25</td><td><b>武汉数文科技有限公司</b></td><td>东湖高新区</td><td><span class="tag cd">民营</span></td><td>大数据+AI</td><td style="color:var(--accent)">数据不出企业 vs 上云</td></tr>
+      <tr><td style="color:var(--muted)">98</td><td><b>武汉云从大衍科技有限公司</b></td><td>东西湖区</td><td><span class="tag cd">上市公司系</span></td><td>AI 视觉</td><td style="color:var(--accent)">接 DDW 作视觉子能力</td></tr>
+      <tr><td style="color:var(--muted)">103</td><td><b>武汉鼎捷数智技术有限公司</b></td><td>江夏区</td><td><span class="tag cd">上市公司</span></td><td>ERP/数智化</td><td style="color:var(--accent)">3 万 vs 30 万 + 27 插件</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 108 家筛选表 -->
+<div class="card">
+  <h2>108 家完整索引 <small>可按名称/区/竞合类型筛选</small></h2>
+  <div class="toolbar">
+    <input id="fq" placeholder="🔍 搜索企业名…" style="flex:1;min-width:180px">
+    <select id="fr"><option value="">全部区</option><option>东湖高新区</option><option>武汉经开区</option><option>长江新区</option><option>江岸区</option><option>江汉区</option><option>硚口区</option><option>汉阳区</option><option>武昌区</option><option>青山区</option><option>洪山区</option><option>东西湖区</option><option>江夏区</option><option>黄陂区</option></select>
+    <select id="ft"><option value="">全部竞合</option><option value="竞争-重度+渠道">竞争-重度（央企）</option><option value="竞争-重度">竞争-重度</option><option value="竞争">直接竞争</option><option value="竞争-轻度">竞争-轻度</option><option value="互补-垂直">互补-垂直</option><option value="互补">互补</option><option value="弱">弱对手</option></select>
+    <span class="cnt" id="fc"></span>
+  </div>
+  <div class="tbl-wrap">
+    <table><thead><tr><th>#</th><th>企业</th><th>区</th><th>业务</th><th>竞合</th></tr></thead><tbody id="tb"></tbody></table>
+  </div>
+</div>
+
+<div class="note"><strong>⚠ 信息缺口：</strong>第一批应用服务商完整名单未能获取（仅确认 7 家代表企业）。需登录 jxj.wuhan.gov.cn 翻历史公示或联系 whsme 协会。</div>
+
+<div class="footer">DDW AI Hub · 武汉锐果互动信息技术有限公司 · 数据截止 2026-08-05</div>
+</div>
+
+<script>
+// 15家对手产品线矩阵数据
+// 格式：[name, bg(1=央企/2=民营), L1, L2, L3, L4, L5, L6, DDW7, 27插件, ESG, CodeCLI, 对手独有]
+var M=[
+["中电云计算","央企",0,0,1,0,0,0,1,1,1,1,"算力服务器/信创云"],
+["联通数科湖北","央企",0,0,1,0,0,0,1,1,1,1,"5G专网/网络基础设施"],
+["中信数智","央企",0,0,1,0.5,0,0,1,1,1,1,"金融风控/供应链金融"],
+["中国联通武汉","央企",0,0,0,0,0,0,1,1,1,1,"5G/CDN/网络"],
+["中电武汉数字","央企",0,0,1,0,0,0,1,1,1,1,"数字政府/信创安全"],
+["湖北大数据集团","省属",0,0,0,0,0.5,0,1,1,1,1,"数据要素交易/数据治理"],
+["宝信软件","央企",0,0,0,1,0,0,1,1,1,1,"钢铁MES/工业PLM"],
+["烽火信息集成","央企",0,0.5,0,0,0,0,1,1,1,1,"通信系统集成/光纤"],
+["湖北智慧大数据","省属",0,0,0,0.5,0,0,1,1,1,1,"视频融合平台/物联网感知"],
+["浪潮智慧科技","央企",0,0,1,0,0,0,1,1,1,1,"算力服务器/政务云OS"],
+["长江词元","民营",0,0,1,1,0,0,1,1,1,1,"大模型API/NLP开放平台"],
+["源启科技","民营",0,0,0,1,0,0,1,1,1,1,"医院HIS/电子病历"],
+["数文科技","民营",0,0,0,0.5,0.5,0,1,1,1,1,"知识图谱/数据中台"],
+["云从大衍","民营",0,0,0,1,0,0,1,1,1,1,"AI视觉/人脸识别"],
+["鼎捷数智","上市",0,0,0,1,0,0,1,1,1,1,"ERP/MES/PLM/财务"],
+];
+var labels=["L1接入","L2网关","L3-LLM","L4业务","L5数据","L6 SDK","DDW7层","27插件","ESG","CodeCLI"];
+function renderMatrix(){
+  var h="";
+  M.forEach(function(r){
+    h+='<tr><td class="row-label"><b>'+r[0]+'</b><br><span style="font-weight:400;font-size:.68rem;color:var(--muted)">'+r[1]+'</span></td>';
+    for(var i=2;i<=11;i++){
+      var v=r[i];
+      var cls="cell-no";
+      if(v===1) cls=i>=7?"cell-ddw":"cell-yes";
+      else if(v===0.5) cls="cell-both";
+      h+='<td class="'+cls+'">'+(v===1?"✔":v===0.5?"✔✔":"")+'</td>';
+    }
+    h+='<td style="text-align:left;font-size:.68rem;color:var(--text2);max-width:140px">'+r[12]+'</td></tr>';
+  });
+  document.getElementById("m-body").innerHTML=h;
+}
+renderMatrix();
+
+// 108 家表
+var D=[
+[1,"传神语联网","东湖高新区","机器翻译/NLP","竞争-轻度"],[2,"理工数字传播","东湖高新区","数字出版","互补"],
+[3,"启云方科技","东湖高新区","云计算/AI","竞争"],[4,"智博创享","东湖高新区","GIS","互补"],
+[5,"长江词元","东湖高新区","大模型/NLP","竞争-重度"],[6,"光谷技术","东湖高新区","政务信息化","竞争-轻度"],
+[7,"易康思","东湖高新区","医疗AI","互补-垂直"],[8,"全景智联","东湖高新区","物联网","互补"],
+[9,"风行在线","东湖高新区","视频AI","互补-垂直"],[10,"亚为电子","东湖高新区","工业视觉","互补-垂直"],
+[11,"两点十分","东湖高新区","动画AI","互补-垂直"],[12,"电鹰科技","东湖高新区","无人机","互补-垂直"],
+[13,"至简天成","东湖高新区","AI方案","竞争"],[14,"中地软件","东湖高新区","GIS","互补"],
+[15,"源启科技","东湖高新区","医疗信息化","竞争-重度"],[16,"东云睿连","东湖高新区","云计算","互补"],
+[17,"华中电力科技","东湖高新区","电力AI","互补-垂直"],[18,"超喵数字","东湖高新区","数字内容","弱"],
+[19,"南梦科技","东湖高新区","综合","弱"],[20,"云天建设","东湖高新区","智慧工地","互补-垂直"],
+[21,"伟宸科技","东湖高新区","综合","弱"],[22,"瀚能电力","东湖高新区","电力","互补-垂直"],
+[23,"华工智云","东湖高新区","云计算+AI","竞争"],[24,"摩鸣科技","东湖高新区","AI","竞争"],
+[25,"数文科技","东湖高新区","大数据+AI","竞争-重度"],[26,"空天软件","东湖高新区","空天软件","互补-垂直"],
+[27,"榕壹云计算","东湖高新区","云计算","互补"],[28,"智品堂","东湖高新区","AI","竞争"],
+[29,"智网兴电","东湖高新区","电力IT","互补-垂直"],[30,"爱敲科技","东湖高新区","AI","竞争"],
+[31,"微创光电","东湖高新区","光电+AI","互补-轻度"],[32,"斯德迪","东湖高新区","综合","弱"],
+[33,"军晟科技","东湖高新区","军工","弱"],[34,"轻逸科技","东湖高新区","综合","弱"],
+[35,"民为技术","东湖高新区","综合","弱"],[36,"新烽光电","东湖高新区","智慧城市","互补-垂直"],
+[37,"中电云计算","武汉经开区","云计算","竞争-重度+渠道"],[38,"江汉大学开源","武汉经开区","高校","互补"],
+[39,"中交智行","武汉经开区","交通工程","弱"],[40,"华砺智行","武汉经开区","智能交通","互补-垂直"],
+[41,"环宇智行","武汉经开区","智能驾驶","互补-垂直"],[42,"开心武汉","武汉经开区","综合","弱"],
+[43,"瞻海网络","武汉经开区","网络科技","弱"],[44,"浩蓝智造","武汉经开区","智能制造","互补-垂直"],
+[45,"云网数算","武汉经开区","云计算","互补"],[46,"三云数字","长江新区","数字科技","弱"],
+[47,"联通数科湖北","江岸区","运营商数科","竞争-重度+渠道"],[48,"三峡星AI","江岸区","AI","竞争-轻度+渠道"],
+[49,"智慧大厨","江岸区","餐饮大数据","互补-垂直"],[50,"中信数智","江岸区","数智化","竞争-重度+渠道"],
+[51,"格事化","江岸区","综合IT","弱"],[52,"中国联通武汉","江岸区","运营商","竞争-重度+渠道"],
+[53,"中安国际","江岸区","综合","弱"],[54,"德发电子","江岸区","电子信息","弱"],
+[55,"鸣小狮","江岸区","网络科技","弱"],[56,"众创网","江岸区","科技服务","弱"],
+[57,"战狼航空","江岸区","无人机","互补-垂直"],[58,"德塔森特","江岸区","数据中心","互补"],
+[59,"宝技电子","江岸区","电子","弱"],[60,"晓闻科技","江岸区","综合","弱"],
+[61,"知行算法","江岸区","AI算法","竞争"],[62,"中电武汉数字","江汉区","数字科技","竞争-重度+渠道"],
+[63,"湖北邮电","江汉区","通信设计","互补"],[64,"云启智慧","江汉区","智慧科技","竞争"],
+[65,"完美网络","江汉区","网络服务","弱"],[66,"晴山科技","江汉区","综合","弱"],
+[67,"晴山云曦","江汉区","云+信息","互补"],[68,"墨仗科技","江汉区","科技","弱"],
+[69,"大公智能","江汉区","智能科技","竞争"],[70,"卓信智恒","江汉区","数据科技","竞争-轻度"],
+[71,"招采网","江汉区","招采数字","互补-垂直"],[72,"博科国信","江汉区","科技","弱"],
+[73,"聚垒科技","硚口区","科技","弱"],[74,"城市数字","硚口区","数字城市","互补-轻度"],
+[75,"星火众达","硚口区","信息技术","弱"],[76,"志昆科技","硚口区","科技","弱"],
+[77,"泰信达环保","汉阳区","环保科技","互补-垂直"],[78,"高路低空","汉阳区","低空经济","互补-垂直"],
+[79,"普思众行","汉阳区","信息技术","弱"],[80,"湖北大数据集团","武昌区","大数据集团","竞争-重度+渠道"],
+[81,"开普勒卫星","武昌区","卫星","互补-垂直"],[82,"云开智捷","武昌区","云计算","互补"],
+[83,"通威电子","武昌区","电子","弱"],[84,"纵横天地","武昌区","空间信息","互补"],
+[85,"华链云","武昌区","区块链","互补-垂直"],[86,"宝信软件武汉","青山区","工业软件","竞争-重度+渠道"],
+[87,"软灵科技","青山区","软件","弱"],[88,"烽火集成","洪山区","通信集成","竞争-重度+渠道"],
+[89,"湖北智慧大数据","洪山区","智慧大数据","竞争-重度+渠道"],[90,"利德测控","洪山区","测控","互补-垂直"],
+[91,"天存信息","洪山区","信息技术","弱"],[92,"华通汇智","洪山区","科技","弱"],
+[93,"倚天云","洪山区","云计算","互补"],[94,"亿量科技","洪山区","科技","弱"],
+[95,"智动力机器人","洪山区","机器人","竞争-轻度"],[96,"艾达旺斯","洪山区","技术","弱"],
+[97,"梵行数字","东西湖区","数字科技","弱"],[98,"云从大衍","东西湖区","AI视觉","竞争-重度"],
+[99,"浪潮智慧科技","东西湖区","智慧城市","竞争-重度+渠道"],[100,"中金云链","东西湖区","区块链","互补-垂直"],
+[101,"达译自动化","东西湖区","自动化","弱"],[102,"缔零智核","东西湖区","AI","竞争"],
+[103,"鼎捷数智","江夏区","ERP/数智化","竞争-重度"],[104,"赛易智询","江夏区","AI咨询","竞争-轻度"],
+[105,"智远数创","江夏区","AI","竞争"],[106,"铁盾民防","江夏区","民防工程","弱"],
+[107,"路和路达","黄陂区","智能交通","互补-垂直"],[108,"智汇和创","黄陂区","AI","竞争"]
+];
+var S={"竞争-重度+渠道":"ct","竞争-重度":"cd","竞争":"c2","竞争-轻度":"c2","互补-垂直":"cp","互补":"cp","互补-轻度":"cp","弱":"wk"};
+var L={"竞争-重度+渠道":"竞争-重度(央企)","竞争-重度":"竞争-重度","竞争":"直接竞争","竞争-轻度":"竞争-轻度","互补-垂直":"互补-垂直","互补":"互补","互补-轻度":"互补-轻度","弱":"弱"};
+var tb=document.getElementById("tb"),fc=document.getElementById("fc");
+function render(){
+  var q=document.getElementById("fq").value.toLowerCase();
+  var rg=document.getElementById("fr").value;
+  var rl=document.getElementById("ft").value;
+  var c=0, h="";
+  D.forEach(function(r){
+    if(q && r[1].toLowerCase().indexOf(q)<0) return;
+    if(rg && r[2]!==rg) return;
+    if(rl && r[4]!==rl) return;
+    c++;
+    h+='<tr><td style="color:var(--muted)">'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td><td><span class="tag '+S[r[4]]+'">'+L[r[4]]+'</span></td></tr>';
+  });
+  tb.innerHTML=h;
+  fc.textContent=c+"/108";
+}
+document.getElementById("fq").oninput=render;
+document.getElementById("fr").onchange=render;
+document.getElementById("ft").onchange=render;
+render();
+</script>
+</body>
+</html>

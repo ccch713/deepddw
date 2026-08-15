@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>业务板块与能力清单 — DDW AI Hub</title>
+<meta name="description" content="DDW 底座之上，按业务场景装配 AI 能力：销售CRM、质量管理、培训人才、财务运营、客服协作、ESG合规六大板块，67 项业务组件，丰俭由人。">
+<link rel="icon" href="assets/logo/favicon-64.svg">
+<link rel="stylesheet" href="assets/css/base.css">
+<script>window.SITE_BASE = '';</script>
+<script src="assets/js/site-common.js"></script>
+<script src="assets/js/plugins-data.js"></script>
+<style>
+  /* ---------- 插件页专用样式 ---------- */
+  .plug-hero {
+    position: relative;
+    padding: 148px 0 60px;
+    background:
+      radial-gradient(ellipse 55% 45% at 82% 18%, rgba(201,160,99,.14) 0%, transparent 60%),
+      radial-gradient(ellipse 45% 40% at 12% 85%, rgba(196,61,44,.06) 0%, transparent 60%),
+      var(--paper);
+    overflow: hidden;
+  }
+  .plug-hero::before {
+    content: ""; position: absolute; inset: 0;
+    background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 75% 90% at 70% 20%, #000 15%, transparent 72%);
+    opacity: .5;
+  }
+  .plug-hero .wrap { position: relative; }
+  .plug-hero h1 { font-size: clamp(32px, 4vw, 46px); font-weight: 900; margin: 10px 0 14px; line-height: 1.3; }
+  .plug-hero .subtitle { max-width: 680px; color: var(--ink-2); font-size: 16px; line-height: 1.9; }
+  .plug-hero .frugal-note {
+    margin: 22px 0 0; padding: 16px 20px; max-width: 780px;
+    background: var(--paper-2); border-left: 3px solid var(--cinnabar);
+    border-radius: 0 8px 8px 0; font-size: 15px; line-height: 1.8; color: var(--ink);
+  }
+  .plug-hero .frugal-note b { color: var(--cinnabar); }
+
+  /* Tab 栏 */
+  .plug-tabs {
+    display: flex; gap: 4px; flex-wrap: nowrap; overflow-x: auto;
+    padding-bottom: 6px; scrollbar-width: thin; margin-bottom: 8px;
+  }
+  .plug-tabs::-webkit-scrollbar { height: 4px; }
+  .plug-tabs::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 2px; }
+  .plug-tab {
+    padding: 10px 20px;
+    border: 1px solid var(--line);
+    border-radius: 8px 8px 0 0;
+    background: var(--paper);
+    color: var(--ink-2);
+    font-size: 15px;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: all .2s;
+    font-weight: 600;
+  }
+  .plug-tab:hover { color: var(--cinnabar); border-color: var(--line-strong); }
+  .plug-tab.active {
+    color: var(--cinnabar);
+    font-weight: 700;
+    background: var(--paper-2);
+    border-color: var(--line);
+    border-bottom: 2px solid var(--cinnabar);
+  }
+
+  /* 详情区 */
+  .plug-detail { margin-top: 18px; }
+  .ai-boost {
+    padding: 20px 24px; border-radius: var(--radius);
+    background: var(--paper-2); border: 1px solid var(--line);
+    font-size: 16px; line-height: 1.9; color: var(--ink); margin-bottom: 20px;
+  }
+  .ai-boost .lead { color: var(--cinnabar); font-weight: 700; margin-right: 6px; }
+
+  /* 能力标签网格 */
+  .caps-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; }
+  .cap-tag {
+    padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 13.5px; color: var(--ink-2); background: var(--paper);
+    transition: all .2s;
+  }
+  .cap-tag:hover { border-color: var(--cinnabar); color: var(--cinnabar); }
+
+  /* 三档卡片 */
+  .plug-tier { display: flex; gap: 18px; padding: 18px 22px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 14px; background: var(--paper-2); transition: all .2s; }
+  .plug-tier:hover { border-color: var(--cinnabar); box-shadow: var(--shadow); }
+  .tier-badge { min-width: 108px; text-align: center; padding: 8px 0; border-radius: 8px; font-size: 13.5px; font-weight: 700; align-self: flex-start; }
+  .tier-badge small { display: block; font-weight: 400; font-size: 12px; opacity: .85; margin-top: 2px; }
+  .tier-badge.min { background: rgba(196,61,44,.1); color: var(--cinnabar); }
+  .tier-badge.mid { background: rgba(62,92,118,.1); color: var(--daiblue); }
+  .tier-badge.full { background: rgba(201,160,99,.12); color: var(--gold-deep); }
+  .tier-body { flex: 1; }
+  .tier-combo { font-weight: 600; font-size: 15px; line-height: 1.7; color: var(--ink); }
+  .tier-scene { color: var(--ink-2); font-size: 14px; margin-top: 6px; line-height: 1.7; }
+  .tier-cross { font-size: 13px; color: var(--ink-3); margin-top: 4px; }
+
+  /* 行业卡片 */
+  .industry-section .i-card { cursor: default; }
+
+  /* 移动端适配 */
+  @media (max-width: 960px) {
+    .plug-hero { padding: 110px 0 40px; }
+    .plug-hero h1 { font-size: 28px; }
+    .plug-tier { flex-direction: column; gap: 10px; }
+    .tier-badge { align-self: flex-start; }
+    .plug-tab { padding: 9px 14px; font-size: 14px; }
+  }
+  @media (max-width: 620px) {
+    .ai-boost { padding: 16px; font-size: 14.5px; }
+    .plug-tier { padding: 14px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 导航（site-common.js 注入） -->
+<div id="site-header"></div>
+
+<!-- ==================== Hero ==================== -->
+<section class="plug-hero">
+  <div class="wrap">
+    <div class="kicker" style="display:inline-flex;align-items:center;gap:10px;font-size:13.5px;font-weight:700;letter-spacing:.2em;color:var(--cinnabar);margin-bottom:18px;">
+      <span style="width:34px;height:2px;background:var(--cinnabar);display:inline-block;"></span>DDW 平台 · 业务板块
+    </div>
+    <h1>业务板块与能力清单</h1>
+    <p class="subtitle">DDW 底座之上，按业务场景装配 AI 能力：六大业务板块、六十七项业务组件，每个板块可独立装配，也可跨板块自由组合。</p>
+    <div class="frugal-note">
+      插件装多装少，完全由贵司的实际业务场景决定：业务场景覆盖范围广，插件群规模就大；业务场景单一，或先以最小业务范围做 AI 落地测试，选最小插件群即可。插件授权费用也随之有多有少——<b>不用的不装，不为用不上的功能付费。</b>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 业务板块 Tab ==================== -->
+<section class="section" style="padding-top:40px;">
+  <div class="wrap">
+
+    <div class="plug-tabs" id="domain-tabs"></div>
+    <div class="plug-detail" id="domain-detail"></div>
+
+    <!-- ==================== 行业套件 ==================== -->
+    <div class="section-head reveal" style="margin-top:64px;">
+      <div class="seal"><div class="stamp" style="background:var(--gold);color:var(--ink-band);">行</div><span style="color:var(--gold);">行业套件</span></div>
+      <h2>开箱即用的<em>组合</em></h2>
+      <p>针对垂直行业预装配好的能力组合，拿来就能跑</p>
+      <div class="rule"></div>
+    </div>
+    <div class="industry-row" id="industries" style="margin-bottom:24px;"></div>
+
+    <!-- ==================== 丰俭由人 ==================== -->
+    <div class="sec-head reveal" style="margin-top:64px;">
+      <div class="seal"><div class="stamp">丰</div><span>丰俭由人</span></div>
+      <h2>授权费用随场景增减，<em>不用的不装</em></h2>
+      <div class="rule"></div>
+    </div>
+    <div class="tier-row" style="margin-bottom:48px;">
+      <div class="tier-card min reveal"><span class="tag">最小组合</span><h4>先跑通一个场景</h4><p>围绕核心场景选 3~5 个组件，以最小业务范围做 AI 落地验证，投入可控、见效最快。</p><div class="tier-rule"></div></div>
+      <div class="tier-card mid reveal"><span class="tag">中等组合</span><h4>核心链路完整跑通</h4><p>覆盖核心业务流，销售、质量或客服主链路完整数字化，适合业务稳定、要提效的企业。</p><div class="tier-rule"></div></div>
+      <div class="tier-card full reveal"><span class="tag">全量组合</span><h4>全流程数字化</h4><p>板块内组件全部装配，管理层实时掌握经营全貌，适合全面推进数字化的企业。</p><div class="tier-rule"></div></div>
+    </div>
+
+    <!-- ==================== CTA ==================== -->
+    <div class="cta-band reveal">
+      <h2>不确定怎么选？让顾问帮您<em>配</em></h2>
+      <p>告诉我们您的业务场景和现有系统，我们给出建议组合与授权方案。</p>
+      <a class="btn btn-cin" href="contact.html">预约方案演示</a>
+    </div>
+
+  </div>
+</section>
+
+<!-- 页脚（site-common.js 注入） -->
+<div id="site-footer"></div>
+
+<script>
+/* ---------- Tab 切换渲染 ---------- */
+(function () {
+  'use strict';
+  var DATA = window.PLUGIN_DATA;
+  if (!DATA) return;
+
+  var TIER_CLASS = { '最小': 'min', '中等': 'mid', '全量': 'full' };
+  var tabsEl = document.getElementById('domain-tabs');
+  var detailEl = document.getElementById('domain-detail');
+
+  function renderTabs() {
+    tabsEl.innerHTML = DATA.domains.map(function (d, i) {
+      return '<button class="plug-tab" data-i="' + i + '" onclick="PLUGINS.showDomain(' + i + ')">' + d.name + '（' + d.n + '）</button>';
+    }).join('');
+  }
+
+  function renderCaps(caps) {
+    if (!caps) return '';
+    return '<div class="caps-grid">' + caps.split('/').map(function (c) {
+      return '<span class="cap-tag">' + c + '</span>';
+    }).join('') + '</div>';
+  }
+
+  function tierCard(t) {
+    return '<div class="plug-tier">' +
+      '<div class="tier-badge ' + (TIER_CLASS[t.tier] || 'mid') + '">' + t.tier + '组合<small>' + t.n + '</small></div>' +
+      '<div class="tier-body">' +
+      '<div class="tier-combo">' + t.combo + '</div>' +
+      '<div class="tier-scene">' + t.scene + '</div>' +
+      '</div></div>';
+  }
+
+  function renderDetail(i) {
+    var d = DATA.domains[i];
+    detailEl.innerHTML =
+      '<div class="ai-boost"><span class="lead">' + d.name + '：</span>' + d.boost + '</div>' +
+      renderCaps(d.caps) +
+      d.tiers.map(tierCard).join('') +
+      '<div class="tier-cross">组合可跨板块自由搭配，也可按需定制；组件数为当前已上线实测值。</div>';
+    var tabs = tabsEl.querySelectorAll('.plug-tab');
+    for (var j = 0; j < tabs.length; j++) {
+      tabs[j].classList.toggle('active', j === i);
+    }
+  }
+
+  window.PLUGINS = window.PLUGINS || {};
+  window.PLUGINS.showDomain = function (i) {
+    renderDetail(i);
+    try { if (location.hash !== '#' + DATA.domains[i].id) history.replaceState(null, '', '#' + DATA.domains[i].id); } catch (e) {}
+  };
+
+  /* 行业卡片渲染 */
+  var indEl = document.getElementById('industries');
+  DATA.industries.forEach(function (x, i) {
+    var el = document.createElement('div');
+    el.className = 'i-card reveal';
+    el.style.transitionDelay = (i % 3) * .07 + 's';
+    el.innerHTML = '<div class="stamp">' + x.seal + '</div><h4>' + x.name + '</h4><p>' + x.desc + '</p>';
+    indEl.appendChild(el);
+  });
+
+  /* 初始化（支持 #hash 定位） */
+  renderTabs();
+  var target = null;
+  try { target = location.hash ? location.hash.slice(1) : null; } catch (e) {}
+  var dIdx = 0;
+  if (target) {
+    for (var di = 0; di < DATA.domains.length; di++) { if (DATA.domains[di].id === target) { dIdx = di; break; } }
+  }
+  renderDetail(dIdx);
+})();
+</script>
+</body>
+</html>

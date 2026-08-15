@@ -1,0 +1,22 @@
+name: ddw-esg-report
+license: commercial
+tier: beta
+version: 0.1.0
+description: |
+  ESG assessment report generator — produces PDF reports with radar charts,
+  score tables, meta analysis, and actionable recommendations using
+  reportlab + matplotlib.
+dependencies:
+  plugins: {}
+  python:
+    - reportlab>=4.0
+    - matplotlib>=3.7
+    - pydantic>=2.0
+events:
+  produces: []
+  consumes: []
+isolation: inline
+permissions:
+  - file:write
+config:
+  reports_dir: reports

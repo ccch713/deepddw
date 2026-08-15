@@ -1,0 +1,19 @@
+name: ddw_dental_imaging
+license: commercial
+tier: beta
+version: "0.1.0"
+description: 口腔影像管理
+author: DDW Team
+endpoints:
+  - path: /api/v1/plugins/ddw_dental_imaging/health
+    method: GET
+  - path: /api/v1/plugins/ddw_dental_imaging/images
+    method: POST
+  - path: /api/v1/plugins/ddw_dental_imaging/images
+    method: GET
+  - path: /api/v1/plugins/ddw_dental_imaging/images/{id}
+    method: GET
+  - path: /api/v1/plugins/ddw_dental_imaging/images/{id}
+    method: DELETE
+  - path: /api/v1/plugins/ddw_dental_imaging/timeline
+    method: GET

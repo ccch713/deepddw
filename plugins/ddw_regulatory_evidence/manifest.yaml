@@ -1,0 +1,25 @@
+name: ddw-regulatory-evidence
+tier: beta
+version: 1.0.0
+description: "DDW 法规证据索引 — NHC/EU Novel Food/EFSA/FDA法规条款检索与证据链管理"
+author: "DDW Team"
+license: commercial
+type: plugin
+adapter:
+  type: "quality"
+  vendor: "ddw"
+  protocol: "internal"
+dependencies:
+  plugins:
+    ddw-core: ">=2.0.0"
+config:
+  optional:
+    llm_provider:
+      default: "mimo"
+      description: "LLM 提供商"
+    jurisdictions:
+      default: "CN,EU,US"
+      description: "支持的法规辖区"
+routes:
+  - prefix: /api/v1/plugins/ddw-regulatory-evidence
+    router: router:router

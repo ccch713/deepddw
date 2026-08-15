@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>DDW AI Hub · 定价双轨模型</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#020617;color:#e2e8f0;min-height:100vh;padding:24px}
+  .container{max-width:1080px;margin:0 auto}
+  .header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid #1e293b}
+  .header h1{font-size:18px;color:#f1f5f9;font-weight:700}
+  .sub{font-size:11px;color:#94a3b8;margin-left:auto}
+  .ver{background:rgba(34,211,238,0.1);color:#22d3ee;border:1px solid #22d3ee;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700}
+
+  /* Main two-column layout */
+  .dual{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
+
+  .col-a{background:#0f172a;border:1px solid #34d399;border-radius:12px;overflow:hidden}
+  .col-a-header{background:rgba(6,78,59,0.3);padding:16px;border-bottom:1px solid #34d399}
+  .col-a-header h2{color:#d1fae5;font-size:14px;font-weight:700}
+  .col-a-header p{color:#6ee7b7;font-size:10.5px;margin-top:4px}
+  .col-a-body{padding:16px}
+
+  .col-b{background:#0f172a;border:1px solid #fbbf24;border-radius:12px;overflow:hidden}
+  .col-b-header{background:rgba(120,53,15,0.3);padding:16px;border-bottom:1px solid #fbbf24}
+  .col-b-header h2{color:#fef3c7;font-size:14px;font-weight:700}
+  .col-b-header p{color:#fde68a;font-size:10.5px;margin-top:4px}
+  .col-b-body{padding:16px}
+
+  .price-card{border:1px solid #1e293b;border-radius:8px;padding:14px;margin-bottom:10px;background:rgba(15,23,42,0.5)}
+  .price-card:last-child{margin-bottom:0}
+  .price-tag{font-size:22px;font-weight:700;color:#f1f5f9}
+  .price-note{font-size:9px;color:#64748b;margin-top:2px}
+  .price-desc{font-size:10.5px;color:#cbd5e1;margin-top:8px;line-height:1.6}
+  .price-list{list-style:none;margin-top:8px}
+  .price-list li{font-size:10px;color:#94a3b8;padding:3px 0;padding-left:12px;position:relative}
+  .price-list li::before{content:"✓";position:absolute;left:0;color:#34d399;font-weight:700}
+  .price-list li.x::before{content:"✗";color:#fb7185}
+  .price-list li.orange::before{content:"•";color:#fbbf24}
+  .tag-cyan{display:inline-block;background:rgba(34,211,238,0.1);color:#22d3ee;padding:1px 6px;border-radius:3px;font-size:8.5px;font-weight:700;margin-right:4px}
+  .tag-amber{display:inline-block;background:rgba(251,191,36,0.1);color:#fbbf24;padding:1px 6px;border-radius:3px;font-size:8.5px;font-weight:700;margin-right:4px}
+  .tag-rose{display:inline-block;background:rgba(251,113,133,0.1);color:#fb7185;padding:1px 6px;border-radius:3px;font-size:8.5px;font-weight:700;margin-right:4px}
+  .analogy-box{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:18px;margin-bottom:20px}
+  .analogy-box h3{font-size:13px;color:#f1f5f9;font-weight:700;margin-bottom:12px;text-align:center}
+  .analogy-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .analogy-item{text-align:center;padding:14px;border:1px solid #1e293b;border-radius:8px;background:rgba(15,23,42,0.4)}
+  .analogy-emoji{font-size:28px;margin-bottom:8px}
+  .analogy-title{font-size:11px;color:#f1f5f9;font-weight:700;margin-bottom:4px}
+  .analogy-desc{font-size:9.5px;color:#64748b}
+  .bridge{display:flex;align-items:center;justify-content:center;gap:14px;margin:10px 0;color:#94a3b8;font-size:10px}
+  .bridge-line{border-top:1px dashed #1e293b;flex:1}
+  .bridge-icon{font-size:18px}
+  .note{background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:12px;margin-bottom:16px}
+  .note p{font-size:10.5px;color:#cbd5e1;line-height:1.6}
+  .hl-green{color:#34d399;font-weight:700}
+  .hl-amber{color:#fbbf24;font-weight:700}
+  .hl-cyan{color:#22d3ee;font-weight:700}
+  .section-title{font-size:13px;color:#f1f5f9;font-weight:700;margin-bottom:12px;margin-top:8px}
+  .matrix{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  .matrix-cell{border:1px solid #1e293b;border-radius:6px;padding:10px}
+  .matrix-cell h4{font-size:10.5px;color:#f1f5f9;font-weight:700;margin-bottom:4px}
+  .matrix-cell p{font-size:9.5px;color:#94a3b8;line-height:1.5}
+  .footer{text-align:center;font-size:9px;color:#475569;padding:16px 0 4px}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>DDW AI Hub Platform · 定价双轨架构模型</h1>
+    <span class="ver">澄清版</span>
+    <span class="sub">买地打地基 ≠ 盖房子出租 · 两套互不影响</span>
+  </div>
+
+  <!-- 比喻总览 -->
+  <div class="analogy-box">
+    <h3>🏗️ 核心比喻：买地打地基 vs 盖房子出租</h3>
+    <div class="analogy-grid">
+      <div class="analogy-item">
+        <div class="analogy-emoji">🏡</div>
+        <div class="analogy-title">AI 底座平台</div>
+        <div class="analogy-desc">买地 + 打地基 + 通水电<br>一次性投入，永久持有</div>
+      </div>
+      <div class="analogy-item" style="border-color:#fbbf24">
+        <div class="analogy-emoji">🏢</div>
+        <div class="analogy-title">业务功能插件</div>
+        <div class="analogy-desc">在这块地上建房子<br>硬装 + 软装 + 拎包入住</div>
+      </div>
+      <div class="analogy-item" style="border-color:#fb7185">
+        <div class="analogy-emoji">💰</div>
+        <div class="analogy-title">定价方式</div>
+        <div class="analogy-desc">地 = 一次性卖断<br>房子 = 收房租（低价走量）</div>
+      </div>
+    </div>
+
+    <div class="bridge">
+      <span class="bridge-line"></span>
+      <span class="bridge-icon">⇨</span>
+      <span style="font-size:10px;color:#64748b"><span class="hl-amber">平台是基础设施</span> 卖一次，终身用</span>
+      <span class="bridge-icon">⇨</span>
+      <span style="font-size:10px;color:#64748b"><span class="hl-cyan">插件是功能增值</span> 用户按需订阅，¥1.99-4.99</span>
+      <span class="bridge-icon">⇨</span>
+      <span style="font-size:10px;color:#64748b">互不影响，双线独立</span>
+      <span class="bridge-line"></span>
+    </div>
+  </div>
+
+  <!-- 双轨并列 -->
+  <div class="dual">
+    <!-- 左：轨道A — 平台 -->
+    <div class="col-a">
+      <div class="col-a-header">
+        <h2>🏡 轨道 A · AI 底座平台</h2>
+        <p>「买地 + 打地基 + 通水电」— 基础设施一次卖断</p>
+      </div>
+      <div class="col-a-body">
+        <div class="price-card">
+          <div>
+            <span class="tag-cyan">开源免费</span>
+            <span class="tag-cyan">Apache 2.0 / MIT</span>
+          </div>
+          <div class="price-tag">¥0</div>
+          <div class="price-note">任何人都能 git clone 安装 · 家庭测试 · 个人使用</div>
+          <ul class="price-list">
+            <li>核心平台全部开源，零费用</li>
+            <li>Standalone 模式：SQLite + Python 3.11，零外部依赖</li>
+            <li>适合：开发者、极客、10 人以下（含 chenye 家庭测试）</li>
+            <li>x️ 不含商业技术支持</li>
+          </ul>
+        </div>
+
+        <div class="price-card" style="border-color:#34d399">
+          <div>
+            <span class="tag-cyan">商业授权</span>
+            <span class="tag-cyan">一次性永久</span>
+          </div>
+          <div class="price-tag">¥4,999</div>
+          <div class="price-note">一次性付款，终身使用，无年费无月费</div>
+          <ul class="price-list">
+            <li>专业版：≤20 用户，DataConnector × 1，10 个 Skill</li>
+            <li>钉钉/飞书/企微全部适配器已集成</li>
+            <li>1 年免费更新 + 基础技术部署支持</li>
+            <li>x️ 不需要交第二年的钱</li>
+          </ul>
+        </div>
+
+        <div class="price-card" style="border-color:#34d399">
+          <div>
+            <span class="tag-cyan">商业授权</span>
+            <span class="tag-cyan">一次性永久</span>
+          </div>
+          <div class="price-tag">¥19,999</div>
+          <div class="price-note">一次性付款，终身使用，企业全功能</div>
+          <ul class="price-list">
+            <li>企业版：≤100 用户，DataConnector × 3，无限 Skill</li>
+            <li>定制插件模板 + 插件市场 + 多租户</li>
+            <li>2 年免费更新 + 优先技术支持</li>
+            <li>x️ 不要和年费钉钉比 — 我是一次性卖断</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右：轨道B — 插件 -->
+    <div class="col-b">
+      <div class="col-b-header">
+        <h2>🔌 轨道 B · 业务功能插件</h2>
+        <p>「盖房子 + 装修 + 拎包入住」— 收房租，低价走量</p>
+      </div>
+      <div class="col-b-body">
+        <div class="price-card" style="border-color:#fbbf24">
+          <div>
+            <span class="tag-amber">插件订阅</span>
+            <span class="tag-amber">收房租模式</span>
+          </div>
+          <div class="price-tag">¥1.99-4.99</div>
+          <div class="price-note">/月 · 每个插件独立订阅 · 零营销</div>
+          <ul class="price-list">
+            <li class="orange">打工牛马直接扫码订阅，无电话无跟单</li>
+            <li class="orange">用多久付多久，不想用随时退</li>
+            <li class="orange">符合你的记忆规则：低价走量，不卖年费</li>
+          </ul>
+        </div>
+
+        <div class="price-card">
+          <div><span class="tag-amber">示例插件</span></div>
+          <div class="price-tag" style="font-size:16px;color:#fbbf24">病历管理 · 错题管理 · 生产看板 · 库存管理</div>
+          <ul class="price-list">
+            <li class="orange">医疗插件：dudu 看牙病历 OCR + A1 录音</li>
+            <li class="orange">教育插件：xinyan 错题拍照 + 同类题 + 学习计划</li>
+            <li class="orange">SME 插件：生产看板 / 质量追溯 / 库存管理</li>
+            <li class="orange">每个 ¥1.99-4.99/月，可叠加</li>
+          </ul>
+        </div>
+
+        <div class="price-card" style="border:1px solid #fb7185">
+          <div>
+            <span class="tag-rose">注意区分</span>
+          </div>
+          <div class="price-desc">
+            <span class="hl-amber">¥1.99-4.99 → 不是底座平台本身的定价，是底座以上插件的"房租"。</span>
+            <br><br>
+            底座平台本身（轨道 A）卖地打地基，一次买断；<br>
+            插件（轨道 B）才是低价走量的房租模式。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 影响关系矩阵 -->
+  <div class="section-title">📐 定价模型影响矩阵</div>
+  <div class="matrix">
+    <div class="matrix-cell" style="border-left:3px solid #34d399">
+      <h4>底座定价（轨道 A）</h4>
+      <p>一次性永久授权，按企业规模分级。开源免费版让开发者自行验证 → 企业买单升级 → 没有续费压力，一次交易终身服务。</p>
+    </div>
+    <div class="matrix-cell" style="border-left:3px solid #fbbf24">
+      <h4>插件定价（轨道 B）</h4>
+      <p>¥1.99-4.99/月，零营销，零谈判。打工牛马扫个码就付了，用就付费，不用停付。对标你的记忆硬规则：低价走量，不卖年费。</p>
+    </div>
+    <div class="matrix-cell" style="border-left:3px solid #a78bfa">
+      <h4>两轨独立</h4>
+      <p>企业买了底座 ≠ 插件免费。企业没买底座 ≠ 插件单独可用（插件运行在底座上）。但定价互不影响——底座贵是因为它是资产，插件便宜是因为它是收房租。</p>
+    </div>
+    <div class="matrix-cell" style="border-left:3px solid #fb7185">
+      <h4>你的性格匹配</h4>
+      <p>极端内向：底座官网明码标价 + 插件扫码订阅 = 零社交成交。一人公司：底座卖一单是一单（不需要追款），插件靠量（不需要销售）。完美。</p>
+    </div>
+  </div>
+
+  <!-- 总结 -->
+  <div class="note">
+    <p>
+      <strong style="color:#f1f5f9">总结：</strong>
+      <span class="hl-green">AI 底座平台 = 买地 + 打地基</span>（¥4,999-19,999 一次性永久授权），
+      <span class="hl-amber">业务功能插件 = 盖房子 + 装修 + 收租</span>（¥1.99-4.99/月，低价走量）。
+      前者是资产型销售，后者是服务型收租。
+      <strong style="color:#f1f5f9">双轨完全独立，互不影响。</strong>先按这个策略写 metering 框架，MVP 跑通后再调整具体数字。
+    </p>
+  </div>
+
+  <div class="footer">DDW AI Hub Platform · 定价双轨架构模型 · 2026-06-27</div>
+</div>
+</body>
+</html>

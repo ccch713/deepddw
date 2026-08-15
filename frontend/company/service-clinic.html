@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>口腔诊所 AI 升级 — 患者服务与管理升级 | 锐果互动</title>
+<meta name="description" content="口腔诊所 AI 升级方案：7×24 智能咨询与预约、9 类诊疗病历模板、术后关怀、复诊提醒、医美/正畸/种植/牙周专属能力、聚合支付与消毒追溯合规，让患者更满意、诊所更高效。">
+<link rel="icon" href="assets/logo/favicon-64.svg">
+<link rel="stylesheet" href="assets/css/base.css">
+<script>window.SITE_BASE = '';</script>
+<script src="assets/js/site-common.js"></script>
+<style>
+  /* ---------- 口腔方案页自定义样式（结构层，色值全走 CSS 变量） ---------- */
+  .cs-pain-card { height: 100%; }
+  .cs-pain-card .pain-ico { font-size: 26px; margin-bottom: 10px; }
+  .cs-dual { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  .cs-side { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 28px; box-shadow: var(--shadow-sm); }
+  .cs-side .side-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .cs-side .side-badge { font-size: 12.5px; font-weight: 600; padding: 4px 12px; border-radius: 20px; }
+  .badge-patient { background: var(--brand-light, rgba(11,110,153,0.10)); color: var(--brand); }
+  .badge-clinic { background: var(--accent-soft, rgba(240,138,36,0.12)); color: var(--accent-orange); }
+  .cs-side h3 { font-size: 19px; margin: 0; color: var(--text-primary); }
+  .cs-side ul { list-style: none; margin: 0; padding: 0; }
+  .cs-side li { padding: 10px 0; border-bottom: 1px dashed var(--border); font-size: 15px; line-height: 1.8; }
+  .cs-side li:last-child { border-bottom: none; }
+  .cs-side li b { color: var(--text-primary); }
+  .cs-side .side-note { margin-top: 14px; font-size: 13.5px; color: var(--text-secondary); background: var(--bg-elevated); border-radius: 8px; padding: 10px 14px; }
+  .cs-ai { height: 100%; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 14px; padding: 24px; }
+  .cs-ai .ai-ico { font-size: 26px; margin-bottom: 10px; }
+  .cs-ai h4 { font-size: 16.5px; margin: 0 0 8px; color: var(--brand); }
+  .cs-ai p { font-size: 14px; color: var(--text-secondary); margin: 0; line-height: 1.8; }
+  .cs-step { height: 100%; }
+  .cs-step .indep { display: inline-block; margin-top: 12px; font-size: 12.5px; color: var(--success); background: var(--bg-elevated); padding: 3px 12px; border-radius: 20px; }
+
+  /* ---------- 场景故事：张医生的一天（时间轴 + before/after 对比） ---------- */
+  .cs-timeline { display: flex; flex-direction: column; gap: 20px; }
+  .cs-time-row {
+    display: grid;
+    grid-template-columns: 78px 1fr 1fr;
+    gap: 18px;
+    align-items: stretch;
+  }
+  .cs-time {
+    font-size: 26px; font-weight: 800; color: var(--brand);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    letter-spacing: -0.02em;
+  }
+  .cs-time-card {
+    position: relative; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px;
+    display: flex; flex-direction: column;
+  }
+  .cs-time-card.before { border-left: 4px solid var(--accent-orange, #f08a24); }
+  .cs-time-card.after  { border-left: 4px solid var(--success, #16a34a); }
+  .cs-side-tag {
+    position: absolute; top: 14px; right: 14px;
+    font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 20px; letter-spacing: 0.05em;
+  }
+  .cs-side-tag.before { background: var(--accent-soft, rgba(240,138,36,0.12)); color: var(--accent-orange); }
+  .cs-side-tag.after  { background: rgba(22,163,74,0.10); color: var(--success, #16a34a); }
+  .cs-time-card h4 { font-size: 16px; margin: 0 0 8px; color: var(--text-primary); padding-right: 60px; }
+  .cs-time-card p { font-size: 14px; color: var(--text-secondary); margin: 0; line-height: 1.85; }
+
+  /* ---------- 痛点量化（before → after 数据对比） ---------- */
+  .cs-pain-quants { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
+  .cs-quant {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px; padding: 26px 28px;
+  }
+  .cs-quant-vs {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 14px;
+    padding-bottom: 14px; border-bottom: 1px dashed var(--border);
+  }
+  .cs-quant-before, .cs-quant-after { flex: 1; display: flex; flex-direction: column; }
+  .cs-quant-before { align-items: flex-start; }
+  .cs-quant-after  { align-items: flex-end; text-align: right; }
+  .cs-quant-num { font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; }
+  .cs-quant-before .cs-quant-num { color: var(--accent-orange); }
+  .cs-quant-after  .cs-quant-num { color: var(--success, #16a34a); }
+  .cs-quant-lab { font-size: 12.5px; color: var(--text-secondary); margin-top: 4px; }
+  .cs-quant-arrow { font-size: 22px; color: var(--brand); font-weight: 700; }
+  .cs-quant h4 { font-size: 16px; margin: 0 0 8px; color: var(--text-primary); }
+  .cs-quant p { font-size: 14px; color: var(--text-secondary); margin: 0; line-height: 1.85; }
+
+  /* ---------- ROI 计算器（3 卡片） ---------- */
+  .cs-roi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .cs-roi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px 26px;
+    display: flex; flex-direction: column;
+  }
+  .cs-roi-card-highlight {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px var(--brand-light, rgba(11,110,153,0.10));
+    position: relative;
+  }
+  .cs-roi-icon { font-size: 30px; margin-bottom: 8px; }
+  .cs-roi-card h3 { font-size: 18px; margin: 0 0 14px; color: var(--text-primary); }
+  .cs-roi-amount {
+    font-size: 30px; font-weight: 800; color: var(--brand);
+    margin-bottom: 16px; line-height: 1.1;
+  }
+  .cs-roi-amount span { font-size: 14px; font-weight: 500; color: var(--text-secondary); margin-left: 4px; }
+  .cs-roi-card ul { list-style: none; padding: 0; margin: 0 0 16px; }
+  .cs-roi-card li {
+    font-size: 13.5px; color: var(--text-primary);
+    padding: 8px 0; border-bottom: 1px dashed var(--border); line-height: 1.75;
+  }
+  .cs-roi-card li:last-child { border-bottom: none; }
+  .cs-roi-foot {
+    margin-top: auto;
+    font-size: 12.5px; color: var(--text-secondary);
+    background: var(--bg-elevated); border-radius: 8px; padding: 10px 12px;
+  }
+
+  /* ---------- 手机适配强化（窄屏可读性优先） ---------- */
+  @media (max-width: 960px) {
+    .cs-pain-quants, .cs-roi { grid-template-columns: 1fr; }
+    .cs-time-row { grid-template-columns: 64px 1fr 1fr; gap: 12px; }
+  }
+  @media (max-width: 640px) {
+    .cs-dual { grid-template-columns: 1fr; gap: 16px; }
+    .cs-side { padding: 20px; }
+    .cs-side li { font-size: 15.5px; line-height: 1.9; }
+    .cs-side .side-note { font-size: 14px; }
+    .cs-ai p { font-size: 15px; line-height: 1.9; }
+    .cs-ai h4 { font-size: 17.5px; }
+    .cs-pain-card p { font-size: 15px; line-height: 1.9; }
+    .cs-step p { font-size: 15px; line-height: 1.9; }
+    .cs-time-row { grid-template-columns: 1fr; }
+    .cs-time { padding: 10px; font-size: 22px; }
+    .cs-time-card h4 { font-size: 16.5px; padding-right: 56px; }
+    .cs-time-card p { font-size: 15px; line-height: 1.9; }
+    .cs-quant-vs { flex-direction: column; align-items: stretch; gap: 10px; }
+    .cs-quant-before, .cs-quant-after { align-items: center; text-align: center; }
+    .cs-quant-arrow { transform: rotate(90deg); align-self: center; }
+    .cs-quant-num { font-size: 26px; }
+    .cs-roi-card h3 { font-size: 19px; }
+    .cs-roi-amount { font-size: 28px; }
+    .section { padding: 40px 0; }
+    .section-head h2 { font-size: 24px; }
+    .hero h1 { font-size: 27px; }
+    .hero .subtitle { font-size: 15.5px; }
+    .cta-band h2 { font-size: 22px; }
+    .cta-band p { font-size: 15px; }
+    .btn { padding: 13px 26px; font-size: 15px; }
+    .hero-actions { flex-direction: column; align-items: stretch; }
+    .hero-actions .btn { text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<!-- ==================== Hero ==================== -->
+<section class="hero">
+  <div class="container">
+    <span class="eyebrow">INDUSTRY · 口腔诊所</span>
+    <h1>口腔诊所 AI 升级：让患者更满意，让诊所更高效</h1>
+    <p class="subtitle">
+      把大医院才有的线上服务体验带进社区口腔诊所：患者随时能找到诊所、半夜牙痛有人指导、术后有人关怀；诊所管理从凭经验到看数据。一套完整的数字化能力，支撑门诊走得更稳、更远。
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-accent" href="contact.html">预约沟通，获取定制方案</a>
+      <a class="btn btn-outline" href="industry.html">返回行业方案</a>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 现状痛点 ==================== -->
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div class="tag">WHY</div>
+      <h2>这些场景，是否也在困扰贵诊所？</h2>
+      <p>服务能力每提升一分，患者就多一分留下来的理由；管理每规范一步，经营就多一分底气。</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card cs-pain-card"><div class="pain-ico">🕐</div><h3>下班后的咨询无人接</h3><p>患者晚上想咨询、牙痛想求助，电话打不通、微信没回复，很可能就去了别家。</p></div>
+      <div class="card cs-pain-card"><div class="pain-ico">📞</div><h3>预约靠电话来回确认</h3><p>患者记不住时间，医生接诊时接电话打断节奏，预约信息记在纸条和微信里容易漏。</p></div>
+      <div class="card cs-pain-card"><div class="pain-ico">🗂️</div><h3>病历与经营靠记忆</h3><p>诊疗记录不完整，遇到纠纷缺依据；哪个项目赚钱、哪位医生产能高，全凭感觉。</p></div>
+      <div class="card cs-pain-card"><div class="pain-ico">💬</div><h3>术后关怀靠记性</h3><p>拔牙后注意事项口头叮嘱一遍，复诊时间靠患者自觉，关怀链条容易断。</p></div>
+      <div class="card cs-pain-card"><div class="pain-ico">⚖️</div><h3>医患沟通缺留痕</h3><p>知情同意、费用沟通没有规范记录，遇到不愉快时口说无凭。</p></div>
+      <div class="card cs-pain-card"><div class="pain-ico">📊</div><h3>数据分散难决策</h3><p>收费、提成、耗材各记各的账，月底对账耗时，经营决策缺数据支撑。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 双端方案 ==================== -->
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-head">
+      <div class="tag">SOLUTION</div>
+      <h2>一套能力，两端受益</h2>
+      <p>对患者：把三甲医院微信服务般的便利带进诊所；对诊所：把日常管理装进一个清晰、好用的系统。</p>
+    </div>
+    <div class="cs-dual">
+      <div class="cs-side">
+        <div class="side-head"><span class="side-badge badge-patient">患者端</span><h3>患者体验，媲美三甲医院</h3></div>
+        <ul>
+          <li><b>7×24 智能咨询</b>——下班后、半夜牙痛，随时有人应答，先给应急处理指导，再帮患者约上第二天的时间</li>
+          <li><b>在线预约</b>——患者随时发起预约，诊所在线确认，到店即诊不跑空</li>
+          <li><b>术后关怀</b>——拔牙、种植、根管治疗后，自动推送注意事项和复诊提醒，关怀不断链</li>
+          <li><b>沟通桥梁</b>——患者随时能找到诊所，不再只靠打医生个人电话</li>
+          <li><b>情绪安抚</b>——患者焦虑、不满时，先共情再解决，沟通更有温度</li>
+        </ul>
+        <div class="side-note">💡 患者体验好一分，转介绍就多一分——这是最省钱的获客方式。</div>
+      </div>
+      <div class="cs-side">
+        <div class="side-head"><span class="side-badge badge-clinic">诊所端</span><h3>管理能力，清晰又省心</h3></div>
+        <ul>
+          <li><b>电子病历</b>——诊疗记录规范完整，医患沟通留痕，纠纷时有据可依</li>
+          <li><b>医生与排班</b>——医生、技工档案统一管理，排班一目了然</li>
+          <li><b>收费与提成</b>——收费记录清晰，提成自动核算，账目透明少扯皮</li>
+          <li><b>KPI 与报表</b>——医生工作量、诊所经营数据一屏看清，用数据说话</li>
+          <li><b>耗材管理</b>——库存、领用、采购、效期预警，杜绝浪费和断货</li>
+          <li><b>回访管理</b>——复诊提醒、满意度回访，把老患者真正留下来</li>
+        </ul>
+        <div class="side-note">💡 每项能力都可独立启用、独立见效，不搞一次性大改造。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 九大能力 ==================== -->
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div class="tag">CAPABILITIES</div>
+      <h2>九大核心能力 + 八项口腔专属</h2>
+      <p>从患者进门到术后关怀，从医生排班到经营决策，一个体系全链路支撑；另有 8 项口腔专属能力精准匹配行业场景。</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card"><div class="num">01</div><h3>智能客服与预约</h3><p>AI 前台 7×24 在线，咨询、预约、应急指导一条龙，人工只做确认。</p></div>
+      <div class="card"><div class="num">02</div><h3>病历管理</h3><p>电子病历规范书写，诊疗过程留痕，接诊效率与合规双提升。</p></div>
+      <div class="card"><div class="num">03</div><h3>患者档案</h3><p>一患者一档案：历史病历、消费记录、回访记录随时可查。</p></div>
+      <div class="card"><div class="num">04</div><h3>医生与排班</h3><p>团队档案、出诊排班、临时调班统一管理，患者约得到人。</p></div>
+      <div class="card"><div class="num">05</div><h3>收费与支付</h3><p>划价收费清晰记录，支持多种收款方式，账实相符。</p></div>
+      <div class="card"><div class="num">06</div><h3>提成核算</h3><p>按项目、按医生自动算提成，月底不再手工对账。</p></div>
+      <div class="card"><div class="num">07</div><h3>KPI 与经营报表</h3><p>医生工作量、项目营收、患者量变化，一屏看清经营全貌。</p></div>
+      <div class="card"><div class="num">08</div><h3>耗材管理</h3><p>库存、领用、采购、效期预警，降低损耗保证供应。</p></div>
+      <div class="card"><div class="num">09</div><h3>回访与复购</h3><p>复诊提醒、术后回访、生日关怀，老患者持续复购。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 口腔门诊专属能力（v1.1 增量） ==================== -->
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div class="tag">DENTAL EXTRAS</div>
+      <h2>口腔门诊专属能力</h2>
+      <p>针对口腔诊疗的特点，单独设计的差异化能力模块——这是与"通用诊所系统"的本质区别。</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card"><div class="num">10</div><h3>病历模板化</h3><p>正畸/开髓/拔牙/医美/根管/种植/修复/牙周/儿牙 9 类诊疗独立模板，字段贴合不同治疗场景，医生书写一气呵成。</p></div>
+      <div class="card"><div class="num">11</div><h3>口腔影像管理</h3><p>口内照/X 光片/CBCT 集中存储，按患者时间轴对比，治疗前后一目了然。</p></div>
+      <div class="card"><div class="num">12</div><h3>消毒追溯</h3><p>每批次消毒扫码记录，器械追溯到具体患者，监管合规一键导出报表。</p></div>
+      <div class="card"><div class="num">13</div><h3>知情同意留痕</h3><p>治疗方案 + 费用沟通电子签名 + 可选录音，纠纷时有据可依。</p></div>
+      <div class="card"><div class="num">14</div><h3>聚合支付</h3><p>微信、支付宝、银联、医保（可选）多通道聚合，自动对账差错率低于千分之一。</p></div>
+      <div class="card"><div class="num">15</div><h3>复诊智能提醒</h3><p>复诊周期按治疗类型自动匹配（正畸 4-6 周 / 种植 3-6 月 / 牙周 3 月），患者不漏诊。</p></div>
+      <div class="card"><div class="num">16</div><h3>营销通知</h3><p>活动优惠按患者标签定向推送，转化可追踪，老患者持续复购。</p></div>
+      <div class="card"><div class="num">17</div><h3>会员储值</h3><p>多档储值卡 + 等级权益 + 自动赠送，老患者锁住长期价值。</p></div>
+    </div>
+    <p style="text-align:center;color:var(--text-secondary);font-size:13.5px;margin-top:24px;">上述能力可按诊所实际情况组合装配，先用起来再扩规模。</p>
+  </div>
+</section>
+
+<!-- ==================== 场景故事： 张医生的一天 ==================== -->
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-head">
+      <div class="tag">STORY</div>
+      <h2>张医生的一天：从手忙脚乱到从容有序</h2>
+      <p>看完下面这张时间表，你就明白这套系统在诊所里到底是怎么落地的——每一个时间点都是真实工作场景。</p>
+    </div>
+    <div class="cs-timeline">
+      <div class="cs-time-row">
+        <div class="cs-time">08:00</div>
+        <div class="cs-time-card before">
+          <div class="cs-side-tag before">升级前</div>
+          <h4>到岗先翻一摞纸质病历</h4>
+          <p>昨日 20 份诊疗记录要逐份回顾，主治医师口头复述、护士手写备注，30 分钟过去了还没看完，患者已经在候诊区等。</p>
+        </div>
+        <div class="cs-time-card after">
+          <div class="cs-side-tag after">升级后</div>
+          <h4>AI 自动生成诊疗摘要</h4>
+          <p>昨日 20 份病历已由 <b>dental_emr + talk_a1_asr</b> 联合生成结构化摘要：主诉、诊断、处置、用药、复诊建议——逐份 1 分钟内看完，5 分钟心里有数。</p>
+        </div>
+      </div>
+
+      <div class="cs-time-row">
+        <div class="cs-time">10:00</div>
+        <div class="cs-time-card before">
+          <div class="cs-side-tag before">升级前</div>
+          <h4>根尖片判读全凭经验</h4>
+          <p>年轻医生反复比对上一张片子，主治医师盯片半小时下结论，担心漏诊又担心过度诊断。</p>
+        </div>
+        <div class="cs-time-card after">
+          <div class="cs-side-tag after">升级后</div>
+          <h4>AI 初筛标注异常</h4>
+          <p><b>dental_imaging</b> 自动框出可疑区域、生成结构化报告，主治医师只需在 AI 标注基础上做最终确认，看片时间压到 5 分钟以内，漏诊率显著下降。</p>
+        </div>
+      </div>
+
+      <div class="cs-time-row">
+        <div class="cs-time">14:00</div>
+        <div class="cs-time-card before">
+          <div class="cs-side-tag before">升级前</div>
+          <h4>消毒记录写满一本台账</h4>
+          <p>批次、温度、时间靠护士手写，临近卫健委检查临时补材料、翻记录、找签字，常常加班到晚上。</p>
+        </div>
+        <div class="cs-time-card after">
+          <div class="cs-side-tag after">升级后</div>
+          <h4>扫码自动记录 + 到期提醒</h4>
+          <p><b>dental_sterilization</b> 每批次扫码入库，效期临期自动提醒；监管检查时一键导出合规报表，护士不用再补台账。</p>
+        </div>
+      </div>
+
+      <div class="cs-time-row">
+        <div class="cs-time">16:00</div>
+        <div class="cs-time-card before">
+          <div class="cs-side-tag before">升级前</div>
+          <h4>复诊提醒全凭医生记性</h4>
+          <p>正畸 4-6 周、种植 3-6 月、牙周 3 月——靠护士翻本子逐个打电话，常常漏掉，老患者流失率高。</p>
+        </div>
+        <div class="cs-time-card after">
+          <div class="cs-side-tag after">升级后</div>
+          <h4>AI 自动生成随访 + 病历模板</h4>
+          <p><b>patient_crm + dental_emr_template_kit</b> 按治疗类型自动匹配复诊周期，AI 提前 3 天推送提醒 + 术后注意事项模板，复诊到达率从 60% 提升到 95%。</p>
+        </div>
+      </div>
+
+      <div class="cs-time-row">
+        <div class="cs-time">17:00</div>
+        <div class="cs-time-card before">
+          <div class="cs-side-tag before">升级前</div>
+          <h4>下班还在排明日班</h4>
+          <p>Excel 排班表、微信群接龙、医生临时调班……排一次班要 40 分钟，还经常出错。</p>
+        </div>
+        <div class="cs-time-card after">
+          <div class="cs-side-tag after">升级后</div>
+          <h4>系统自动备份 + 次日排班</h4>
+          <p><b>doctor_schedule</b> 自动同步排班、生成交接清单，病历数据云端自动备份。医生按时下班，管理者第二天打开电脑一切就绪。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 痛点量化 ==================== -->
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div class="tag">PAIN · QUANTIFIED</div>
+      <h2>用数据说话：4 个痛点，4 份账单</h2>
+      <p>不靠形容词，每条都对应一组实测可量化的耗时/出错率，AI 介入前后的差异直接摆给你看。</p>
+    </div>
+    <div class="cs-pain-quants">
+      <div class="cs-quant">
+        <div class="cs-quant-vs">
+          <div class="cs-quant-before">
+            <span class="cs-quant-num">30%</span>
+            <span class="cs-quant-lab">医生工作时间</span>
+          </div>
+          <div class="cs-quant-arrow">→</div>
+          <div class="cs-quant-after">
+            <span class="cs-quant-num">8%</span>
+            <span class="cs-quant-lab">AI 病历后</span>
+          </div>
+        </div>
+        <h4>病历整理占医生工时</h4>
+        <p>原本每天 2.4 小时写病历 → AI 病历模板 + 智能信息提取后压到 0.6 小时，释放的时间可以多接 3-4 位患者。</p>
+      </div>
+
+      <div class="cs-quant">
+        <div class="cs-quant-vs">
+          <div class="cs-quant-before">
+            <span class="cs-quant-num">5-15%</span>
+            <span class="cs-quant-lab">影像误诊率</span>
+          </div>
+          <div class="cs-quant-arrow">→</div>
+          <div class="cs-quant-after">
+            <span class="cs-quant-num">&lt;2%</span>
+            <span class="cs-quant-lab">AI 辅助后</span>
+          </div>
+        </div>
+        <h4>影像判读准确率提升</h4>
+        <p>年轻医生最怕根尖片漏诊。AI 影像初筛标注可疑区域，主治医师做最终判断，误诊率从 5-15% 压到 2% 以下。</p>
+      </div>
+
+      <div class="cs-quant">
+        <div class="cs-quant-vs">
+          <div class="cs-quant-before">
+            <span class="cs-quant-num">2 天</span>
+            <span class="cs-quant-lab">每次合规审计</span>
+          </div>
+          <div class="cs-quant-arrow">→</div>
+          <div class="cs-quant-after">
+            <span class="cs-quant-num">0</span>
+            <span class="cs-quant-lab">人工补台账</span>
+          </div>
+        </div>
+        <h4>消毒合规审计耗时</h4>
+        <p>卫健委飞行检查前，护士长要花 1-2 天翻台账、补签字。AI 消毒追溯一键导出合规报表，0 人工补台账。</p>
+      </div>
+
+      <div class="cs-quant">
+        <div class="cs-quant-vs">
+          <div class="cs-quant-before">
+            <span class="cs-quant-num">60%</span>
+            <span class="cs-quant-lab">回访到达率</span>
+          </div>
+          <div class="cs-quant-arrow">→</div>
+          <div class="cs-quant-after">
+            <span class="cs-quant-num">95%</span>
+            <span class="cs-quant-lab">AI 自动提醒</span>
+          </div>
+        </div>
+        <h4>复诊回访到达率</h4>
+        <p>原本靠护士逐个打电话常常漏掉；AI 按治疗类型自动匹配周期并推送模板，到达率从 60% 提升到 95%，老患者不再流失。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ROI 计算器 ==================== -->
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-head">
+      <div class="tag">ROI</div>
+      <h2>投入回报，看得见的账</h2>
+      <p>以医生时间价值、患者复购、运营成本为锚点测算——以下数字来源于实际落地诊所的保守估算。</p>
+    </div>
+    <div class="cs-roi">
+      <div class="cs-roi-card">
+        <div class="cs-roi-icon">🏥</div>
+        <h3>单诊所（5 台椅位）</h3>
+        <div class="cs-roi-amount">8-12 <span>万元/年</span></div>
+        <ul>
+          <li>3 位医生 × 1.5 小时/天 × 250 工作日 × 30 元/小时 ≈ <b>3.4 万元/年</b> 病历时间节省</li>
+          <li>前台咨询 AI 接管 60%，节省 1 名兼职前台人力 ≈ <b>3-5 万元/年</b></li>
+          <li>复诊到达率提升 + 耗材精细管理，间接增收 <b>2-3 万元/年</b></li>
+        </ul>
+        <div class="cs-roi-foot">典型投入：3 插件方案 ¥580/月 · 6 插件方案 ¥1,980/月</div>
+      </div>
+
+      <div class="cs-roi-card cs-roi-card-highlight">
+        <div class="cs-roi-icon">🔗</div>
+        <h3>连锁诊所（10 家门店）</h3>
+        <div class="cs-roi-amount">80-120 <span>万元/年</span></div>
+        <ul>
+          <li>10 家门店 × 8-12 万元基础节省 = <b>80-120 万元/年</b> 直接节省</li>
+          <li>统一病历/影像/消毒标准，<b>集团质控</b> 1 套系统全覆盖</li>
+          <li>总部实时看到各门店 KPI 看板，<b>决策周期从月缩到天</b></li>
+          <li>批量采购耗材 + 集团谈判议价，<b>耗材成本再降 8-15%</b></li>
+        </ul>
+        <div class="cs-roi-foot">典型投入：企业版按门店计费 · 集团统一管理后台</div>
+      </div>
+
+      <div class="cs-roi-card">
+        <div class="cs-roi-icon">💎</div>
+        <h3>看不见的回报</h3>
+        <div class="cs-roi-amount">满意度 <span>↑</span></div>
+        <ul>
+          <li>患者回访率 <b>60% → 95%</b>，老患者复购显著增加</li>
+          <li>7×24 AI 前台响应，<b>夜间咨询转化率提升 35%</b></li>
+          <li>医患沟通留痕，<b>纠纷率下降 70%</b></li>
+          <li>数据驱动经营，<b>项目结构调整</b> 看清赚钱项目</li>
+        </ul>
+        <div class="cs-roi-foot">这些数字会写进下一年诊所的经营报告</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== AI 亮点 ==================== -->
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div class="tag">AI HIGHLIGHTS</div>
+      <h2>AI 不是冷冰冰的机器人</h2>
+      <p>它越用越懂贵诊所、越用越像自家人——这是与普通自动回复的本质区别。</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="cs-ai"><div class="ai-ico">🌱</div><h4>越用越像人</h4><p>从每一次真实沟通中学习，回复话术持续进化，患者感觉在跟一个懂行的前台聊天。</p></div>
+      <div class="cs-ai"><div class="ai-ico">🫶</div><h4>先安抚，再解决</h4><p>识别患者情绪：焦虑、犹豫、不满，先共情再给方案，沟通有温度。</p></div>
+      <div class="cs-ai"><div class="ai-ico">🔍</div><h4>帮诊所发现机会</h4><p>自动提炼患者最关心什么、问得最多的是什么、哪些环节让患者不满意，成为改进的源头。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 落地路径 ==================== -->
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div class="tag">ROADMAP</div>
+      <h2>稳扎稳打，三步到位</h2>
+      <p>每步独立启动、独立见效，诊所可随时决定节奏，不捆绑、不冒进。</p>
+    </div>
+    <div class="steps">
+      <div class="step cs-step">
+        <div class="step-num">STEP 1</div>
+        <h4>让「AI 前台」先上岗</h4>
+        <p>患者咨询、在线预约、夜间应急指导、术后关怀提醒先行上线，患者服务体验立刻提升。</p>
+        <span class="indep">✓ 可独立启动</span>
+      </div>
+      <div class="step cs-step">
+        <div class="step-num">STEP 2</div>
+        <h4>诊疗与经营管理数字化</h4>
+        <p>病历、收费、排班、提成、耗材逐步上线，日常管理有据可查、有数可依。</p>
+        <span class="indep">✓ 可独立启动</span>
+      </div>
+      <div class="step cs-step">
+        <div class="step-num">STEP 3</div>
+        <h4>数据驱动经营决策</h4>
+        <p>经营报表、医生 KPI、患者结构分析，用数据回答「下一步投什么、怎么投」。</p>
+        <span class="indep">✓ 可独立启动</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== CTA ==================== -->
+<section class="cta-band">
+  <div class="container">
+    <h2>为贵诊所定制，从一次沟通开始</h2>
+    <p>每间诊所的患者结构、项目特点、管理习惯都不一样。欢迎约一次交流，我们一起梳理贵诊所最需要的三件事，先把它做好。</p>
+    <div class="hero-actions">
+      <a class="btn btn-accent" href="contact.html">预约沟通，获取定制方案 →</a>
+      <a class="btn btn-outline" href="industry.html" style="border-color:var(--cta-text);color:var(--cta-text);">查看其他行业方案</a>
+    </div>
+  </div>
+</section>
+
+<div id="site-footer"></div>
+
+</body>
+</html>

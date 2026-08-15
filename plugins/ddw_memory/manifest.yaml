@@ -1,0 +1,17 @@
+name: ddw-memory
+license: free
+tier: core
+version: 2.0.0
+display_name: DDW 企业记忆引擎
+description: 四层持久化记忆引擎（员工/岗位/部门/企业），SOP模板，自动捕获，知识蒸馏导出
+engine: ">=2.0.0"
+dependencies:
+  plugins:
+    ddw-llm-gateway: ">=1.0.0"
+permissions:
+  - storage
+  - llm
+events:
+  consumes:
+    - conversation.turn.completed
+config: {}

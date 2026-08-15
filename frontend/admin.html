@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理后台 · DDW AI Hub</title>
+<link rel="stylesheet" href="./css/theme.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231a1a2e'/><text x='50%' y='55%' font-family='Arial' font-size='20' font-weight='800' fill='%23e8b86d' text-anchor='middle' dominant-baseline='middle'>D</text></svg>">
+</head>
+<body>
+
+<div id="header-slot"></div>
+
+<div class="admin-layout">
+  <!-- ===== Sidebar ===== -->
+  <aside class="admin-sidebar">
+    <h4>主导航</h4>
+    <a href="#" data-section="dashboard" class="active">仪表盘</a>
+    <a href="#" data-section="plugins">插件管理</a>
+    <a href="#" data-section="users">用户管理</a>
+    <a href="#" data-section="llm">LLM 配置</a>
+    <a href="#" data-section="whitelist">白名单</a>
+    <a href="#" data-section="channels">渠道商</a>
+    <a href="#" data-section="analytics">网站流量</a>
+    <a href="./partner-demo-accounts.html">客户Demo账号</a>
+    <a href="./partner-paid-customers.html">付费客户</a>
+    <a href="#" data-section="docs">文档库</a>
+
+    <h4>系统</h4>
+    <a href="#" data-section="plugins">全部插件</a>
+    <a href="./admin" target="_blank">SQL Admin</a>
+    <a href="./docs" target="_blank">API 文档</a>
+    <a href="#" id="logoutBtn">退出登录</a>
+  </aside>
+
+  <!-- ===== Main ===== -->
+  <main class="admin-main">
+
+    <!-- Dashboard -->
+    <section data-panel="dashboard">
+      <div class="admin-header">
+        <h2>📊 仪表盘</h2>
+        <div style="font-size:13px;color:var(--c-text-muted);" id="welcomeMsg">欢迎回来</div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">插件市场总数</div>
+          <div class="stat-value" id="statPlugins">—</div>
+          <div class="stat-delta" id="statPluginsSub">加载中...</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">注册用户</div>
+          <div class="stat-value" id="statUsers">—</div>
+          <div class="stat-delta">活跃用户</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">LLM 提供商</div>
+          <div class="stat-value" id="statLLM">—</div>
+          <div class="stat-delta" id="statLLMSub">健康检查</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">渠道伙伴</div>
+          <div class="stat-value" id="statChannels">—</div>
+          <div class="stat-delta">合作渠道</div>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>🚀 快速开始</h3>
+          <ol style="padding-left:18px;color:var(--c-text);line-height:2;font-size:14px;">
+            <li>查看 <a href="./marketplace.html">插件市场</a>，选 1 个场景插件</li>
+            <li>在「插件管理」标签启用</li>
+            <li>把用户手机号加入「白名单」</li>
+            <li>在钉钉/飞书扫码绑定机器人</li>
+            <li>测试对话，搞定！</li>
+          </ol>
+        </div>
+        <div class="card">
+          <h3>📈 系统状态</h3>
+          <div id="healthList" style="font-size:14px;line-height:2;">
+            <div>⏳ 检查中...</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Plugins -->
+    <section data-panel="plugins" style="display:none;">
+      <div class="admin-header">
+        <h2>🧩 插件管理</h2>
+        <button class="btn btn-outline btn-sm" id="reloadPlugins">🔄 刷新</button>
+      </div>
+
+      <div id="pluginList">
+        <div class="empty"><div class="icon">⏳</div>加载中...</div>
+      </div>
+    </section>
+
+    <!-- Users（G 项改版：角色管理 + 用户管理 + 停用用户） -->
+    <section data-panel="users" style="display:none;">
+      <div class="admin-header">
+        <h2>👥 用户管理</h2>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn btn-outline btn-sm" id="reloadUsers">🔄 刷新</button>
+          <button class="btn btn-primary btn-sm" id="btnNewUser" style="display:none;">+ 新建用户</button>
+          <button class="btn btn-outline btn-sm" id="btnNewSubAdmin" style="display:none;">+ 新建子管理员</button>
+        </div>
+      </div>
+
+      <!-- 三 Tab 切换 -->
+      <div class="um-tabs" style="display:flex;gap:0;margin-bottom:18px;border-bottom:2px solid var(--border,#333);">
+        <button class="um-tab active" data-umtab="roles">角色管理</button>
+        <button class="um-tab" data-umtab="users">用户管理</button>
+        <button class="um-tab" data-umtab="disabled">停用用户</button>
+      </div>
+
+      <!-- Tab: 角色管理 -->
+      <div data-umpanel="roles">
+        <div style="margin-bottom:14px;">
+          <button class="btn btn-primary btn-sm" id="btnNewRole">+ 新建角色</button>
+        </div>
+        <div id="roleList"><div class="empty"><div class="icon">⏳</div>加载中...</div></div>
+      </div>
+
+      <!-- Tab: 用户管理 -->
+      <div data-umpanel="users" style="display:none;">
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+          <div class="um-filter-btns" style="display:flex;gap:4px;">
+            <button class="btn btn-sm btn-outline um-filter active" data-utype="">全部</button>
+            <button class="btn btn-sm btn-outline um-filter" data-utype="demo">Demo</button>
+            <button class="btn btn-sm btn-outline um-filter" data-utype="dealer">经销商</button>
+            <button class="btn btn-sm btn-outline um-filter" data-utype="saas">SaaS</button>
+            <button class="btn btn-sm btn-outline um-filter" data-utype="onpremise">独立部署</button>
+          </div>
+          <div style="flex:1;"></div>
+          <button class="btn btn-danger btn-sm" id="btnBatchDisable" style="display:none;">批量停用</button>
+        </div>
+        <div id="userListTable"><div class="empty"><div class="icon">⏳</div>加载中...</div></div>
+      </div>
+
+      <!-- Tab: 停用用户 -->
+      <div data-umpanel="disabled" style="display:none;">
+        <div id="disabledUserList"><div class="empty"><div class="icon">⏳</div>加载中...</div></div>
+      </div>
+
+      <!-- 独立部署档案抽屉 -->
+      <div id="onpremiseDrawer" style="display:none;position:fixed;top:0;right:0;width:520px;height:100vh;background:var(--bg-elevated,#1e1e2e);border-left:1px solid var(--border,#333);z-index:999;overflow-y:auto;padding:24px;box-shadow:-4px 0 20px rgba(0,0,0,.3);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+          <h3 style="margin:0;">📋 独立部署档案</h3>
+          <button class="btn btn-sm btn-outline" onclick="closeOnpremiseDrawer()">✕ 关闭</button>
+        </div>
+        <div id="onpremiseContent"><div class="empty"><div class="icon">⏳</div>加载中...</div></div>
+      </div>
+
+      <!-- 授权码更新弹窗 -->
+      <div id="licenseUpdateModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:center;justify-content:center;">
+        <div style="background:var(--bg-elevated,#1e1e2e);border:1px solid var(--border,#333);border-radius:14px;width:600px;max-height:80vh;overflow-y:auto;padding:24px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+            <h3 style="margin:0;">🔑 授权码更新 — 选择插件</h3>
+            <button class="btn btn-sm btn-outline" onclick="closeLicenseModal()">✕</button>
+          </div>
+          <div id="licensePluginList"><div class="empty">加载中...</div></div>
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border,#333);display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:15px;font-weight:700;">增补差价：¥<span id="licenseDiffPrice">0.00</span></div>
+            <button class="btn btn-primary" id="btnSubmitLicenseUpdate">确认更新</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 新建用户弹窗 -->
+      <div id="newUserModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:var(--bg-elevated,#1e1e2e);border:1px solid var(--border,#333);border-radius:14px;width:480px;max-height:80vh;overflow-y:auto;padding:24px;">
+          <h3 style="margin:0 0 18px;">+ 新建用户</h3>
+          <form id="newUserForm">
+            <div style="margin-bottom:12px;"><label>手机号</label><input type="tel" name="phone" required style="width:100%;padding:8px;border:1px solid var(--border,#333);border-radius:8px;background:var(--bg,#12121f);color:var(--text,#fff);"></div>
+            <div style="margin-bottom:12px;"><label>密码</label><input type="password" name="password" required minlength="6" style="width:100%;padding:8px;border:1px solid var(--border,#333);border-radius:8px;background:var(--bg,#12121f);color:var(--text,#fff);"></div>
+            <div style="margin-bottom:12px;"><label>姓名</label><input type="text" name="name" style="width:100%;padding:8px;border:1px solid var(--border,#333);border-radius:8px;background:var(--bg,#12121f);color:var(--text,#fff);"></div>
+            <div style="margin-bottom:12px;"><label>用户类型</label><select name="user_type" id="newUserType" style="width:100%;padding:8px;border:1px solid var(--border,#333);border-radius:8px;background:var(--bg,#12121f);color:var(--text,#fff);">
+              <option value="demo">Demo 用户</option><option value="dealer">经销商用户</option><option value="saas" selected>SaaS 用户</option><option value="onpremise">独立部署用户</option>
+            </select></div>
+            <div id="onpremiseFields" style="display:none;">
+              <div style="margin-bottom:12px;"><label>公司名称</label><input type="text" name="company_name" style="width:100%;padding:8px;border:1px solid var(--border,#333);border-radius:8px;background:var(--bg,#12121f);color:var(--text,#fff);"></div>
+              <div style="margin-bottom:12px;"><label>联系人</label><input type="text" name="contact_name" style="width:100%;padding:8px;border:1px solid var(--border,#333);border-radius:8px;background:var(--bg,#12121f);color:var(--text,#fff);"></div>
+              <div style="margin-bottom:12px;"><label>联系电话</label><input type="tel" name="contact_phone" style="width:100%;padding:8px;border:1px solid var(--border,#333);border-radius:8px;background:var(--bg,#12121f);color:var(--text,#fff);"></div>
+              <div style="margin-bottom:12px;"><label>收款凭证（图片/PDF）<span style="color:#e74c3c;">*</span></label><input type="file" name="proof_file" id="proofFileInput" accept="image/*,.pdf" style="width:100%;padding:8px;border:1px solid var(--border,#333);border-radius:8px;background:var(--bg,#12121f);color:var(--text,#fff);"><div id="proofUploadStatus" style="font-size:12px;margin-top:4px;"></div></div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;">
+              <button type="button" class="btn btn-outline" onclick="closeNewUserModal()">取消</button>
+              <button type="submit" class="btn btn-primary" id="btnSaveNewUser">保存</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- 新建子管理员弹窗 -->
+      <div id="subAdminModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:var(--bg-elevated,#1e1e2e);border:1px solid var(--border,#333);border-radius:14px;width:520px;max-height:80vh;overflow-y:auto;padding:24px;">
+          <h3 style="margin:0 0 18px;">+ 新建子管理员</h3>
+          <form id="subAdminForm">
+            <div style="margin-bottom:12px;"><label>手机号</label><input type="tel" name="phone" required style="width:100%;padding:8px;border:1px solid var(--border,#333);border-radius:8px;background:var(--bg,#12121f);color:var(--text,#fff);"></div>
+            <div style="margin-bottom:12px;"><label>密码</label><input type="password" name="password" required minlength="6" style="width:100%;padding:8px;border:1px solid var(--border,#333);border-radius:8px;background:var(--bg,#12121f);color:var(--text,#fff);"></div>
+            <div style="margin-bottom:12px;"><label>姓名</label><input type="text" name="name" style="width:100%;padding:8px;border:1px solid var(--border,#333);border-radius:8px;background:var(--bg,#12121f);color:var(--text,#fff);"></div>
+            <div style="margin-bottom:12px;"><label>频道权限勾选</label>
+              <div id="subAdminChannelPerms" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;"></div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;">
+              <button type="button" class="btn btn-outline" onclick="closeSubAdminModal()">取消</button>
+              <button type="submit" class="btn btn-primary">创建</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- 角色编辑弹窗 -->
+      <div id="roleEditModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:var(--bg-elevated,#1e1e2e);border:1px solid var(--border,#333);border-radius:14px;width:520px;max-height:80vh;overflow-y:auto;padding:24px;">
+          <h3 style="margin:0 0 18px;" id="roleEditTitle">编辑角色</h3>
+          <form id="roleEditForm">
+            <input type="hidden" name="id" id="roleEditId">
+            <div style="margin-bottom:12px;"><label>角色名称</label><input type="text" name="name" required style="width:100%;padding:8px;border:1px solid var(--border,#333);border-radius:8px;background:var(--bg,#12121f);color:var(--text,#fff);"></div>
+            <div style="margin-bottom:12px;"><label>描述</label><input type="text" name="description" style="width:100%;padding:8px;border:1px solid var(--border,#333);border-radius:8px;background:var(--bg,#12121f);color:var(--text,#fff);"></div>
+            <div style="margin-bottom:12px;"><label>频道权限</label>
+              <div id="roleEditChannelPerms" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;"></div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;">
+              <button type="button" class="btn btn-outline" onclick="closeRoleEditModal()">取消</button>
+              <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- LLM -->
+    <section data-panel="llm" style="display:none;">
+      <div class="admin-header">
+        <h2>🤖 LLM 配置</h2>
+        <button class="btn btn-outline btn-sm" id="reloadLLM">🔄 刷新</button>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <h3>提供商健康状态</h3>
+        <p style="font-size:13px;color:var(--c-text-muted);margin:0 0 14px;">多供应商路由，自动降级。绿色 = 可用，灰色 = 不可达。</p>
+        <div id="llmProviderList">
+          <div class="empty"><div class="icon">⏳</div>加载中...</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>路由规则</h3>
+        <p style="font-size:13px;color:var(--c-text-muted);margin:0 0 14px;">按优先级匹配，命中规则后路由到指定 provider。</p>
+        <div id="llmRulesList">
+          <div class="empty"><div class="icon">⏳</div>加载中...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Whitelist -->
+    <section data-panel="whitelist" style="display:none;">
+      <div class="admin-header">
+        <h2>📋 用户白名单</h2>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <h3>添加白名单</h3>
+        <form id="whitelistForm" style="display:grid;grid-template-columns:1fr 2fr auto;gap:12px;align-items:end;">
+          <div>
+            <label>手机号</label>
+            <input type="tel" name="phone" placeholder="138xxxxxxxx" required>
+          </div>
+          <div>
+            <label>备注</label>
+            <input type="text" name="note" placeholder="例如：杭州诊所 前台王">
+          </div>
+          <button type="submit" class="btn btn-primary">+ 添加</button>
+        </form>
+      </div>
+
+      <div id="whitelistList">
+        <div class="empty"><div class="icon">⏳</div>加载中...</div>
+      </div>
+    </section>
+
+    <!-- Channels -->
+    <section data-panel="channels" style="display:none;">
+      <div class="admin-header">
+        <h2>💼 渠道伙伴</h2>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <h3>添加渠道商</h3>
+        <form id="channelForm" style="display:grid;grid-template-columns:1fr 1fr 1fr 2fr auto;gap:12px;align-items:end;">
+          <div>
+            <label>渠道名</label>
+            <input type="text" name="name" placeholder="杭州代理商A" required>
+          </div>
+          <div>
+            <label>等级</label>
+            <select name="level">
+              <option value="small">小型</option>
+              <option value="medium">中型</option>
+              <option value="large">大型</option>
+            </select>
+          </div>
+          <div>
+            <label>联系人</label>
+            <input type="text" name="contact" placeholder="王经理">
+          </div>
+          <div>
+            <label>父渠道 ID（可选）</label>
+            <input type="number" name="parent_id" placeholder="留空为顶级">
+          </div>
+          <button type="submit" class="btn btn-primary">+ 添加</button>
+        </form>
+      </div>
+
+      <div id="channelList">
+        <div class="empty"><div class="icon">⏳</div>加载中...</div>
+      </div>
+    </section>
+    <section data-panel="docs" style="display:none;">
+      <div class="admin-header">
+        <h2>📚 文档库（内部 / FDE）</h2>
+      </div>
+      <div class="card" style="margin-bottom:18px;">
+        <h3>Unlimited-OCR 客户方案文档</h3>
+        <p style="color:var(--text-secondary);margin-bottom:14px;">客户现场演示与部署的标准物料，仅供 FDE 工程师与内部人员使用，请勿外传。</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">
+          <a href="#" onclick="return openFdeDoc(event, 'unlimited-ocr-demo-sop.html')" style="text-decoration:none;color:inherit;display:block;background:var(--bg-elevated);border:1px solid var(--border);border-radius:12px;padding:18px;">
+            <div style="font-size:22px;margin-bottom:8px;">🎬</div>
+            <div style="font-weight:700;margin-bottom:6px;">现场演示 SOP</div>
+            <div style="font-size:13px;color:var(--text-muted);">45 分钟标准场次 · 五场景脚本 · 故障应急 · 客户问答 TOP10</div>
+          </a>
+          <a href="#" onclick="return openFdeDoc(event, 'unlimited-ocr-deploy.html')" style="text-decoration:none;color:inherit;display:block;background:var(--bg-elevated);border:1px solid var(--border);border-radius:12px;padding:18px;">
+            <div style="font-size:22px;margin-bottom:8px;">🚀</div>
+            <div style="font-weight:700;margin-bottom:6px;">FDE 快速部署指南</div>
+            <div style="font-size:13px;color:var(--text-muted);">9 步标准流程 · 环境检查 · 批量解析模板 · 错误速查</div>
+          </a>
+        </div>
+      </div>
+      <div class="card">
+        <h3>文档说明</h3>
+        <ul style="margin-left:20px;color:var(--text-secondary);font-size:14px;">
+          <li>客户可见文档（能力介绍）位于 <a href="/docs/unlimited-ocr-intro.html" target="_blank">公开文档中心</a>，可向客户展示</li>
+          <li>本页文档为内部物料，仅登录管理员可见入口</li>
+          <li>文档库持续扩充中（DDW 产品文档 / 部署手册 / 行业方案）</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ===== 网站流量（ddw_website_analytics） ===== -->
+    <section data-panel="analytics" style="display:none;">
+      <div class="admin-header">
+        <h2>🌐 网站流量</h2>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div id="periodToggle" class="seg">
+            <button data-period="7d" class="seg-btn active">7 天</button>
+            <button data-period="30d" class="seg-btn">30 天</button>
+          </div>
+          <button id="analyticsRefresh" class="btn-refresh">🔄 刷新数据</button>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">今日 PV</div>
+          <div class="stat-value" id="ana-today-pv">—</div>
+          <div class="stat-delta">页面浏览</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">今日 UV</div>
+          <div class="stat-value" id="ana-today-uv">—</div>
+          <div class="stat-delta">独立访客</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">跳出率</div>
+          <div class="stat-value" id="ana-bounce">—</div>
+          <div class="stat-delta">单页会话占比</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">平均停留</div>
+          <div class="stat-value" id="ana-avg">—</div>
+          <div class="stat-delta">估算（秒）</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>📈 访问趋势</h3>
+        <canvas id="trendChart" height="180" style="width:100%;display:block;"></canvas>
+        <div style="display:flex;gap:14px;margin-top:8px;font-size:12px;color:var(--c-text-muted);">
+          <span><span style="display:inline-block;width:10px;height:2px;background:#5b9dff;vertical-align:middle;"></span> PV</span>
+          <span><span style="display:inline-block;width:10px;height:2px;background:#e8b86d;vertical-align:middle;"></span> UV</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="card">
+          <h3>📄 热门页面 TOP10</h3>
+          <table id="topPagesTable" class="data-table"><thead><tr><th>路径</th><th>PV</th><th>UV</th></tr></thead><tbody></tbody></table>
+        </div>
+        <div class="card">
+          <h3>🔍 流量来源 TOP10</h3>
+          <table id="topReferrersTable" class="data-table"><thead><tr><th>来源</th><th>访问</th><th>占比</th></tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🤖 AI 爬虫统计</h3>
+        <div id="crawlerChips" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
+      </div>
+
+      <div style="text-align:right;font-size:12px;color:var(--c-text-muted);margin-top:8px;">
+        最后更新: <span id="ana-updated">—</span>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="./js/api.js?v=20260811b"></script>
+<script src="./js/auth.js?v=20260811b"></script>
+<script src="./js/layout.js?v=20260811b"></script>
+<script src="./js/license-watermark.js?v=20260815a"></script>
+<script>
+  // 守卫：必须 admin 角色
+  DDW.auth.requireAdmin('/login.html').then(claims => {
+    if (!claims) return;
+    document.getElementById('welcomeMsg').textContent =
+      '欢迎 ' + (claims.user ? (claims.user.name || '用户#' + claims.user.id) : (claims.user_id ? '用户#' + claims.user_id : '')) +
+      ' · 角色：' + (claims.user ? (claims.user.role || 'user') : (claims.role || 'user')) +
+      ' · 账号：****' + String(claims.user ? (claims.user.phone || '') : (claims.phone || '')).slice(-4);
+    DDW.layout.mount({ active: 'admin', ctaLabel: '退出', ctaHref: '#' });
+    // 顶部退出按钮（layout.js 渲染的 class 是 ddw-nav-cta，兼容旧 .nav-cta）
+    const navCta = document.querySelector('.ddw-nav-cta, .nav-cta');
+    if (navCta) {
+      navCta.addEventListener('click', e => {
+        e.preventDefault(); DDW.auth.logout();
+      });
+    }
+    initDashboard();
+    switchFromHash();
+  });
+
+  // ===== 侧边栏切换 =====
+  function switchSection(target) {
+    document.querySelectorAll('.admin-sidebar a').forEach(x => x.classList.remove('active'));
+    const link = document.querySelector('.admin-sidebar a[data-section="' + target + '"]');
+    if (link) link.classList.add('active');
+    document.querySelectorAll('[data-panel]').forEach(p => {
+      p.style.display = p.dataset.panel === target ? '' : 'none';
+    });
+    // 触发对应数据加载
+    const loaders = { plugins: loadPlugins, users: loadUsers, llm: loadLLM, whitelist: loadWhitelist, channels: loadChannels, analytics: loadAnalytics };
+    if (loaders[target]) loaders[target]();
+  }
+
+  // 支持 hash 定位频道（如 /admin.html#plugins），供经销商侧边栏跳转
+  function switchFromHash() {
+    const h = (window.location.hash || '').replace('#', '');
+    if (h && document.querySelector('[data-panel="' + h + '"]')) switchSection(h);
+  }
+  window.addEventListener('hashchange', switchFromHash);
+
+  document.querySelectorAll('.admin-sidebar a[data-section]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      switchSection(a.dataset.section);
+    });
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', e => {
+    e.preventDefault(); DDW.auth.logout();
+  });
+
+  // ===== Dashboard =====
+  async function initDashboard() {
+    // 并行拉数据
+    const [pluginR, userR, llmR, chanR] = await Promise.all([
+      DDW.api.get('/admin/plugins'),
+      DDW.api.get('/users/'),
+      DDW.api.get('/llm/providers'),
+      DDW.api.get('/admin/billing/channels'),
+    ]);
+
+    if (pluginR.ok) {
+      const arr = Array.isArray(pluginR.data) ? pluginR.data : [];
+      document.getElementById('statPlugins').textContent = arr.length;
+      document.getElementById('statPluginsSub').textContent = arr.length + ' 个插件可用';
+    } else {
+      document.getElementById('statPlugins').textContent = '?';
+      document.getElementById('statPluginsSub').textContent = pluginR.message || '加载失败';
+    }
+
+    if (userR.ok) {
+      const arr = Array.isArray(userR.data) ? userR.data : [];
+      const active = arr.filter(u => u.is_active !== false).length;
+      document.getElementById('statUsers').textContent = arr.length;
+      document.getElementById('statUsers').nextElementSibling.textContent = active + ' 个活跃';
+    } else {
+      document.getElementById('statUsers').textContent = '?';
+    }
+
+    if (llmR.ok && llmR.data && typeof llmR.data === 'object') {
+      const providers = llmR.data.providers || llmR.data;
+      const keys = Object.keys(providers);
+      const healthy = keys.filter(k => providers[k].healthy || providers[k].available || providers[k].ok).length;
+      document.getElementById('statLLM').textContent = keys.length;
+      document.getElementById('statLLMSub').textContent = healthy + '/' + keys.length + ' 健康';
+    } else {
+      document.getElementById('statLLM').textContent = '?';
+    }
+
+    if (chanR.ok) {
+      const arr = Array.isArray(chanR.data) ? chanR.data : [];
+      document.getElementById('statChannels').textContent = arr.length;
+    } else {
+      document.getElementById('statChannels').textContent = '?';
+    }
+
+    // 健康检查列表
+    const hl = document.getElementById('healthList');
+    let healthHTML = '';
+    healthHTML += '<div>✅ 核心 API: 运行中</div>';
+    healthHTML += '<div>✅ SQL Admin: <a href="./admin" target="_blank">/admin</a></div>';
+    healthHTML += '<div>✅ JWT Auth: Bearer Token 已启用</div>';
+    healthHTML += '<div>✅ EventBus: 进程内 + Redis 降级</div>';
+    healthHTML += '<div>' + (pluginR.ok ? '✅' : '⚠️') + ' 插件管理: ' + (pluginR.message || 'OK') + '</div>';
+    hl.innerHTML = healthHTML;
+  }
+
+  // ===== Plugins =====
+  async function loadPlugins() {
+    const el = document.getElementById('pluginList');
+    el.innerHTML = '<div class="empty"><div class="icon">⏳</div>加载中...</div>';
+    const resp = await DDW.api.get('/admin/plugins');
+    if (!resp.ok) {
+      el.innerHTML = '<div class="empty"><div class="icon">❌</div>' + (resp.message || '加载失败') + '</div>';
+      return;
+    }
+    const list = Array.isArray(resp.data) ? resp.data : [];
+    if (list.length === 0) {
+      el.innerHTML = '<div class="empty"><div class="icon">📦</div>暂无插件</div>';
+      return;
+    }
+    let html = '<table class="table"><thead><tr><th>插件名称</th><th>说明</th><th>版本</th><th>状态</th><th style="text-align:right;">操作</th></tr></thead><tbody>';
+    for (const p of list) {
+      const installed = p.installed === true;
+      const statusBadge = installed
+        ? (p.enabled === false
+          ? '<span class="badge badge-warn">已安装 · 已禁用</span>'
+          : '<span class="badge badge-on">✅ 已安装</span>')
+        : '<span class="badge badge-off">⬜ 未安装</span>';
+      const actions = installed
+        ? `<button class="btn btn-sm btn-outline" data-act="enable" data-name="${escape(p.name)}">启用</button>
+           <button class="btn btn-sm btn-outline" data-act="disable" data-name="${escape(p.name)}">禁用</button>`
+        : '<span style="font-size:12px;color:var(--c-text-muted);">—</span>';
+      html += `<tr>
+        <td><strong>${escape(p.name)}</strong></td>
+        <td style="font-size:12px;color:var(--c-text-muted);max-width:320px;">${escape(p.description || '—')}</td>
+        <td><span class="badge badge-gold">${escape(p.version || '—')}</span></td>
+        <td>${statusBadge}</td>
+        <td style="text-align:right;">${actions}</td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    el.innerHTML = html;
+
+    el.querySelectorAll('button[data-act]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const name = btn.dataset.name, act = btn.dataset.act;
+        btn.disabled = true;
+        const resp = await DDW.api.post('/admin/plugins/' + encodeURIComponent(name) + '/' + act);
+        if (resp.ok) DDW.toast('插件 ' + name + ' 已' + (act === 'enable' ? '启用' : '禁用'), 'success');
+        else DDW.toast(resp.message || '操作失败', 'error');
+        btn.disabled = false;
+        loadPlugins();
+      });
+    });
+  }
+
+  document.getElementById('reloadPlugins').addEventListener('click', loadPlugins);
+
+  // ===== Users（G 项改版） =====
+  const ALL_CHANNELS = ['dashboard','plugins','users','llm','whitelist','channels','analytics','docs','marketplace','forum'];
+  const CHANNEL_LABELS = {dashboard:'仪表盘',plugins:'插件管理',users:'用户管理',llm:'LLM配置',whitelist:'白名单',channels:'渠道商',analytics:'网站流量',docs:'文档库',marketplace:'插件市场',forum:'论坛'};
+  let currentUmTab = 'roles';
+  let currentUserFilter = '';
+  let selectedUserIds = new Set();
+  let currentLicenseKid = null;
+
+  // --- Tab 切换 ---
+  document.querySelectorAll('.um-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.um-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const target = tab.dataset.umtab;
+      currentUmTab = target;
+      document.querySelectorAll('[data-umpanel]').forEach(p => {
+        p.style.display = p.dataset.umpanel === target ? '' : 'none';
+      });
+      if (target === 'roles') loadRoles();
+      else if (target === 'users') loadUsersList();
+      else if (target === 'disabled') loadDisabledUsers();
+    });
+  });
+
+  // --- 分类筛选 ---
+  document.querySelectorAll('.um-filter').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.um-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentUserFilter = btn.dataset.utype;
+      loadUsersList();
+    });
+  });
+
+  function loadUsers() { loadUsersList(); }
+
+  // --- 用户列表 ---
+  async function loadUsersList() {
+    const el = document.getElementById('userListTable');
+    el.innerHTML = '<div class="empty"><div class="icon">⏳</div>加载中...</div>';
+    const qs = currentUserFilter ? '?user_type=' + currentUserFilter : '';
+    const resp = await DDW.api.get('/admin/users/list' + qs);
+    if (!resp.ok) {
+      el.innerHTML = '<div class="empty"><div class="icon">❌</div>' + (resp.message || '加载失败') + '</div>';
+      return;
+    }
+    const list = Array.isArray(resp.data) ? resp.data : [];
+    if (list.length === 0) {
+      el.innerHTML = '<div class="empty"><div class="icon">👥</div>暂无用户</div>';
+      return;
+    }
+    selectedUserIds.clear();
+    let html = '<table class="table"><thead><tr><th><input type="checkbox" id="selectAllUsers"></th><th>用户</th><th>手机尾号</th><th>类型</th><th>角色</th><th>最近登录</th><th>状态</th></tr></thead><tbody>';
+    for (const u of list) {
+      const typeBadge = {demo:'Demo',dealer:'经销商',saas:'SaaS',onpremise:'独立部署'}[u.user_type] || u.user_type;
+      const phoneTail = (u.phone || '').slice(-4);
+      const zombie = u.zombie ? '<span class="badge badge-warn" style="background:#e74c3c;color:#fff;margin-left:4px;">僵尸用户</span>' : '';
+      const isActive = u.status !== 'disabled';
+      const demoStatus = u.user_type === 'demo' && u.last_login_at
+        ? ((Date.now() - new Date(u.last_login_at).getTime()) > 15*24*3600*1000
+          ? '<span class="badge badge-warn">超15天未登录</span>'
+          : '<span class="badge badge-on">活跃</span>')
+        : '';
+      const clickAttr = u.user_type === 'onpremise' ? ' style="cursor:pointer;color:var(--accent,#e8b86d);text-decoration:underline;" onclick="openOnpremiseDrawer(' + u.id + ')"' : '';
+      html += `<tr>
+        <td><input type="checkbox" class="user-cb" data-uid="${u.id}" ${isActive ? '' : 'disabled'}></td>
+        <td${clickAttr}>${escape(u.name || u.phone)}</td>
+        <td>****${escape(phoneTail)}</td>
+        <td><span class="badge badge-gold">${typeBadge}</span></td>
+        <td>${escape(u.role || 'member')}</td>
+        <td style="font-size:12px;">${escape(u.last_active_label || '—')}${zombie}</td>
+        <td>${demoStatus || (isActive ? '<span class="badge badge-on">活跃</span>' : '<span class="badge badge-off">已停用</span>')}</td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    el.innerHTML = html;
+
+    // 全选
+    document.getElementById('selectAllUsers').addEventListener('change', e => {
+      document.querySelectorAll('.user-cb:not(:disabled)').forEach(cb => { cb.checked = e.target.checked; });
+      updateBatchBtn();
+    });
+    document.querySelectorAll('.user-cb').forEach(cb => {
+      cb.addEventListener('change', updateBatchBtn);
+    });
+  }
+
+  function updateBatchBtn() {
+    const checked = [...document.querySelectorAll('.user-cb:checked')].map(c => parseInt(c.dataset.uid));
+    selectedUserIds = new Set(checked);
+    const btn = document.getElementById('btnBatchDisable');
+    btn.style.display = checked.length > 0 ? '' : 'none';
+    btn.textContent = '批量停用 (' + checked.length + ')';
+  }
+
+  // --- 批量停用 ---
+  document.getElementById('btnBatchDisable').addEventListener('click', async () => {
+    if (selectedUserIds.size === 0) return;
+    if (!confirm('确认停用 ' + selectedUserIds.size + ' 个用户？')) return;
+    const resp = await DDW.api.post('/admin/users/batch-disable', { ids: [...selectedUserIds] });
+    if (resp.ok) { DDW.toast('已停用 ' + (resp.data?.disabled || 0) + ' 个用户', 'success'); loadUsersList(); }
+    else DDW.toast(resp.message || '操作失败', 'error');
+  });
+
+  // --- 停用用户列表 ---
+  async function loadDisabledUsers() {
+    const el = document.getElementById('disabledUserList');
+    el.innerHTML = '<div class="empty"><div class="icon">⏳</div>加载中...</div>';
+    const resp = await DDW.api.get('/admin/users/disabled');
+    if (!resp.ok) {
+      el.innerHTML = '<div class="empty"><div class="icon">❌</div>' + (resp.message || '加载失败') + '</div>';
+      return;
+    }
+    const list = Array.isArray(resp.data) ? resp.data : [];
+    if (list.length === 0) {
+      el.innerHTML = '<div class="empty"><div class="icon">✅</div>暂无停用用户</div>';
+      return;
+    }
+    let html = '<table class="table"><thead><tr><th>用户</th><th>手机尾号</th><th>类型</th><th>停用时间</th><th>距今</th></tr></thead><tbody>';
+    for (const u of list) {
+      html += `<tr>
+        <td>${escape(u.name || u.phone)}</td>
+        <td>****${escape((u.phone||'').slice(-4))}</td>
+        <td><span class="badge badge-gold">${escape(u.user_type || '—')}</span></td>
+        <td style="font-size:12px;">${u.disabled_at ? new Date(u.disabled_at).toLocaleString('zh-CN') : '—'}</td>
+        <td><span class="badge badge-warn">${u.disabled_days ?? '—'} 天</span></td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+
+  document.getElementById('reloadUsers').addEventListener('click', () => {
+    if (currentUmTab === 'roles') loadRoles();
+    else if (currentUmTab === 'users') loadUsersList();
+    else loadDisabledUsers();
+  });
+
+  // --- 角色管理 ---
+  async function loadRoles() {
+    const el = document.getElementById('roleList');
+    el.innerHTML = '<div class="empty"><div class="icon">⏳</div>加载中...</div>';
+    const resp = await DDW.api.get('/admin/roles');
+    if (!resp.ok) {
+      el.innerHTML = '<div class="empty"><div class="icon">❌</div>' + (resp.message || '加载失败') + '</div>';
+      return;
+    }
+    const list = Array.isArray(resp.data) ? resp.data : [];
+    if (list.length === 0) {
+      el.innerHTML = '<div class="empty"><div class="icon">🎭</div>暂无角色</div>';
+      return;
+    }
+    let html = '<table class="table"><thead><tr><th>角色名</th><th>描述</th><th>频道权限</th><th>类型</th><th style="text-align:right;">操作</th></tr></thead><tbody>';
+    for (const r of list) {
+      const perms = (r.channel_perms && r.channel_perms.length > 0)
+        ? r.channel_perms.map(c => CHANNEL_LABELS[c] || c).join(', ')
+        : '<span style="color:var(--c-text-muted);">全部频道</span>';
+      const sysBadge = r.is_system ? '<span class="badge badge-gold">内置</span>' : '<span class="badge badge-off">自定义</span>';
+      const actions = r.is_system ? '<span style="font-size:12px;color:var(--c-text-muted);">—</span>'
+        : `<button class="btn btn-sm btn-outline" onclick="editRole(${r.id})">编辑</button>
+           <button class="btn btn-sm btn-danger" onclick="deleteRole(${r.id},'${escape(r.name)}')">删除</button>`;
+      html += `<tr>
+        <td><strong>${escape(r.name)}</strong></td>
+        <td style="font-size:12px;color:var(--c-text-muted);">${escape(r.description || '—')}</td>
+        <td style="font-size:12px;">${perms}</td>
+        <td>${sysBadge}</td>
+        <td style="text-align:right;">${actions}</td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+
+  // 新建角色
+  document.getElementById('btnNewRole').addEventListener('click', () => {
+    document.getElementById('roleEditTitle').textContent = '新建角色';
+    document.getElementById('roleEditId').value = '';
+    document.getElementById('roleEditForm').reset();
+    renderChannelCheckboxes('roleEditChannelPerms', []);
+    document.getElementById('roleEditModal').style.display = 'flex';
+  });
+
+  function renderChannelCheckboxes(containerId, selected) {
+    const c = document.getElementById(containerId);
+    c.innerHTML = ALL_CHANNELS.map(ch =>
+      `<label style="display:flex;align-items:center;gap:4px;font-size:13px;background:var(--bg,#12121f);border:1px solid var(--border,#333);border-radius:6px;padding:4px 8px;cursor:pointer;">
+        <input type="checkbox" value="${ch}" ${selected.includes(ch) ? 'checked' : ''}> ${CHANNEL_LABELS[ch] || ch}
+      </label>`
+    ).join('');
+  }
+
+  async function editRole(id) {
+    const resp = await DDW.api.get('/admin/roles');
+    if (!resp.ok) return;
+    const role = (Array.isArray(resp.data) ? resp.data : []).find(r => r.id === id);
+    if (!role) return;
+    document.getElementById('roleEditTitle').textContent = '编辑角色';
+    document.getElementById('roleEditId').value = id;
+    document.getElementById('roleEditForm').querySelector('[name=name]').value = role.name;
+    document.getElementById('roleEditForm').querySelector('[name=description]').value = role.description || '';
+    renderChannelCheckboxes('roleEditChannelPerms', role.channel_perms || []);
+    document.getElementById('roleEditModal').style.display = 'flex';
+  }
+
+  function closeRoleEditModal() { document.getElementById('roleEditModal').style.display = 'none'; }
+
+  document.getElementById('roleEditForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const id = document.getElementById('roleEditId').value;
+    const name = e.target.querySelector('[name=name]').value.trim();
+    const description = e.target.querySelector('[name=description]').value.trim();
+    const perms = [...document.querySelectorAll('#roleEditChannelPerms input:checked')].map(c => c.value);
+    const body = { name, description: description || null, channel_perms: perms };
+    const resp = id
+      ? await DDW.api.put('/admin/roles/' + id, body)
+      : await DDW.api.post('/admin/roles', body);
+    if (resp.ok) { DDW.toast('角色已保存', 'success'); closeRoleEditModal(); loadRoles(); }
+    else DDW.toast(resp.message || '操作失败', 'error');
+  });
+
+  async function deleteRole(id, name) {
+    if (!confirm('确认删除角色 ' + name + '？')) return;
+    const resp = await DDW.api.del('/admin/roles/' + id);
+    if (resp.ok) { DDW.toast('已删除', 'success'); loadRoles(); }
+    else DDW.toast(resp.message || '操作失败', 'error');
+  }
+
+  // --- 独立部署档案抽屉 ---
+  async function openOnpremiseDrawer(userId) {
+    const drawer = document.getElementById('onpremiseDrawer');
+    const content = document.getElementById('onpremiseContent');
+    drawer.style.display = 'block';
+    content.innerHTML = '<div class="empty"><div class="icon">⏳</div>加载中...</div>';
+    const resp = await DDW.api.get('/admin/onpremise/' + userId);
+    if (!resp.ok) {
+      content.innerHTML = '<div class="empty"><div class="icon">❌</div>' + (resp.message || '加载失败') + '</div>';
+      return;
+    }
+    const d = resp.data;
+    let html = `<div style="margin-bottom:16px;">
+      <div style="font-size:13px;color:var(--c-text-muted);margin-bottom:8px;">公司信息</div>
+      <div><strong>公司名称：</strong>${escape(d.company_name || '—')}</div>
+      <div><strong>联系人：</strong>${escape(d.contact_name || '—')}</div>
+      <div><strong>电话：</strong>${escape(d.contact_phone || '—')}</div>
+      <div><strong>建户日期：</strong>${d.created_at ? new Date(d.created_at).toLocaleDateString('zh-CN') : '—'}</div>
+      <div><strong>首次授权日期：</strong>${d.first_license_date ? new Date(d.first_license_date).toLocaleDateString('zh-CN') : '—'}</div>
+    </div>`;
+
+    // 凭证预览
+    if (d.payment_proof_path) {
+      html += `<div style="margin-bottom:16px;"><div style="font-size:13px;color:var(--c-text-muted);margin-bottom:4px;">收款凭证</div>
+        <a href="#" onclick="alert('凭证路径: ${escape(d.payment_proof_path)}');return false;" style="color:var(--accent,#e8b86d);font-size:13px;">查看凭证文件</a></div>`;
+    }
+
+    // 授权码历史
+    html += `<div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-size:13px;color:var(--c-text-muted);">授权码历史</div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-sm btn-primary" onclick="showIssueLicense(${userId})">发放授权码</button>
+        <button class="btn btn-sm btn-outline" onclick="showLicenseUpdate(${userId})">授权码更新</button>
+      </div>
+    </div>`;
+
+    const keys = d.license_keys || [];
+    if (keys.length === 0) {
+      html += '<div style="font-size:13px;color:var(--c-text-muted);">暂无授权码</div>';
+    } else {
+      for (const lk of keys) {
+        const statusBadge = lk.status === 'active' ? '<span class="badge badge-on">有效</span>'
+          : lk.status === 'expired' ? '<span class="badge badge-off">已过期</span>'
+          : '<span class="badge badge-warn">已撤销</span>';
+        html += `<div style="border:1px solid var(--border,#333);border-radius:8px;padding:12px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleLicenseDetail('lkc-${lk.id}')">
+            <div><strong>${escape(lk.license_code)}</strong> ${statusBadge}</div>
+            <div style="font-size:12px;color:var(--c-text-muted);">${lk.issued_at ? new Date(lk.issued_at).toLocaleDateString('zh-CN') : ''}</div>
+          </div>
+          <div id="lkc-${lk.id}" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border,#333);">`;
+        const changes = lk.plugin_changes || [];
+        if (changes.length === 0) {
+          html += '<div style="font-size:12px;color:var(--c-text-muted);">无插件变更记录</div>';
+        } else {
+          html += '<table class="table" style="font-size:12px;"><thead><tr><th>操作</th><th>插件</th><th>时间</th><th>原因</th></tr></thead><tbody>';
+          for (const pc of changes) {
+            const actBadge = pc.action === 'add' ? '<span class="badge badge-on">新增</span>' : '<span class="badge badge-off">移除</span>';
+            html += `<tr><td>${actBadge}</td><td>${escape(pc.plugin_name)}</td><td>${pc.changed_at ? new Date(pc.changed_at).toLocaleString('zh-CN') : '—'}</td><td>${escape(pc.reason || '—')}</td></tr>`;
+          }
+          html += '</tbody></table>';
+        }
+        html += '</div></div>';
+      }
+    }
+    content.innerHTML = html;
+  }
+
+  function closeOnpremiseDrawer() { document.getElementById('onpremiseDrawer').style.display = 'none'; }
+
+  function toggleLicenseDetail(id) {
+    const el = document.getElementById(id);
+    el.style.display = el.style.display === 'none' ? '' : 'none';
+  }
+
+  // 发放授权码
+  async function showIssueLicense(userId) {
+    const code = prompt('请输入授权码：');
+    if (!code) return;
+    const resp = await DDW.api.post('/admin/onpremise/' + userId + '/license-keys', { license_code: code });
+    if (resp.ok) { DDW.toast('授权码已发放', 'success'); openOnpremiseDrawer(userId); }
+    else DDW.toast(resp.message || '操作失败', 'error');
+  }
+
+  // 授权码更新弹窗
+  async function showLicenseUpdate(userId) {
+    const modal = document.getElementById('licenseUpdateModal');
+    const listEl = document.getElementById('licensePluginList');
+    modal.style.display = 'flex';
+    listEl.innerHTML = '<div class="empty">加载中...</div>';
+
+    // 获取该用户的最新 active 授权码
+    const profileResp = await DDW.api.get('/admin/onpremise/' + userId);
+    if (!profileResp.ok) { listEl.innerHTML = '<div class="empty">加载失败</div>'; return; }
+    const activeKeys = (profileResp.data.license_keys || []).filter(k => k.status === 'active');
+    if (activeKeys.length === 0) { listEl.innerHTML = '<div class="empty">无有效授权码，请先发放</div>'; return; }
+    currentLicenseKid = activeKeys[0].id;
+
+    // 获取已装插件列表
+    const installed = new Set((profileResp.data.license_keys || []).flatMap(k => (k.plugin_changes || []).filter(c => c.action === 'add').map(c => c.plugin_name)));
+
+    // 获取全部插件（含 price_cny）
+    const pluginsResp = await DDW.api.get('/admin/plugins-with-price');
+    if (!pluginsResp.ok) { listEl.innerHTML = '<div class="empty">加载插件失败</div>'; return; }
+    const plugins = Array.isArray(pluginsResp.data) ? pluginsResp.data : [];
+
+    let html = '<div style="max-height:400px;overflow-y:auto;">';
+    for (const p of plugins) {
+      const isInstalled = installed.has(p.name) || p.installed;
+      if (isInstalled) {
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;margin-bottom:4px;border-radius:8px;background:rgba(46,204,113,.1);border:1px solid #2ecc71;">
+          <div><strong style="color:#2ecc71;">${escape(p.name)}</strong> <span style="font-size:12px;color:var(--c-text-muted);">${escape(p.description || '')}</span></div>
+          <div style="font-size:13px;color:#2ecc71;">已安装 ¥${(p.price_cny || 0).toFixed(2)}</div>
+        </div>`;
+      } else {
+        html += `<label style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;margin-bottom:4px;border-radius:8px;background:var(--bg,#12121f);border:1px solid var(--border,#333);cursor:pointer;">
+          <div><input type="checkbox" class="license-plugin-cb" data-name="${escape(p.name)}" data-price="${p.price_cny || 0}"> <strong style="color:#888;">${escape(p.name)}</strong> <span style="font-size:12px;color:var(--c-text-muted);">${escape(p.description || '')}</span></div>
+          <div style="font-size:13px;color:#888;">¥${(p.price_cny || 0).toFixed(2)}</div>
+        </label>`;
+      }
+    }
+    html += '</div>';
+    listEl.innerHTML = html;
+
+    // 实时计算差价
+    document.querySelectorAll('.license-plugin-cb').forEach(cb => {
+      cb.addEventListener('change', updateLicenseDiffPrice);
+    });
+    updateLicenseDiffPrice();
+  }
+
+  function updateLicenseDiffPrice() {
+    let total = 0;
+    document.querySelectorAll('.license-plugin-cb:checked').forEach(cb => {
+      total += parseFloat(cb.dataset.price) || 0;
+    });
+    document.getElementById('licenseDiffPrice').textContent = total.toFixed(2);
+  }
+
+  function closeLicenseModal() { document.getElementById('licenseUpdateModal').style.display = 'none'; }
+
+  document.getElementById('btnSubmitLicenseUpdate').addEventListener('click', async () => {
+    if (!currentLicenseKid) return;
+    const names = [...document.querySelectorAll('.license-plugin-cb:checked')].map(c => c.dataset.name);
+    if (names.length === 0) { DDW.toast('请勾选要新增的插件', 'error'); return; }
+    // 先计算差价确认
+    const quoteResp = await DDW.api.post('/admin/license-keys/' + currentLicenseKid + '/quote', { plugin_names: names });
+    const total = quoteResp.ok ? quoteResp.data.total_cny : '?';
+    if (!confirm('确认新增 ' + names.length + ' 个插件？增补差价：¥' + total)) return;
+
+    const resp = await DDW.api.post('/admin/license-keys/' + currentLicenseKid + '/plugins', { action: 'add', plugin_names: names });
+    if (resp.ok) { DDW.toast('已记录 ' + (resp.data?.recorded || 0) + ' 条变更', 'success'); closeLicenseModal(); }
+    else DDW.toast(resp.message || '操作失败', 'error');
+  });
+
+  // --- 新建用户弹窗 ---
+  document.getElementById('btnNewUser').addEventListener('click', () => {
+    document.getElementById('newUserModal').style.display = 'flex';
+    document.getElementById('onpremiseFields').style.display = 'none';
+    document.getElementById('newUserForm').reset();
+    document.getElementById('proofUploadStatus').textContent = '';
+    window._uploadedProofPath = null;
+  });
+
+  function closeNewUserModal() { document.getElementById('newUserModal').style.display = 'none'; }
+
+  document.getElementById('newUserType').addEventListener('change', e => {
+    document.getElementById('onpremiseFields').style.display = e.target.value === 'onpremise' ? '' : 'none';
+    updateSaveBtnState();
+  });
+
+  // 凭证上传
+  document.getElementById('proofFileInput').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const statusEl = document.getElementById('proofUploadStatus');
+    statusEl.textContent = '上传中...';
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const token = DDW.api.getToken();
+      const r = await fetch('/api/v1/admin/upload-proof', {
+        method: 'POST', body: fd,
+        headers: { 'Authorization': 'Bearer ' + token },
+      });
+      const d = await r.json();
+      if (r.ok) {
+        window._uploadedProofPath = d.path;
+        statusEl.textContent = '✅ 已上传: ' + d.filename;
+        statusEl.style.color = '#2ecc71';
+      } else {
+        statusEl.textContent = '❌ ' + (d.detail || '上传失败');
+        statusEl.style.color = '#e74c3c';
+        window._uploadedProofPath = null;
+      }
+    } catch (err) {
+      statusEl.textContent = '❌ 上传出错';
+      statusEl.style.color = '#e74c3c';
+      window._uploadedProofPath = null;
+    }
+    updateSaveBtnState();
+  });
+
+  function updateSaveBtnState() {
+    const type = document.getElementById('newUserType').value;
+    const btn = document.getElementById('btnSaveNewUser');
+    if (type === 'onpremise' && !window._uploadedProofPath) {
+      btn.disabled = true;
+      btn.title = '请上传收款凭证';
+    } else {
+      btn.disabled = false;
+      btn.title = '';
+    }
+  }
+
+  document.getElementById('newUserForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = {
+      phone: fd.get('phone'),
+      password: fd.get('password'),
+      name: fd.get('name') || null,
+      user_type: fd.get('user_type'),
+    };
+    if (body.user_type === 'onpremise') {
+      if (!window._uploadedProofPath) { DDW.toast('请上传收款凭证', 'error'); return; }
+      body.company_name = fd.get('company_name') || null;
+      body.contact_name = fd.get('contact_name') || null;
+      body.contact_phone = fd.get('contact_phone') || null;
+      body.payment_proof_path = window._uploadedProofPath;
+    }
+    const resp = await DDW.api.post('/admin/users/create', body);
+    if (resp.ok) { DDW.toast('用户已创建', 'success'); closeNewUserModal(); loadUsersList(); }
+    else DDW.toast(resp.message || '创建失败', 'error');
+  });
+
+  // --- 新建子管理员 ---
+  document.getElementById('btnNewSubAdmin').addEventListener('click', () => {
+    document.getElementById('subAdminModal').style.display = 'flex';
+    document.getElementById('subAdminForm').reset();
+    renderChannelCheckboxes('subAdminChannelPerms', []);
+  });
+
+  function closeSubAdminModal() { document.getElementById('subAdminModal').style.display = 'none'; }
+
+  document.getElementById('subAdminForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const perms = [...document.querySelectorAll('#subAdminChannelPerms input:checked')].map(c => c.value);
+    const body = {
+      phone: fd.get('phone'),
+      password: fd.get('password'),
+      name: fd.get('name') || null,
+      channel_perms: perms,
+    };
+    const resp = await DDW.api.post('/admin/sub-admins', body);
+    if (resp.ok) { DDW.toast('子管理员已创建', 'success'); closeSubAdminModal(); }
+    else DDW.toast(resp.message || '创建失败', 'error');
+  });
+
+  // --- 权限控制：显示/隐藏按钮 ---
+  async function checkAdminRole() {
+    try {
+      const meResp = await DDW.api.get('/auth/me');
+      if (meResp.ok && meResp.data && meResp.data.can_access_admin) {
+        document.getElementById('btnNewUser').style.display = '';
+        document.getElementById('btnNewSubAdmin').style.display = '';
+      }
+    } catch (e) {}
+  }
+  checkAdminRole();
+
+  // --- CSS for um-tabs ---
+  const _umCss = document.createElement('style');
+  _umCss.textContent = `
+    .um-tab{background:transparent;color:var(--c-text,#ccc);border:none;padding:10px 18px;font-size:14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;}
+    .um-tab:hover{color:var(--accent,#e8b86d);}
+    .um-tab.active{color:var(--accent,#e8b86d);border-bottom-color:var(--accent,#e8b86d);font-weight:700;}
+    .um-filter.active{background:var(--accent,#e8b86d);color:#1a1a2e;border-color:var(--accent,#e8b86d);}
+  `;
+  document.head.appendChild(_umCss);
+
+  // ===== LLM =====
+  async function loadLLM() {
+    const pe = document.getElementById('llmProviderList');
+    const re = document.getElementById('llmRulesList');
+    pe.innerHTML = '<div class="empty"><div class="icon">⏳</div>加载中...</div>';
+    re.innerHTML = '<div class="empty"><div class="icon">⏳</div>加载中...</div>';
+
+    const [provR, ruleR] = await Promise.all([
+      DDW.api.get('/llm/providers'),
+      DDW.api.get('/llm/rules'),
+    ]);
+
+    // Providers（支持目录渲染：所有支持的大模型都列出，未配置的显示"未配置"）
+    if (provR.ok && provR.data) {
+      const d = provR.data;
+      const providers = d.providers || {};
+      const supported = Array.isArray(d.supported) ? d.supported : Object.keys(providers);
+      if (supported.length === 0) {
+        pe.innerHTML = '<div class="empty">未配置任何 LLM 提供商</div>';
+      } else {
+        const modelNames = { minimax: 'MiniMax', deepseek: 'DeepSeek', ollama: 'Ollama', qwen: '通义千问 Qwen', glm: '智谱 GLM', kimi: '月之暗面 Kimi' };
+        let html = '<table class="table"><thead><tr><th>大模型</th><th>状态</th><th>模型</th></tr></thead><tbody>';
+        for (const k of supported) {
+          const v = providers[k] || {};
+          let badge;
+          if (v.ok && v.mode === 'live') {
+            badge = '<span class="badge badge-on">✅ 已配置 · 健康</span>';
+          } else if (v.error === '未配置' || v.mode === 'mock' || (!v.ok && !v.error)) {
+            badge = '<span class="badge badge-off">⬜ 未配置</span>';
+          } else {
+            badge = '<span class="badge badge-off">不可达</span>';
+          }
+          html += `<tr><td><strong>${escape(modelNames[k] || k)}</strong></td><td>${badge}</td><td>${escape(v.model || v.default_model || '—')}</td></tr>`;
+        }
+        html += '</tbody></table>';
+        pe.innerHTML = html;
+      }
+    } else {
+      pe.innerHTML = '<div class="empty"><div class="icon">❌</div>' + (provR.message || '加载失败') + '</div>';
+    }
+
+    // Rules
+    if (ruleR.ok && Array.isArray(ruleR.data)) {
+      if (ruleR.data.length === 0) {
+        re.innerHTML = '<div class="empty">暂无路由规则，使用默认 fallback chain</div>';
+      } else {
+        let html = '<table class="table"><thead><tr><th>优先级</th><th>匹配条件</th><th>目标 Provider</th></tr></thead><tbody>';
+        ruleR.data.forEach((r, i) => {
+          html += `<tr><td>${i + 1}</td><td><code>${escape(JSON.stringify(r.match || r))}</code></td><td><strong>${escape(r.provider || r.target || '—')}</strong></td></tr>`;
+        });
+        html += '</tbody></table>';
+        re.innerHTML = html;
+      }
+    } else {
+      re.innerHTML = '<div class="empty"><div class="icon">❌</div>' + (ruleR.message || '加载失败') + '</div>';
+    }
+  }
+
+  document.getElementById('reloadLLM').addEventListener('click', loadLLM);
+
+  // ===== Whitelist =====
+  async function loadWhitelist() {
+    const el = document.getElementById('whitelistList');
+    el.innerHTML = '<div class="empty"><div class="icon">⏳</div>加载中...</div>';
+    const resp = await DDW.api.get('/users/whitelist');
+    if (!resp.ok) {
+      el.innerHTML = '<div class="empty"><div class="icon">❌</div>' + (resp.message || '加载失败') + '</div>';
+      return;
+    }
+    const list = Array.isArray(resp.data) ? resp.data : [];
+    if (list.length === 0) {
+      el.innerHTML = '<div class="empty"><div class="icon">📋</div>白名单为空</div>';
+      return;
+    }
+    let html = '<table class="table"><thead><tr><th>手机号</th><th>备注</th><th>添加时间</th><th style="text-align:right;">操作</th></tr></thead><tbody>';
+    for (const w of list) {
+      html += `<tr>
+        <td><strong>${escape(w.phone)}</strong></td>
+        <td>${escape(w.note || '—')}</td>
+        <td style="font-size:12px;color:var(--c-text-muted);">${escape(w.added_at || '—')}</td>
+        <td style="text-align:right;">
+          <button class="btn btn-sm btn-danger" data-phone="${escape(w.phone)}">移除</button>
+        </td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    el.innerHTML = html;
+    el.querySelectorAll('button[data-phone]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('确认从白名单移除 ' + btn.dataset.phone + '？')) return;
+        const resp = await DDW.api.del('/users/whitelist/' + encodeURIComponent(btn.dataset.phone));
+        if (resp.ok) { DDW.toast('已移除', 'success'); loadWhitelist(); }
+        else DDW.toast(resp.message || '失败', 'error');
+      });
+    });
+  }
+
+  document.getElementById('whitelistForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target).entries());
+    if (!/^1\d{10}$/.test(data.phone)) { DDW.toast('手机号格式有误', 'error'); return; }
+    const resp = await DDW.api.post('/users/whitelist', { phone: data.phone, note: data.note || null });
+    if (resp.ok) { DDW.toast('已加入白名单', 'success'); e.target.reset(); loadWhitelist(); }
+    else DDW.toast(resp.message || '失败', 'error');
+  });
+
+  // ===== Channels =====
+  async function loadChannels() {
+    const el = document.getElementById('channelList');
+    el.innerHTML = '<div class="empty"><div class="icon">⏳</div>加载中...</div>';
+    const resp = await DDW.api.get('/admin/billing/channels');
+    if (!resp.ok) {
+      el.innerHTML = '<div class="empty"><div class="icon">❌</div>' + (resp.message || '加载失败') + '</div>';
+      return;
+    }
+    const list = Array.isArray(resp.data) ? resp.data : [];
+    if (list.length === 0) {
+      el.innerHTML = '<div class="empty"><div class="icon">💼</div>暂无渠道商</div>';
+      return;
+    }
+    let html = '<table class="table"><thead><tr><th>ID</th><th>名称</th><th>等级</th><th>联系人</th></tr></thead><tbody>';
+    for (const c of list) {
+      const levelBadge = c.level === 'large'
+        ? '<span class="badge badge-gold">大型</span>'
+        : c.level === 'medium'
+        ? '<span class="badge badge-warn">中型</span>'
+        : '<span class="badge badge-off">小型</span>';
+      html += `<tr>
+        <td>${c.id}</td>
+        <td><strong>${escape(c.name)}</strong></td>
+        <td>${levelBadge}</td>
+        <td>${escape(c.contact || '—')}</td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+
+  document.getElementById('channelForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target).entries());
+    if (!data.name) { DDW.toast('请填写渠道名', 'error'); return; }
+    const payload = {
+      name: data.name,
+      level: data.level,
+      contact: data.contact || null,
+    };
+    if (data.parent_id) payload.parent_id = parseInt(data.parent_id, 10);
+    const resp = await DDW.api.post('/admin/billing/channels', payload);
+    if (resp.ok) { DDW.toast('渠道商已添加', 'success'); e.target.reset(); loadChannels(); }
+    else DDW.toast(resp.message || '失败', 'error');
+  });
+
+  // 工具：HTML 转义
+  function escape(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  // FDE 文档签名 URL 访问
+  async function openFdeDoc(e, file) {
+    e.preventDefault();
+    const token = DDW.api.getToken();
+    try {
+      const r = await fetch('/api/v1/docs/sign?path=fde/' + file, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (!r.ok) { alert('无权限访问内部文档'); return false; }
+      const d = await r.json();
+      window.open(d.url, '_blank');
+    } catch (err) { alert('获取文档链接失败'); }
+    return false;
+  }
+
+  // ===== Analytics (ddw_website_analytics) =====
+  let analyticsPeriod = '7d';
+
+  function setSegActive(period) {
+    analyticsPeriod = period;
+    document.querySelectorAll('#periodToggle .seg-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.period === period);
+    });
+  }
+
+  document.querySelectorAll('#periodToggle .seg-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      setSegActive(b.dataset.period);
+      loadAnalytics();
+    });
+  });
+  document.getElementById('analyticsRefresh').addEventListener('click', async () => {
+    const btn = document.getElementById('analyticsRefresh');
+    btn.disabled = true; btn.textContent = '⏳ 刷新中…';
+    try {
+      await DDW.api.post('/plugins/ddw_website_analytics/refresh');
+      await loadAnalytics();
+      DDW.toast('已刷新', 'success');
+    } catch (err) {
+      DDW.toast('刷新失败', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = '🔄 刷新数据';
+    }
+  });
+
+  async function loadAnalytics() {
+    const period = analyticsPeriod;
+    const sR = await DDW.api.get('/plugins/ddw_website_analytics/summary?period=' + period);
+    if (sR.ok) {
+      const s = sR.data || {};
+      document.getElementById('ana-today-pv').textContent = s.today_pv ?? 0;
+      document.getElementById('ana-today-uv').textContent = s.today_uv ?? 0;
+      const br = Number(s.bounce_rate ?? 0);
+      document.getElementById('ana-bounce').textContent = (br * 100).toFixed(1) + '%';
+      document.getElementById('ana-avg').textContent = Math.round(s.avg_duration ?? 0) + ' 秒';
+      renderTrend(s.daily_trend || []);
+      // pages
+      const pb = document.querySelector('#topPagesTable tbody');
+      pb.innerHTML = '';
+      (s.top_pages || []).forEach(p => {
+        pb.insertAdjacentHTML('beforeend',
+          '<tr><td>' + escape(p.path) + '</td><td>' + p.pv + '</td><td>' + p.uv + '</td></tr>');
+      });
+      // referrers
+      const rb = document.querySelector('#topReferrersTable tbody');
+      rb.innerHTML = '';
+      (s.top_referrers || []).forEach(r => {
+        rb.insertAdjacentHTML('beforeend',
+          '<tr><td>' + escape(r.source) + '</td><td>' + r.visits + '</td><td>' +
+          (Number(r.percentage || 0) * 100).toFixed(1) + '%</td></tr>');
+      });
+      // crawlers
+      const chips = document.getElementById('crawlerChips');
+      chips.innerHTML = '';
+      const crawlers = s.crawler_stats || [];
+      if (crawlers.length === 0) {
+        chips.innerHTML = '<span style="color:var(--c-text-muted);">暂无爬虫访问</span>';
+      } else {
+        crawlers.forEach(c => {
+          chips.insertAdjacentHTML('beforeend',
+            '<div class="ana-chip"><b>' + escape(c.ua_name) + '</b><span>' + c.requests + ' 次</span></div>');
+        });
+      }
+      document.getElementById('ana-updated').textContent = new Date().toLocaleString('zh-CN');
+    } else {
+      document.getElementById('ana-updated').textContent = '加载失败: ' + (sR.message || '网络错误');
+    }
+  }
+
+  // 纯 JS + Canvas 折线图
+  function renderTrend(data) {
+    const c = document.getElementById('trendChart');
+    if (!c) return;
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = c.clientWidth || 600;
+    const cssH = 180;
+    c.width = cssW * dpr;
+    c.height = cssH * dpr;
+    const ctx = c.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    // 背景
+    ctx.fillStyle = 'rgba(255,255,255,0.02)';
+    ctx.fillRect(0, 0, cssW, cssH);
+
+    if (!data || data.length === 0) {
+      ctx.fillStyle = '#888';
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('暂无数据', cssW / 2, cssH / 2);
+      return;
+    }
+    const padL = 36, padR = 12, padT = 12, padB = 22;
+    const w = cssW - padL - padR;
+    const h = cssH - padT - padB;
+
+    let maxPV = 0, maxUV = 0;
+    data.forEach(d => {
+      if (d.pv > maxPV) maxPV = d.pv;
+      if (d.uv > maxUV) maxUV = d.uv;
+    });
+    if (maxPV === 0) maxPV = 1;
+    if (maxUV === 0) maxUV = 1;
+
+    // 水平网格线
+    ctx.strokeStyle = 'rgba(232,184,109,0.12)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = padT + (h * i) / 4;
+      ctx.beginPath();
+      ctx.moveTo(padL, y); ctx.lineTo(padL + w, y); ctx.stroke();
+    }
+
+    // X 轴标签 (每 n 个显示一次)
+    const stepX = data.length > 14 ? Math.ceil(data.length / 7) : 1;
+    ctx.fillStyle = '#9aa4ad';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    data.forEach((d, i) => {
+      if (i % stepX !== 0 && i !== data.length - 1) return;
+      const x = padL + (i / Math.max(1, data.length - 1)) * w;
+      const lbl = (d.date || '').slice(5); // MM-DD
+      ctx.fillText(lbl, x, cssH - 6);
+    });
+
+    function drawLine(key, color, max) {
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      data.forEach((d, i) => {
+        const x = padL + (i / Math.max(1, data.length - 1)) * w;
+        const y = padT + h - (d[key] / max) * h;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      // 点
+      data.forEach((d, i) => {
+        const x = padL + (i / Math.max(1, data.length - 1)) * w;
+        const y = padT + h - (d[key] / max) * h;
+        ctx.beginPath();
+        ctx.arc(x, y, 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+    drawLine('pv', '#5b9dff', maxPV);
+    drawLine('uv', '#e8b86d', maxUV);
+  }
+
+  // 段控件样式（仅本页面内）
+  const _anaCss = document.createElement('style');
+  _anaCss.textContent = `
+    .seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+    .seg-btn{background:transparent;color:var(--c-text);border:none;padding:6px 12px;font-size:12px;cursor:pointer;}
+    .seg-btn.active{background:var(--accent,#e8b86d);color:#1a1a2e;font-weight:700;}
+    .btn-refresh{background:transparent;color:var(--c-text);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;}
+    .btn-refresh:hover{background:var(--accent,#e8b86d);color:#1a1a2e;}
+    .ana-chip{background:var(--bg-elevated);border:1px solid var(--border);border-radius:20px;padding:6px 12px;font-size:13px;display:inline-flex;gap:8px;align-items:center;}
+    .ana-chip b{color:var(--accent,#e8b86d);}
+  `;
+  document.head.appendChild(_anaCss);
+</script>
+
+</body>
+</html>

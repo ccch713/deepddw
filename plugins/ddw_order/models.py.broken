@@ -1,0 +1,69 @@
+from __future__ import annotations
+"""DDW 订单管理插件 ORM 模型。
+
+本插件包含一张表：
+- :class:`Order` — 订单主表（继承 TenantMixin + TimestampMixin）
+  - 明细（items）以 JSON 列存储，与 P0-4 报价单子表模式不同
+
+继承 DDW 平台核心：
+- core.database.models.Base: DeclarativeBase 根
+- core.database.models.TenantMixin: 自动注入 tenant_id + 标记租户感知
+- core.database.models.TimestampMixin: 自动注入 created_at / updated_at
+
+状态机：
+    pending → confirmed → delivered → completed
+    pending / confirmed → cancelled（需 reason）
+    completed / cancelled 为终态
+"""
+
+from datetime import datetime
+from decimal import Decimal
+from typing import Optional
+
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+from sqlalchemy.orm import Mapped, mapped_column
+
+from core.database.models import Base, TenantMixin, TimestampMixin
+
+# BigInteger 在 SQLite 不支持 -> 退化到 Integer
+BigInt = BigInteger().with_variant(Integer(), "sqlite")
+
+
+class Order(Base, TenantMixin, TimestampMixin):
+    """订单主表。
+
+    - ``items`` 用 JSON 列存储明细行（dict list），单条订单一个 JSON 字段；
+      与 P0-4 报价单的独立子表不同——订单明细通常较短、变动少，JSON 更轻。
+    - 状态机五态：pending / confirmed / delivered / completed / cancelled
+    - 外键 ``company_id`` / ``contract_id`` 走 ``use_alter=True``，避免
+      metadata.create_all 阶段因 crm_companies / crm_contracts 尚未建表而抛
+      NoReferencedTableError；ON DELETE SET NULL 保证关联对象删除后订单保留。
+    """
+
+    __tablename__ = "crm_orders"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[int] = mapped_column(BigInt, primary_key=True, autoincrement=True)
+
+    # ---- 业务关联（外键 ON DELETE SET NULL：关联对象删除不级联删订单） ----
+    company_id: Mapped[Optional[int]] = mapped_column(        BigInt,
+        ForeignKey("crm_companies.id", ondelete="SET NULL", use_alter=True),
+        nullable=True,
+        index=True,
+    contract_id: Mapped[Optional[int]] = mapped_column(        BigInt,
+        ForeignKey("crm_contracts.id", ondelete="SET NULL", use_alter=True),
+        nullable=True,
+        index=True,
+
+    # ---- 单号 / 标题 ----
+    order_no: Mapped[Optional[str]] = mapped_column(        String(30), unique=True, index=True, nullable=False
+    )  # ORD-YYYYMMDD-NNN
+    title: Mapped[Optional[str]] = mapped_column(# ---- 金额（数值列；明细行金额在 items JSON 中） ---- total_amount: Mapped[Optional[Decimal]] = mapped_column( # ---- 明细（JSON 列；每行 dict: {product_name, quantity, unit_price, amount}） ---- items: Mapped[Optional[list]] = mapped_column(JSON, default=list)  # ---- 状态机 ---- status: Mapped[Optional[str]] = mapped_column(        String(20), default="pending", nullable=False, index=True ) # pending / confirmed / delivered / completed / cancelled confirmed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True) delivered_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True) completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True) cancelled_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True) cancel_reason: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)  # ---- 备注 / 审计 ---- notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True) created_by: Mapped[Optional[int]] = mapped_column(BigInt, nullable=True)  def __repr__(self) -> str:  # pragma: no cover return f"<Order id={self.id} no={self.order_no!r} status={self.status!r}>"   __all__ = ["Order"])

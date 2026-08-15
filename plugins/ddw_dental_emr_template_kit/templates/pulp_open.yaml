@@ -1,0 +1,90 @@
+type: pulp_open
+name: 开髓病历
+version: "1.0"
+required_fields:
+  - chief_complaint
+  - present_illness
+  - tooth_position
+  - pulp_vitality
+  - percussion_tenderness
+  - estimated_canals
+  - anesthesia_type
+
+fields:
+  chief_complaint:
+    label: 主诉
+    type: text
+    max_length: 200
+    required: true
+  present_illness:
+    label: 现病史
+    type: text
+    max_length: 1000
+    required: true
+  past_history:
+    label: 既往史
+    type: text
+    max_length: 500
+    required: false
+  tooth_position:
+    label: 牙位
+    type: text
+    required: true
+  pulp_vitality:
+    label: 牙髓活力
+    type: select
+    options: [alive_inflamed, alive_healthy, necrotic]
+    required: true
+  caries_location:
+    label: 龋坏位置
+    type: select
+    options: [occlusal, proximal, cervical, buccal]
+    required: false
+  percussion_tenderness:
+    label: 叩诊
+    type: boolean
+    required: true
+  thermal_test:
+    label: 冷热测试
+    type: text
+    required: false
+  mobility:
+    label: 松动度
+    type: select
+    options: ["0", "I", "II", "III"]
+    required: false
+  estimated_canals:
+    label: 估计根管数
+    type: number
+    required: true
+  opening_ability:
+    label: 张口度
+    type: select
+    options: [normal, limited, severe_limited]
+    required: false
+  anesthesia_type:
+    label: 麻醉方式
+    type: select
+    options: [local, intraligamentary, inferior_alveolar]
+    required: true
+  pre_operative_pain:
+    label: 术前疼痛(VAS)
+    type: number
+    min: 0
+    max: 10
+    required: false
+
+display_order:
+  - chief_complaint
+  - present_illness
+  - past_history
+  - tooth_position
+  - pulp_vitality
+  - caries_location
+  - percussion_tenderness
+  - thermal_test
+  - mobility
+  - estimated_canals
+  - opening_ability
+  - anesthesia_type
+  - pre_operative_pain

@@ -1,0 +1,9 @@
+name: ddw-esg-chatbot
+license: commercial
+tier: beta
+version: 1.0.0
+description: ESG AI customer service chatbot with RAG pipeline, conversation management, and human escalation
+author: DDW AI Hub
+type: plugin
+dependencies:
+  plugins: {}

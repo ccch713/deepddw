@@ -1,0 +1,10 @@
+special_findings 必须包含：
+- malocclusion_type: 错合类型（crowding/spacing/crossbite/deepbite/openbite/protrusion）
+- angle_class: 安氏分类（I/II_1/II_2/III）
+- arch_form: 牙弓形态（oval/tapered/square）
+- overjet: 覆盖（mm）
+- overbite: 覆合（mm）
+- crowe_index: Crowe 指数（轻度/中度/重度）
+- treatment_modality: 矫治器选择（fixed/removable/invisible/combined）
+- estimated_duration: 预估疗程（月）
+- extraction_needed: 是否需要拔牙（true/false）

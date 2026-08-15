@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DDW AI Hub · 管理后台</title>
+<style>
+/* Design Direction: WorkBuddy-style Blue-White Enterprise
+   Reference: WorkBuddy蓝白 + MiMo深色导航 + 钉钉悟空企业风
+   Primary: #2563EB (blue) / Accent: #E8B86D (DDW gold) / Surface: #F8FAFC
+   Typography: system sans + mono for data
+   Structure: flat, 1px borders, no gradients, no shadows, no emoji
+*/
+:root {
+  --bg: #F8FAFC; --bg-alt: #FFFFFF; --bg-nav: #0F172A; --bg-nav-hover: #1E293B;
+  --text: #0F172A; --text-muted: #64748B; --text-inv: #F8FAFC;
+  --primary: #2563EB; --primary-light: #EFF6FF; --primary-dark: #1D4ED8;
+  --accent: #E8B86D; --accent-light: #FEF3C7;
+  --green: #16A34A; --red: #DC2626; --amber: #D97706;
+  --border: #E2E8F0; --border-dark: #1E293B;
+  --radius: 6px;
+  --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sidebar-w: 208px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; height: 100%; overflow: hidden; }
+
+/* Demo Banner */
+.banner {
+  background: var(--bg-nav); color: var(--accent); text-align: center;
+  padding: 5px 16px; font-size: 11px; font-family: var(--mono);
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+}
+
+/* Top Nav — MiMo-style dark */
+.nav {
+  position: fixed; top: 26px; left: 0; right: 0; z-index: 100;
+  background: var(--bg-nav); color: var(--text-inv);
+  padding: 0 20px; height: 48px; display: flex; align-items: center; justify-content: space-between;
+}
+.nav .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; }
+.nav .logo-icon {
+  width: 26px; height: 26px; border: 1.5px solid var(--accent);
+  display: grid; place-items: center; color: var(--accent); font-size: 11px; font-weight: 800;
+  font-family: var(--mono);
+}
+.nav .links { display: flex; gap: 18px; }
+.nav .links a { color: rgba(255,255,255,.55); font-size: 13px; text-decoration: none; transition: color .12s; }
+.nav .links a:hover, .nav .links a.active { color: #fff; }
+
+/* Layout */
+.layout { display: flex; height: calc(100vh - 74px); margin-top: 74px; }
+
+/* Sidebar — clean white */
+.side {
+  width: var(--sidebar-w); min-width: var(--sidebar-w);
+  background: var(--bg-alt); border-right: 1px solid var(--border);
+  padding: 12px 0; overflow-y: auto;
+}
+.side h4 {
+  padding: 0 16px; font-size: 10px; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--text-muted); margin: 14px 0 4px; font-family: var(--mono);
+}
+.side h4:first-child { margin-top: 0; }
+.side a {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 16px; color: var(--text-muted); font-size: 13px;
+  border-left: 2px solid transparent; transition: all .1s; cursor: pointer; text-decoration: none;
+}
+.side a:hover { color: var(--text); background: var(--bg); }
+.side a.active { color: var(--primary); border-left-color: var(--primary); background: var(--primary-light); font-weight: 500; }
+.side svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.5; flex-shrink: 0; }
+
+/* Main */
+.main { flex: 1; overflow-y: auto; padding: 20px 24px; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* Header */
+.hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.hdr h2 { font-size: 17px; font-weight: 600; }
+.hdr .sub { color: var(--text-muted); font-size: 12px; margin-top: 1px; font-family: var(--mono); }
+
+/* Stat Row */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+.stat {
+  background: var(--bg-alt); padding: 14px 16px; border: 1px solid var(--border);
+  border-radius: var(--radius); border-left: 3px solid var(--primary);
+}
+.stat .lbl { font-size: 11px; color: var(--text-muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+.stat .val { font-size: 24px; font-weight: 700; font-family: var(--mono); margin-top: 2px; }
+.stat .nt { font-size: 11px; color: var(--text-muted); margin-top: 1px; font-family: var(--mono); }
+
+/* Card */
+.card { background: var(--bg-alt); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.card h3 { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text); }
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+
+/* Table */
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th { text-align: left; padding: 7px 10px; font-size: 11px; color: var(--text-muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--border); background: var(--bg); }
+.tbl td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+.tbl tr:last-child td { border-bottom: none; }
+
+/* Badge */
+.b { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-family: var(--mono); }
+.b-g { background: #DCFCE7; color: #15803D; }
+.b-gy { background: #F1F5F9; color: #64748B; }
+.b-a { background: #FEF3C7; color: #B45309; }
+.b-b { background: #DBEAFE; color: #1D4ED8; }
+
+/* Dot */
+.d { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+.d-g { background: var(--green); }
+.d-a { background: var(--amber); }
+.d-gy { background: #94A3B8; }
+
+/* Button */
+.btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: var(--radius); font-size: 12px; font-weight: 500; border: 1px solid var(--border); background: var(--bg-alt); color: var(--text); cursor: pointer; transition: border-color .1s; }
+.btn:hover { border-color: var(--primary); }
+.btn-p { background: var(--primary); color: #fff; border-color: var(--primary); }
+.btn-p:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
+.btn-s { padding: 3px 8px; font-size: 11px; }
+
+/* Plugin Grid */
+.pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.pcard {
+  background: var(--bg-alt); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px; transition: border-color .1s; cursor: pointer;
+}
+.pcard:hover { border-color: var(--primary); }
+.pcard .nm { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.pcard .ds { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.5; }
+.pcard .mt { display: flex; gap: 10px; font-size: 11px; color: var(--text-muted); font-family: var(--mono); padding-top: 7px; border-top: 1px solid var(--border); }
+
+/* Integration */
+.icard { background: var(--bg-alt); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; border-left: 3px solid var(--border); }
+.icard.ok { border-left-color: var(--green); }
+.icard.off { border-left-color: #CBD5E1; }
+.icard .nm { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+.icard .ds { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+.icard .st { display: flex; gap: 14px; font-size: 11px; color: var(--text-muted); font-family: var(--mono); margin-bottom: 8px; }
+.icard .st strong { color: var(--text); }
+
+/* Chat */
+.chat-l { display: flex; height: calc(100vh - 138px); }
+.chat-s { width: 180px; min-width: 180px; background: var(--bg-alt); border-right: 1px solid var(--border); overflow-y: auto; }
+.chat-s h4 { padding: 10px 10px 6px; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); font-family: var(--mono); }
+.cli { display: flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer; border-left: 2px solid transparent; }
+.cli:hover { background: var(--bg); }
+.cli.a { border-left-color: var(--primary); color: var(--primary); font-weight: 500; }
+.chat-m { flex: 1; display: flex; flex-direction: column; }
+.chat-h { padding: 8px 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 12px; background: var(--bg-alt); }
+.chat-c { flex: 1; overflow-y: auto; padding: 14px 18px; }
+.msg { display: flex; gap: 8px; margin-bottom: 14px; max-width: 72%; }
+.msg.u { margin-left: auto; flex-direction: row-reverse; }
+.msg .av {
+  width: 28px; height: 28px; border-radius: 4px; display: grid; place-items: center;
+  font-size: 10px; font-family: var(--mono); font-weight: 600; flex-shrink: 0;
+}
+.msg.ai .av { background: var(--bg-nav); color: var(--accent); }
+.msg.u .av { background: var(--primary); color: #fff; }
+.msg .bub { padding: 9px 12px; border-radius: var(--radius); font-size: 13px; line-height: 1.6; }
+.msg.ai .bub { background: var(--bg-alt); border: 1px solid var(--border); }
+.msg.u .bub { background: var(--primary); color: #fff; }
+.chat-in { padding: 10px 14px; border-top: 1px solid var(--border); display: flex; gap: 6px; background: var(--bg-alt); }
+.chat-in input { flex: 1; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 12px; outline: none; }
+.chat-in input:focus { border-color: var(--primary); }
+
+/* Settings */
+.ss { margin-bottom: 20px; }
+.ss h3 { font-size: 12px; font-weight: 600; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid var(--border); font-family: var(--mono); text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
+.fg { margin-bottom: 10px; }
+.fg label { display: block; font-size: 11px; font-weight: 500; margin-bottom: 3px; font-family: var(--mono); }
+.fg input, .fg select { width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 12px; background: var(--bg-alt); }
+.fg input:focus { outline: 0; border-color: var(--primary); }
+.fr { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tr { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.tg { position: relative; width: 34px; height: 18px; }
+.tg input { opacity: 0; width: 0; height: 0; }
+.tg .sl { position: absolute; inset: 0; background: #CBD5E1; border-radius: 18px; cursor: pointer; transition: .2s; }
+.tg .sl::before { content: ""; position: absolute; height: 12px; width: 12px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .2s; }
+.tg input:checked + .sl { background: var(--primary); }
+.tg input:checked + .sl::before { transform: translateX(16px); }
+
+/* Responsive */
+@media (max-width: 960px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .g2 { grid-template-columns: 1fr; }
+  .side { width: 44px; min-width: 44px; }
+  .side h4, .side a span { display: none; }
+  .side a { justify-content: center; padding: 9px; }
+}
+@media (max-width: 640px) {
+  .stats { grid-template-columns: 1fr; }
+  .main { padding: 14px; }
+  .nav .links { display: none; }
+}
+</style>
+    <link rel="stylesheet" href="/css/ddw-themes.css">
+    <script src="/js/ddw-theme-switcher.js"></script>
+  </head>
+<body>
+
+<div class="banner">[DEMO] DDW AI Hub v5.4 · 数据为模拟 · 实际系统需部署</div>
+
+<nav class="nav">
+  <div class="logo">
+    <div class="logo-icon">D</div>
+    <span>DDW</span>
+  </div>
+  <div class="links">
+    <a href="#">首页</a>
+    <a href="#">插件市场</a>
+    <a href="#">文档</a>
+    <a href="#">GitHub</a>
+    <a href="#" class="active">管理后台</a>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="side">
+    <h4>导航</h4>
+    <a class="active" data-page="dashboard">
+      <svg viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+      <span>仪表盘</span>
+    </a>
+    <a data-page="plugins">
+      <svg viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="2" stroke-dasharray="3 2"/></svg>
+      <span>插件管理</span>
+    </a>
+    <a data-page="integrations">
+      <svg viewBox="0 0 16 16"><circle cx="4" cy="8" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="12" cy="12" r="2"/><line x1="6" y1="7" x2="10" y2="4.5"/><line x1="6" y1="9" x2="10" y2="11.5"/></svg>
+      <span>企业集成</span>
+    </a>
+    <a data-page="chat">
+      <svg viewBox="0 0 16 16"><path d="M2 3h12v8H5l-3 3V3z" stroke-linejoin="round"/></svg>
+      <span>AI 对话</span>
+    </a>
+    <a data-page="users">
+      <svg viewBox="0 0 16 16"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+      <span>用户管理</span>
+    </a>
+    <h4>系统</h4>
+    <a data-page="llm">
+      <svg viewBox="0 0 16 16"><rect x="3" y="2" width="10" height="12" rx="1"/><line x1="5" y1="5" x2="11" y2="5"/><line x1="5" y1="7.5" x2="11" y2="7.5"/><line x1="5" y1="10" x2="9" y2="10"/></svg>
+      <span>LLM 配置</span>
+    </a>
+    <a data-page="settings">
+      <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>
+      <span>系统设置</span>
+    </a>
+  </aside>
+
+  <main class="main">
+
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="hdr">
+        <div><h2>仪表盘</h2><div class="sub">DDW AI Hub v5.4 · [演示数据]</div></div>
+        <button class="btn btn-s">刷新</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="lbl">已装插件</div><div class="val">12</div><div class="nt">本月 +3</div></div>
+        <div class="stat"><div class="lbl">活跃用户</div><div class="val">847</div><div class="nt">较上周 +12%</div></div>
+        <div class="stat"><div class="lbl">今日调用</div><div class="val">2,341</div><div class="nt">较昨日 +8.7%</div></div>
+        <div class="stat"><div class="lbl">可用率</div><div class="val">99.9%</div><div class="nt">近30天</div></div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <h3>近期操作</h3>
+          <table class="tbl">
+            <thead><tr><th>时间</th><th>操作</th><th>结果</th></tr></thead>
+            <tbody>
+              <tr><td style="font-family:var(--mono);font-size:11px;">14:32</td><td>飞书适配器连接</td><td><span class="b b-g">成功</span></td></tr>
+              <tr><td style="font-family:var(--mono);font-size:11px;">14:18</td><td>ESG 评估引擎启用</td><td><span class="b b-g">成功</span></td></tr>
+              <tr><td style="font-family:var(--mono);font-size:11px;">13:45</td><td>智能客服处理 47 条会话</td><td><span class="b b-g">89% 解决率</span></td></tr>
+              <tr><td style="font-family:var(--mono);font-size:11px;">11:20</td><td>Token 月度报告</td><td><span class="b b-b">¥128.50 / ¥500</span></td></tr>
+              <tr><td style="font-family:var(--mono);font-size:11px;">03:00</td><td>PostgreSQL 备份</td><td><span class="b b-g">2.3GB</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h3>服务状态</h3>
+          <table class="tbl">
+            <thead><tr><th>服务</th><th>状态</th><th>端口</th></tr></thead>
+            <tbody>
+              <tr><td><span class="d d-g"></span>DDW Core</td><td><span class="b b-g">运行中</span></td><td style="font-family:var(--mono);font-size:11px;">8080</td></tr>
+              <tr><td><span class="d d-g"></span>PostgreSQL</td><td><span class="b b-g">连接正常</span></td><td style="font-family:var(--mono);font-size:11px;">5432</td></tr>
+              <tr><td><span class="d d-g"></span>Redis</td><td><span class="b b-g">命中 94%</span></td><td style="font-family:var(--mono);font-size:11px;">6379</td></tr>
+              <tr><td><span class="d d-g"></span>LLM Gateway</td><td><span class="b b-g">3 在线</span></td><td style="font-family:var(--mono);font-size:11px;">8081</td></tr>
+              <tr><td><span class="d d-a"></span>飞书 Webhook</td><td><span class="b b-a">延迟 2.1s</span></td><td style="font-family:var(--mono);font-size:11px;">--</td></tr>
+              <tr><td><span class="d d-g"></span>钉钉 Stream</td><td><span class="b b-g">已连接</span></td><td style="font-family:var(--mono);font-size:11px;">WS</td></tr>
+              <tr><td><span class="d d-gy"></span>企微机器人</td><td><span class="b b-gy">未配置</span></td><td style="font-family:var(--mono);font-size:11px;">--</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plugins -->
+    <div class="page" id="page-plugins">
+      <div class="hdr">
+        <div><h2>插件管理</h2><div class="sub">已安装 12 / 可用 20</div></div>
+        <button class="btn btn-p btn-s">浏览市场</button>
+      </div>
+      <div style="margin-bottom:10px;">
+        <input type="search" placeholder="搜索插件..." style="width:100%;max-width:320px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--bg-alt);outline:none;" id="pSearch" oninput="fp()">
+      </div>
+      <div class="pgrid" id="pGrid"></div>
+    </div>
+
+    <!-- Integrations -->
+    <div class="page" id="page-integrations">
+      <div class="hdr">
+        <div><h2>企业集成</h2><div class="sub">连接飞书/钉钉/企微/泛微OA</div></div>
+        <button class="btn btn-p btn-s">添加集成</button>
+      </div>
+      <div style="background:var(--bg-nav);color:var(--text-inv);border-radius:var(--radius);padding:12px 16px;margin-bottom:14px;font-family:var(--mono);font-size:11px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="color:var(--accent);">架构:</span>
+        <span>企业IM</span><span style="color:var(--accent);">→</span>
+        <span>适配器</span><span style="color:var(--accent);">→</span>
+        <span style="color:var(--accent);font-weight:600;">DDW AI Hub</span><span style="color:var(--accent);">→</span>
+        <span>OA/ERP</span>
+      </div>
+      <div class="g2">
+        <div class="icard ok">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><div class="nm">飞书</div><span class="b b-g">已连接</span></div>
+          <div class="ds">OAuth + 机器人 + 工作台网页应用</div>
+          <div class="st"><span>用户 <strong>236</strong></span><span>今日 <strong>1,247</strong></span><span>延迟 <strong>0.8s</strong></span></div>
+          <div style="display:flex;gap:5px;"><button class="btn btn-s">配置</button><button class="btn btn-s">断开</button></div>
+        </div>
+        <div class="icard ok">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><div class="nm">钉钉</div><span class="b b-g">已连接</span></div>
+          <div class="ds">Stream WebSocket 长连接</div>
+          <div class="st"><span>用户 <strong>189</strong></span><span>今日 <strong>892</strong></span><span>延迟 <strong>1.1s</strong></span></div>
+          <div style="display:flex;gap:5px;"><button class="btn btn-s">配置</button><button class="btn btn-s">断开</button></div>
+        </div>
+        <div class="icard off">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><div class="nm">企业微信</div><span class="b b-gy">未连接</span></div>
+          <div class="ds">Webhook + 工作台网页应用</div>
+          <div class="st"><span>用户 <strong>--</strong></span><span>今日 <strong>--</strong></span><span>延迟 <strong>--</strong></span></div>
+          <div style="display:flex;gap:5px;"><button class="btn btn-p btn-s">开始连接</button></div>
+        </div>
+        <div class="icard off">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><div class="nm">泛微 OA</div><span class="b b-gy">未连接</span></div>
+          <div class="ds">iframe 嵌入 + SSO 单点登录</div>
+          <div class="st"><span>用户 <strong>--</strong></span><span>今日 <strong>--</strong></span><span>延迟 <strong>--</strong></span></div>
+          <div style="display:flex;gap:5px;"><button class="btn btn-p btn-s">开始连接</button></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:10px;">
+        <h3>本月数据</h3>
+        <table class="tbl">
+          <thead><tr><th>平台</th><th>消息</th><th>AI处理</th><th>解决率</th><th>延迟</th><th>状态</th></tr></thead>
+          <tbody>
+            <tr><td>飞书</td><td style="font-family:var(--mono);">32,450</td><td style="font-family:var(--mono);">28,100</td><td style="font-family:var(--mono);">89.2%</td><td style="font-family:var(--mono);">0.8s</td><td><span class="b b-g">正常</span></td></tr>
+            <tr><td>钉钉</td><td style="font-family:var(--mono);">18,920</td><td style="font-family:var(--mono);">16,340</td><td style="font-family:var(--mono);">86.5%</td><td style="font-family:var(--mono);">1.1s</td><td><span class="b b-g">正常</span></td></tr>
+            <tr><td>企微</td><td style="font-family:var(--mono);">--</td><td style="font-family:var(--mono);">--</td><td style="font-family:var(--mono);">--</td><td style="font-family:var(--mono);">--</td><td><span class="b b-gy">未连接</span></td></tr>
+            <tr><td>泛微OA</td><td style="font-family:var(--mono);">--</td><td style="font-family:var(--mono);">--</td><td style="font-family:var(--mono);">--</td><td style="font-family:var(--mono);">--</td><td><span class="b b-gy">未连接</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Chat -->
+    <div class="page" id="page-chat">
+      <div class="chat-l">
+        <div class="chat-s">
+          <h4>插件</h4>
+          <div class="cli a">智能客服</div>
+          <div class="cli">知识问答</div>
+          <div class="cli">邮件助手</div>
+          <div class="cli">ESG 评估</div>
+          <div class="cli">SOP 编排</div>
+          <div class="cli">用户反馈</div>
+          <div class="cli">工业数据</div>
+        </div>
+        <div class="chat-m">
+          <div class="chat-h">
+            <div><strong>智能客服</strong> <span style="color:var(--text-muted);font-size:10px;">MiniMax M3</span></div>
+            <span class="b b-g">在线</span>
+          </div>
+          <div class="chat-c">
+            <div class="msg ai"><div class="av">AI</div><div class="bub">你好。我是 DDW 智能客服，可以帮你处理产品咨询、技术问题、插件安装。有什么需要？</div></div>
+            <div class="msg u"><div class="av">U</div><div class="bub">ESG 评估插件怎么用？我们是做光通讯模块出口的。</div></div>
+            <div class="msg ai"><div class="av">AI</div><div class="bub">DDW 的 ESG 评估引擎覆盖 EcoVadis、CDP、SBTi 等主要框架。对光通讯模块出口企业，重点是环境数据（碳排放、能耗）和供应链管理两块。安装命令：<code style="background:var(--bg);padding:1px 4px;font-family:var(--mono);font-size:11px;">ddw plugin install ddw-esg-assessment</code><br><br>装好后在管理后台的"插件管理"里启用，就能开始评估流程。要我帮你走一遍？</div></div>
+            <div class="msg u"><div class="av">U</div><div class="bub">好，帮我启动。</div></div>
+            <div class="msg ai"><div class="av">AI</div><div class="bub">评估流程已启动。当前进度：<br><br>1/5 企业基本信息 — 已完成<br>2/5 环境数据 — 已完成<br>3/5 社会责任 — 进行中<br>4/5 公司治理 — 待开始<br>5/5 报告生成 — 待开始<br><br>当前评分 72/100（Silver）。社会责任部分还有 12 道题，继续？</div></div>
+          </div>
+          <div class="chat-in">
+            <input type="text" placeholder="输入消息..." disabled>
+            <button class="btn btn-p btn-s" disabled>发送</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Users -->
+    <div class="page" id="page-users">
+      <div class="hdr">
+        <div><h2>用户管理</h2><div class="sub">RBAC 权限 · 3 个租户</div></div>
+        <button class="btn btn-p btn-s">添加用户</button>
+      </div>
+      <div class="stats" style="grid-template-columns:repeat(3,1fr);">
+        <div class="stat"><div class="lbl">总用户</div><div class="val">425</div></div>
+        <div class="stat"><div class="lbl">活跃</div><div class="val">312</div><div class="nt">73.4%</div></div>
+        <div class="stat"><div class="lbl">管理员</div><div class="val">5</div></div>
+      </div>
+      <div class="card">
+        <table class="tbl">
+          <thead><tr><th>用户</th><th>部门</th><th>角色</th><th>来源</th><th>活跃</th><th>状态</th></tr></thead>
+          <tbody>
+            <tr><td><strong>张工</strong><br><span style="font-size:10px;color:var(--text-muted);">zhang@co.com</span></td><td>研发部</td><td><span class="b b-a">管理员</span></td><td>飞书</td><td style="font-family:var(--mono);font-size:11px;">刚刚</td><td><span class="b b-g">在线</span></td></tr>
+            <tr><td><strong>李经理</strong><br><span style="font-size:10px;color:var(--text-muted);">li@co.com</span></td><td>市场部</td><td><span class="b b-b">普通</span></td><td>钉钉</td><td style="font-family:var(--mono);font-size:11px;">10分钟前</td><td><span class="b b-g">在线</span></td></tr>
+            <tr><td><strong>王主管</strong><br><span style="font-size:10px;color:var(--text-muted);">wang@co.com</span></td><td>质量部</td><td><span class="b b-b">普通</span></td><td>飞书</td><td style="font-family:var(--mono);font-size:11px;">2小时前</td><td><span class="b b-gy">离线</span></td></tr>
+            <tr><td><strong>赵总监</strong><br><span style="font-size:10px;color:var(--text-muted);">zhao@co.com</span></td><td>ESG委员会</td><td><span class="b b-a">管理员</span></td><td>钉钉</td><td style="font-family:var(--mono);font-size:11px;">1小时前</td><td><span class="b b-g">在线</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- LLM -->
+    <div class="page" id="page-llm">
+      <div class="hdr"><div><h2>LLM 配置</h2><div class="sub">Provider 管理 · 配额 · 降级策略</div></div></div>
+      <div class="stats" style="grid-template-columns:repeat(3,1fr);">
+        <div class="stat"><div class="lbl">在线 Provider</div><div class="val">3</div><div class="nt">1 本地 + 2 云端</div></div>
+        <div class="stat"><div class="lbl">本月消耗</div><div class="val">¥107.50</div><div class="nt">4.2M tokens</div></div>
+        <div class="stat"><div class="lbl">平均延迟</div><div class="val">1.3s</div><div class="nt">P95: 2.8s</div></div>
+      </div>
+      <div class="card">
+        <h3>Provider 列表</h3>
+        <table class="tbl">
+          <thead><tr><th>Provider</th><th>模型</th><th>角色</th><th>配额</th><th>已用</th><th>延迟</th><th>状态</th></tr></thead>
+          <tbody>
+            <tr><td><strong>MiniMax</strong></td><td style="font-family:var(--mono);">M3</td><td><span class="b b-a">主力</span></td><td style="font-family:var(--mono);">¥200</td><td style="font-family:var(--mono);">¥45.20</td><td style="font-family:var(--mono);">0.6s</td><td><span class="b b-g">在线</span></td></tr>
+            <tr><td><strong>DeepSeek</strong></td><td style="font-family:var(--mono);">V4 Pro</td><td><span class="b b-b">审计</span></td><td style="font-family:var(--mono);">¥200</td><td style="font-family:var(--mono);">¥62.30</td><td style="font-family:var(--mono);">1.2s</td><td><span class="b b-g">在线</span></td></tr>
+            <tr><td><strong>Ollama</strong></td><td style="font-family:var(--mono);">ds4-flash</td><td><span class="b b-gy">兜底</span></td><td style="font-family:var(--mono);">免费</td><td style="font-family:var(--mono);">--</td><td style="font-family:var(--mono);">2.1s</td><td><span class="b b-g">在线</span></td></tr>
+            <tr><td><strong>MiMo</strong></td><td style="font-family:var(--mono);">V2.5 Pro</td><td><span class="b b-b">代码</span></td><td style="font-family:var(--mono);">¥329</td><td style="font-family:var(--mono);">¥128.50</td><td style="font-family:var(--mono);">0.8s</td><td><span class="b b-g">在线</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="page" id="page-settings">
+      <div class="hdr"><div><h2>系统设置</h2><div class="sub">租户 · 安全 · 备份</div></div></div>
+      <div class="ss">
+        <h3>租户信息</h3>
+        <div class="fr">
+          <div class="fg"><label>企业名称</label><input type="text" value="武汉锐光交互科技有限公司" disabled></div>
+          <div class="fg"><label>租户 ID</label><input type="text" value="tenant_ddw_001" disabled style="font-family:var(--mono);"></div>
+        </div>
+      </div>
+      <div class="ss">
+        <h3>安全</h3>
+        <div class="tr"><span>双因素认证 (2FA)</span><label class="tg"><input type="checkbox" checked><span class="sl"></span></label></div>
+        <div class="tr"><span>IP 白名单</span><label class="tg"><input type="checkbox"><span class="sl"></span></label></div>
+        <div class="tr"><span>审计日志</span><label class="tg"><input type="checkbox" checked><span class="sl"></span></label></div>
+        <div class="tr"><span>API Key 自动轮换 (90天)</span><label class="tg"><input type="checkbox" checked><span class="sl"></span></label></div>
+      </div>
+      <div class="ss">
+        <h3>备份</h3>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-s">立即备份</button>
+          <button class="btn btn-s">导出数据</button>
+          <button class="btn btn-s">恢复数据</button>
+        </div>
+        <div style="margin-top:6px;font-size:11px;color:var(--text-muted);font-family:var(--mono);">最近备份: 2026-08-01 03:00 · PostgreSQL · 2.3GB</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+document.querySelectorAll('.side a[data-page]').forEach(a=>{
+  a.addEventListener('click',e=>{
+    e.preventDefault();
+    document.querySelectorAll('.side a').forEach(x=>x.classList.remove('active'));
+    a.classList.add('active');
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    const t=document.getElementById('page-'+a.dataset.page);
+    if(t)t.classList.add('active');
+  });
+});
+const P=[
+  {n:"ddw-llm-gateway",t:"LLM 统一网关",d:"51种渠道适配+负载均衡+断路器",e:18,s:42,on:1},
+  {n:"ddw-token-manager",t:"Token 额度管理",d:"预消费/后消费+K系数校准反算",e:12,s:28,on:1},
+  {n:"ddw-smart-cs",t:"智能客服",d:"多渠道AI客服+Casbin RBAC+知识库",e:12,s:18,on:1},
+  {n:"ddw-email-assistant",t:"邮件助手",d:"IMAP/SMTP多协议+AI分类+自动草稿",e:14,s:34,on:1},
+  {n:"ddw-adapter-registry",t:"适配器注册中心",d:"飞书/钉钉/企微身份适配器统一注册",e:6,s:6,on:1},
+  {n:"ddw-sop-engine",t:"SOP 编排引擎",d:"DAG标准作业流程+条件分支+并行执行",e:9,s:6,on:0},
+  {n:"ddw-persona-engine",t:"人设引擎",d:"AI角色管理+人设模板+情感参数",e:9,s:6,on:0},
+  {n:"ddw-user-feedback",t:"用户反馈",d:"用户反馈收集+人工干预+质量评估",e:9,s:6,on:0},
+  {n:"ddw-trace-panel",t:"Trace 追踪面板",d:"OpenTelemetry分布式追踪+性能分析",e:6,s:6,on:0},
+  {n:"ddw-knowledge-hierarchy",t:"知识层级检索",d:"三阶段层级检索+向量+倒排混合召回",e:8,s:6,on:1},
+  {n:"ddw-esg-assessment",t:"ESG 评估引擎",d:"100+行业标准题库+自动评分+差距分析",e:6,s:12,on:1},
+  {n:"ddw-esg-report",t:"ESG 报告生成",d:"GRI/SASB/TCFD多框架合规报告",e:5,s:8,on:1},
+];
+function rP(l){
+  document.getElementById('pGrid').innerHTML=l.map(p=>`<div class="pcard"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><div class="nm">${p.t}</div><span class="b ${p.on?'b-g':'b-gy'}">${p.on?'已启用':'未启用'}</span></div><div class="ds">${p.d}</div><div class="mt"><span>${p.e} 端点</span><span>${p.s} 测试</span></div></div>`).join('');
+}
+function fp(){const q=(document.getElementById('pSearch').value||'').toLowerCase();rP(q?P.filter(p=>p.t.toLowerCase().includes(q)||p.d.includes(q)):P);}
+rP(P);
+</script>
+</body>
+</html>

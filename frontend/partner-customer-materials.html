@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>客户演示中心 · DDW AI Hub | 锐果互动</title>
+<link rel="icon" href="/company/assets/logo/logo-favicon.png">
+<style>
+  :root {
+    /* ===== 员工界面变量集（与 saas-admin 一致）===== */
+    --bg-base: #F0F2F5;
+    --bg-card: #FFFFFF;
+    --bg-elevated: #FAFAFA;
+    --bg-hover: #F5F7FA;
+    --bg-sidebar: #001529;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --text-muted: #999999;
+    --text-placeholder: #BBBBBB;
+    --text-inverse: #FFFFFF;
+    --brand: #1890FF;
+    --brand-hover: #40A9FF;
+    --brand-light: #E6F4FF;
+    --border: #E8E8E8;
+    --border-light: #F0F0F0;
+    --border-input: #D9D9D9;
+    --border-focus: #1890FF;
+    --success: #52C41A;
+    --success-bg: #F6FFED;
+    --success-border: #B7EB8F;
+    --warning: #FAAD14;
+    --warning-bg: #FFFBE6;
+    --warning-border: #FFE58F;
+    --danger: #F5222D;
+    --danger-bg: #FFF1F0;
+    --danger-border: #FFA39E;
+    --info: #1890FF;
+    --info-bg: #E6F7FF;
+    --info-border: #91D5FF;
+    --shadow-dropdown: 0 8px 24px rgba(0,0,0,0.12);
+    /* ===== 兼容别名（旧页面引用）===== */
+    --border-strong: #D9D9D9;
+    --bg-page: #F0F2F5;
+    --accent-orange: #FAAD14;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--text-primary); background: var(--bg-base); -webkit-font-smoothing: antialiased; }
+  a { color: var(--brand); text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
+
+  .demo-sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 200px; background: var(--bg-card); border-right: 1px solid var(--border); padding: 20px 0 0; display: flex; flex-direction: column; z-index: 50; overflow-y: auto; }
+  .demo-sidebar .sb-brand { padding: 0 20px 18px; font-weight: 800; color: var(--text-primary); font-size: 15px; letter-spacing: .5px; }
+  .demo-sidebar .sb-group { padding: 14px 20px 6px; font-size: 11px; color: var(--text-muted); letter-spacing: 1px; }
+  .demo-sidebar a { display: block; padding: 10px 20px; font-size: 15.5px; color: var(--text-muted); text-decoration: none; }
+  .demo-sidebar a:hover { color: var(--brand); background: rgba(24,144,255,.05); }
+  .demo-sidebar a.active { color: var(--brand); background: rgba(24,144,255,.08); border-right: 3px solid var(--brand); font-weight: 600; }
+  .demo-sidebar .sb-logout { margin-top: auto; padding: 14px 20px; font-size: 13px; color: var(--text-muted); cursor: pointer; border-top: 1px solid var(--border); }
+  .demo-sidebar .sb-logout:hover { color: #ff4d4f; }
+  .demo-page { margin-left: 200px; min-height: 100vh; padding: 40px 20px; background: var(--bg-base); }
+  .demo-wrap { max-width: 900px; margin: 0 auto; }
+  .head-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .head-bar h1 { font-size: 22px; margin: 0; color: var(--text-primary); }
+  .head-bar .sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 26px 28px; margin-bottom: 18px; }
+  .card h2 { font-size: 17px; color: var(--text-primary); margin: 0 0 16px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 14px; }
+  .info-grid .k { color: var(--text-muted); font-size: 12.5px; margin-bottom: 3px; }
+  .info-grid .v { color: var(--text-primary); font-weight: 600; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 12px; }
+  .badge.active { background: rgba(46,160,67,.12); color: #2ea043; }
+  .material-list { display: flex; flex-direction: column; gap: 12px; }
+  .material-item { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; background: var(--bg-page); }
+  .material-item .m-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+  .material-item .m-desc { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
+  .btn { padding: 9px 22px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
+  .btn-primary { background: var(--brand); color: #fff; }
+  .btn-primary:hover { background: var(--brand-hover); }
+  .btn-outline { background: transparent; border: 1px solid var(--border-strong); color: var(--text-primary); }
+  .btn-outline:hover { border-color: var(--brand); color: var(--brand); }
+  .btn-enter { background: linear-gradient(135deg, #1890ff, #0b5ed7); color: #fff; padding: 12px 34px; font-size: 15px; box-shadow: 0 6px 18px rgba(24,144,255,.25); }
+  .btn-enter:hover { opacity: .92; }
+  .tip { font-size: 12.5px; color: var(--text-muted); background: rgba(24,144,255,.06); border: 1px solid rgba(24,144,255,.2); padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; }
+  .nav-back { font-size: 13px; color: var(--text-muted); text-decoration: none; display: inline-block; margin-bottom: 12px; }
+  .nav-back:hover { color: var(--brand); }
+  /* 浮动按钮区：返回客户列表 + 主页 */
+  .fb-bar { position: fixed; right: 20px; bottom: 20px; z-index: 999; display: flex; gap: 10px; }
+  .fb-btn { display: inline-flex; align-items: center; gap: 5px; padding: 10px 18px; border-radius: 999px; background: rgba(0,21,41,.9); color: #fff; border: 1px solid rgba(255,255,255,.2); font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,.22); transition: all .2s; }
+  .fb-btn:hover { background: var(--brand); transform: translateY(-2px); }
+  @media (max-width: 768px) { .demo-sidebar { display: none; } .demo-page { margin-left: 0; } }
+</style>
+<link rel="stylesheet" href="/partner-shared.css">
+</head>
+<body>
+
+<div class="demo-sidebar">
+  <div class="sb-brand">DDW AI HUB</div>
+  <div class="sb-group">客户服务</div>
+  <a href="/partner-demo-accounts.html">客户演示账号</a>
+  <a href="/partner-customer-materials.html" class="active">演示物料</a>
+  <a href="/partner-tools.html">常用工具</a>
+  <div class="sb-logout" id="sbLogout">退出登录</div>
+</div>
+
+<div class="demo-page">
+  <div class="demo-wrap">
+    <a class="nav-back" href="/partner-demo-accounts.html">← 返回客户列表</a>
+    <div class="head-bar">
+      <div>
+        <h1 id="custName">客户演示中心</h1>
+        <div class="sub" id="custSub">加载中…</div>
+      </div>
+      <span class="badge active" id="custStatus">active</span>
+    </div>
+
+    <div class="card" id="custInfoCard" style="display:none">
+      <h2>客户信息</h2>
+      <div class="info-grid">
+        <div><div class="k">客户名称</div><div class="v" id="fName">—</div></div>
+        <div><div class="k">所属行业</div><div class="v" id="fIndustry">—</div></div>
+        <div><div class="k">演示环境</div><div class="v" id="fUrl">—</div></div>
+        <div><div class="k">备注</div><div class="v" id="fNote">—</div></div>
+      </div>
+    </div>
+
+    <div class="tip" id="loadTip">正在加载客户演示信息，请稍候…</div>
+
+    <div class="card" style="display:none" id="actionCard">
+      <h2>演示与物料</h2>
+      <div class="material-list">
+        <div class="material-item">
+          <div>
+            <div class="m-title">🚀 进入演示环境</div>
+            <div class="m-desc">一键打开客户演示界面，免输入账号（15 分钟有效）</div>
+          </div>
+          <button class="btn btn-enter" id="btnEnterDemo">进入演示</button>
+        </div>
+        <div class="material-item">
+          <div>
+            <div class="m-title">📊 能力演示 PPT</div>
+            <div class="m-desc">面向客户的系统能力演示（HTML 放映版，方向键翻页）</div>
+          </div>
+          <button class="btn btn-outline" id="btnOpenPpt">查看</button>
+        </div>
+        <div class="material-item">
+          <div>
+            <div class="m-title">📄 演示说明</div>
+            <div class="m-desc">演示操作指引与要点说明</div>
+          </div>
+          <button class="btn btn-outline" id="btnOpenGuide">查看</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 浮动按钮区：返回客户列表 + 主页 -->
+  <div class="fb-bar">
+    <a class="fb-btn" href="/partner-demo-accounts.html">← 客户列表</a>
+    <a class="fb-btn" href="/partner-demo-accounts.html">🏠 主页</a>
+  </div>
+</div>
+
+<script src="/js/api.js?v=20260811a"></script>
+<script>
+(function () {
+  var root = document.documentElement;
+  root.style.visibility = 'hidden';
+  (async function () {
+    var ok = false;
+    try {
+      var tk = (window.DDW && DDW.api && DDW.api.getToken) ? DDW.api.getToken() : '';
+      if (tk) {
+        var r = await fetch('/api/v1/auth/me', { headers: { 'Authorization': 'Bearer ' + tk } });
+        ok = r.ok;
+      }
+    } catch (e) { ok = false; }
+    if (!ok) { window.location.href = '/login.html'; return; }
+    root.style.visibility = 'visible';
+
+    var params = new URLSearchParams(location.search);
+    var accountId = params.get('account_id') || '';
+
+    function openMaterial(filename) {
+      // 直接跳转中转页（避免浏览器弹窗拦截），中转页鉴权后整页展示物料
+      window.location.href = '/partner-material-view.html?account_id=' + accountId + '&file=' + filename;
+    }
+
+    if (!accountId) {
+      document.getElementById('loadTip').textContent = '缺少客户参数，请从客户列表进入。';
+      return;
+    }
+
+    DDW.api.get('/plugins/ddw-partner-directory/demo-accounts?page_size=200').then(function (resp) {
+      var list = (resp.ok && resp.data && resp.data.items) ? resp.data.items : [];
+      var acc = null;
+      for (var i = 0; i < list.length; i++) { if (String(list[i].id) === String(accountId)) { acc = list[i]; break; } }
+      if (!acc) {
+        document.getElementById('loadTip').textContent = '未找到该客户，请返回客户列表重试。';
+        return;
+      }
+      document.title = acc.client_name + ' · 客户演示中心';
+      document.getElementById('custName').textContent = acc.client_name + ' · 演示中心';
+      document.getElementById('custSub').textContent = '客户专属演示环境与物料';
+      document.getElementById('fName').textContent = acc.client_name;
+      document.getElementById('fIndustry').textContent = acc.client_industry || '—';
+      document.getElementById('fUrl').textContent = acc.demo_url;
+      document.getElementById('fNote').textContent = acc.demo_note || '—';
+      document.getElementById('custStatus').textContent = acc.status;
+      document.getElementById('custInfoCard').style.display = '';
+      document.getElementById('actionCard').style.display = '';
+      document.getElementById('loadTip').style.display = 'none';
+
+      document.getElementById('btnEnterDemo').addEventListener('click', function () {
+        DDW.api.post('/plugins/ddw-partner-directory/enter-demo', { account_id: acc.id }).then(function (r) {
+          if (r.ok && r.data && r.data.demo_token) {
+            var sep = (acc.demo_url || 'https://ddw.9cio.com').indexOf('?') >= 0 ? '&' : '?';
+            // 直接跳转（不用 window.open，避免浏览器弹窗拦截）；官网首页消费 demo_token 后自动进入演示环境
+            window.location.href = acc.demo_url + sep + 'demo_token=' + encodeURIComponent(r.data.demo_token);
+          } else {
+            alert('进入演示失败：' + ((r.data && r.data.detail) || '未知错误'));
+          }
+        });
+      });
+      document.getElementById('btnOpenPpt').addEventListener('click', function () { openMaterial('xiangyun-customer-ppt.html'); });
+      document.getElementById('btnOpenGuide').addEventListener('click', function () { openMaterial('xiangyun-demo-guide.html'); });
+    });
+  })();
+})();
+
+document.getElementById('sbLogout').addEventListener('click', function () {
+  try { localStorage.removeItem('ddw_token'); } catch (e) {}
+  try { document.cookie = 'ddw_logged_in=; Domain=.9cio.com; Path=/; Max-Age=0'; } catch (e) {}
+  window.location.href = '/login.html';
+});
+</script>
+</body>
+</html>

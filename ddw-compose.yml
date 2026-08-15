@@ -1,0 +1,40 @@
+# DDW AI Hub · 独立部署（接入现有 Caddy/网络）
+# 用法: docker compose -f ddw-compose.yml up -d
+
+services:
+  ddw-core:
+    build:
+      context: ./ddw-ai-hub
+      dockerfile: Dockerfile
+    container_name: ddw-core
+    restart: unless-stopped
+    environment:
+      DDW_MODE: cloud
+      DDW_LOG_LEVEL: INFO
+      MINIMAX_API_KEY: ${MINIMAX_API_KEY}
+      DATABASE_URL: sqlite+aiosqlite:///app/data/ddw.db
+      DDW_DOMAIN: ddw.9cio.com
+    volumes:
+      - ddw_data:/app/data
+      - ddw_logs:/app/logs
+    networks:
+      - app-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8500/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  ddw_data:
+  ddw_logs:
+
+networks:
+  app-network:
+    external: true

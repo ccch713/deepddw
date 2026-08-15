@@ -1,0 +1,12 @@
+name: ddw-ent-knowledge
+license: commercial
+tier: core
+version: 1.0.0
+display_name: DDW 企业知识库
+description: 企业知识库引擎 Flat KB MVP
+engine: ">=2.0.0"
+dependencies:
+  plugins: {}
+permissions:
+  - storage
+config: {}

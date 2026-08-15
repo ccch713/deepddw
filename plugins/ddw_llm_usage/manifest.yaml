@@ -1,0 +1,18 @@
+name: ddw_llm_usage
+license: free
+status: locked  # 已由 ddw_token_entitlement / ddw_token_manager_plugin 取代，仅入库锁死，不部署
+version: 0.1.0
+display_name: DDW LLM 用量统计与计费
+description: |
+  统一管理云端/本地 LLM 的调用记录、token 用量与费用。
+  对标 OpenRouter 的企业内部用量中枢：所有 LLM 调用通过 POST /records
+  记账，支持按 model/plugin/user/日聚合统计与可配置单价表。
+engine: plugin_base
+isolation: inline
+permissions:
+  - database.read
+  - database.write
+  - fs.write
+config:
+  # 独立 SQLite 数据库路径（相对插件目录，自动创建）
+  db_path: data/llm_usage.db

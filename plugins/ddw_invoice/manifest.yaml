@@ -1,0 +1,37 @@
+name: ddw-invoice
+license: commercial
+tier: core
+version: 1.0.0
+display_name: DDW 发票管理
+description: 销售端开票申请与发票记录：开票申请（requested）→ 上传发票文件（issued）→ 作废（voided）。支持专票/普票、价税分离（amount/tax_amount/total_amount）、按企业/订单/发票类型/状态/开票日期多维筛选、统计概览。关联 crm_companies / crm_orders。
+engine: plugin_base
+isolation: inline
+
+permissions:
+  - database.read
+  - database.write
+
+dependencies:
+  plugins:
+    - ddw-company-profile
+    - ddw-order
+
+config_schema:
+  type: object
+  properties:
+    default_tenant_id:
+      type: integer
+      default: 1
+    default_page_size:
+      type: integer
+      default: 20
+    invoice_types:
+      type: array
+      default: [special, normal]
+      description: 发票类型枚举（special=专票 / normal=普票）
+    statuses:
+      type: array
+      default: [requested, issued, voided]
+      description: 发票状态枚举
+
+router_prefix: /api/v1/plugins/ddw-invoice

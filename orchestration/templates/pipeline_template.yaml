@@ -1,0 +1,294 @@
+# =====================================================
+# G3: YAML 编排模板
+# DDW AI Hub Orchestration — 长任务无人值守体系
+# =====================================================
+#
+# 六层分离设计：
+#   1. 编排层 (orchestration): 图拓扑 + 节点依赖
+#   2. 拓扑层 (topology): 串/并/扇出/汇聚/回退
+#   3. 模型层 (models): 每个节点使用的 LLM
+#   4. 容器层 (containers): 每个节点的运行环境
+#   5. 安全层 (safety): token budget / 超时 / 重试上限
+#   6. 提示层 (prompts): 每个 agent 的 system prompt
+#
+# 用法：pipeline_loader.py 加载此 YAML → DAGRunner 执行
+
+pipeline:
+  name: "标准六节点流水线"
+  version: "1.0.0"
+  description: "coder → tester → quality → committer 标准流水线"
+  
+  # 全局默认值
+  defaults:
+    model: "minimax-m3"
+    retry_limit: 2
+    timeout_seconds: 600
+    workspace: "${DDW_WORKSPACE}"
+
+# ── 1. 编排层：图拓扑定义 ──
+orchestration:
+  type: "linear_with_parallel"  # linear | fan_out | fan_in | dag
+  
+  nodes:
+    # 节点 1: 编码
+    - id: "coder"
+      name: "编码实现"
+      type: "coder"
+      model: "deepseek-v4-pro"  # 复杂任务用 Pro
+      retry_limit: 3
+      timeout: 1200
+      depends_on: []
+      handoff_required: ["changed_files", "test_results"]
+      
+    # 节点 2: 单元测试（与节点 3 并行）
+    - id: "tester"
+      name: "单元测试"
+      type: "tester"
+      depends_on: ["coder"]
+      handoff_required: ["test_results"]
+    
+    # 节点 3: 代码审查（与节点 2 并行）
+    - id: "reviewer"
+      name: "代码审查"
+      type: "reviewer"
+      depends_on: ["coder"]
+      handoff_required: ["changed_files"]
+    
+    # 节点 4: 质量门（等节点 2 和 3 都完成）
+    - id: "quality"
+      name: "质量检查"
+      type: "quality"
+      depends_on: ["tester", "reviewer"]
+      handoff_required: ["quality_checks"]
+    
+    # 节点 5: 提交（等节点 4）
+    - id: "committer"
+      name: "代码提交"
+      type: "committer"
+      depends_on: ["quality"]
+      handoff_required: ["changed_files", "pr_target"]
+
+# ── 2. 拓扑层：执行规则 ──
+topology:
+  # 回退规则
+  rollback:
+    tester_fail:        # 测试失败 → 打回 coder
+      trigger: "tester.status == 'failed'"
+      rollback_to: "coder"
+      max_rollbacks: 3
+    
+    quality_fail:       # 质量检查失败 → 打回 coder
+      trigger: "quality.status == 'failed'"
+      rollback_to: "coder"
+      max_rollbacks: 3
+  
+  # 并行度
+  parallelism:
+    max_concurrent: 3
+    group: ["tester", "reviewer"]  # 这两个并行
+
+# ── 3. 模型层：每个节点使用的 LLM ──
+models:
+  default: &default_model
+    provider: "minimax-cn"
+    model: "minimax-m3"
+    temperature: 0.3
+    max_tokens: 4096
+  
+  coder:
+    <<: *default_model
+    model: "minimax-m3"
+    temperature: 0.1
+    max_tokens: 8192
+  
+  deep_analysis:
+    provider: "deepseek"
+    model: "deepseek-v4-pro"
+    temperature: 0.5
+    max_tokens: 16384
+
+# ── 4. 容器层：每个节点的运行环境 ──
+containers:
+  default: &default_container
+    type: "process"       # process | docker | venv
+    python_version: "3.11"
+    env:
+      PYTHONPATH: "${WORKSPACE}/src"
+  
+  coder:
+    <<: *default_container
+    type: "process"
+    env:
+      PYTHONPATH: "${WORKSPACE}/src:${WORKSPACE}/tests"
+  
+  tester:
+    <<: *default_container
+    type: "process"
+    env:
+      PYTHONPATH: "${WORKSPACE}/tests"
+      PYTEST_ADDOPTS: "-v --tb=short"
+  
+  quality:
+    <<: *default_container
+    type: "process"
+
+# ── 5. 安全层：Token/超时/重试限制 ──
+safety:
+  global:
+    token_budget_per_node: 50000      # 每个节点最多消耗
+    timeout_minutes: 30               # 每个节点超时
+    max_retries: 3                    # 全局重试上限
+    stall_timeout_seconds: 300        # 停滞超时
+    max_inner_steps: 200              # 最大步数
+  
+  per_node:
+    coder:
+      token_budget: 100000
+      timeout_minutes: 60
+    
+    tester:
+      token_budget: 30000
+      timeout_minutes: 15
+    
+    quality:
+      token_budget: 20000
+      timeout_minutes: 10
+
+# ── 6. 提示层：每个 agent 的 system prompt ──
+prompts:
+  default: |
+    你是 DDW AI Hub 开发流水线中的{node_type}节点。
+    你的任务是{task_description}。
+    
+    重要规则：
+    1. 完成任务后必须输出结构化 handoff 数据
+    2. 只做你的职责范围的工作，不要越界
+    3. 遇到问题不要自己猜测，根据标准流程处理
+    
+    当前任务：{current_task}
+  
+  coder: |
+    你是 DDW AI Hub 流水线的编码节点。
+    
+    职责：
+    1. 根据需求编写代码
+    2. 所有代码必须有对应的测试
+    3. 修改的每个文件都要记录在 changed_files 中
+    4. 完成后运行测试命令确认通过
+    
+    {system_context}
+  
+  tester: |
+    你是 DDW AI Hub 流水线的测试节点。
+    
+    职责：
+    1. 运行编码节点提交的测试命令
+    2. 验证所有测试通过
+    3. 生成覆盖率报告
+    4. 如果测试失败，输出具体失败信息
+    
+    {system_context}
+  
+  reviewer: |
+    你是 DDW AI Hub 流水线的代码审查节点。
+    
+    职责：
+    1. 审查编码节点的代码变更
+    2. 检查代码质量、安全性、性能
+    3. 确认无 scope creep
+    4. 输出审查报告
+    
+    {system_context}
+  
+  quality: |
+    你是 DDW AI Hub 流水线的质量检查节点。
+    
+    职责：
+    1. 运行 linter 和 type checker
+    2. 检查安全漏洞
+    3. 验证测试覆盖率达标
+    4. 如果有问题输出具体问题清单
+    
+    {system_context}
+  
+  committer: |
+    你是 DDW AI Hub 流水线的提交节点。
+    
+    职责：
+    1. 确认所有上游检查通过
+    2. 创建 PR（如果需要）
+    3. 提交到目标分支
+    4. 生成提交摘要
+
+# ── Handoff Schema 定义 ──
+handoff_schema:
+  common_fields:
+    - agent_id
+    - agent_type
+    - task_id
+    - status
+    - timestamp
+    - summary
+  
+  coder_fields:
+    - changed_files
+    - test_results
+    - output_files
+  
+  tester_fields:
+    - test_results
+    - coverage_report
+  
+  quality_fields:
+    - quality_checks
+    - lint_report
+    - security_report
+  
+  committer_fields:
+    - changed_files
+    - pr_target
+    - commit_message
+
+# ── Scorecard 审计规则 ──
+scorecard:
+  enabled: true
+  fail_on_error: true
+  
+  checks:
+    file_exists:
+      weight: 3
+      description: "所有 changed_files 中的文件必须存在且非空"
+    
+    test_pass:
+      weight: 3
+      description: "测试命令 exit_code 必须为 0"
+    
+    syntax_ok:
+      weight: 2
+      description: "所有 .py 文件语法检查通过"
+    
+    handoff_complete:
+      weight: 2
+      description: "handoff 数据包含所有必填字段"
+    
+    git_clean:
+      weight: 1
+      description: "Git 工作区无未提交变更"  # 在生产中这要求太高
+
+# ── 监控配置 ──
+monitoring:
+  watchdog:
+    enabled: true
+    check_interval_seconds: 10
+    task_timeout_seconds: 1800
+    stall_timeout_seconds: 300
+  
+  token_monitor:
+    enabled: true
+    budget_daily: 4.0     # ¥4/天
+    alert_threshold: 0.8  # 80% 告警
+  
+  disk_monitor:
+    enabled: true
+    warn_watermark: 80   # 80% 警告
+    critical_watermark: 90

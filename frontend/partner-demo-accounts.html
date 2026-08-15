@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>客户 Demo 账号 · DDW AI Hub | 锐果互动</title>
+<link rel="icon" href="/company/assets/logo/logo-favicon.png">
+<style>
+  :root {
+    /* ===== 员工界面变量集（与 saas-admin 一致）===== */
+    --bg-base: #F0F2F5;
+    --bg-card: #FFFFFF;
+    --bg-elevated: #FAFAFA;
+    --bg-hover: #F5F7FA;
+    --bg-sidebar: #001529;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --text-muted: #999999;
+    --text-placeholder: #BBBBBB;
+    --text-inverse: #FFFFFF;
+    --brand: #1890FF;
+    --brand-hover: #40A9FF;
+    --brand-light: #E6F4FF;
+    --border: #E8E8E8;
+    --border-light: #F0F0F0;
+    --border-input: #D9D9D9;
+    --border-focus: #1890FF;
+    --success: #52C41A;
+    --success-bg: #F6FFED;
+    --success-border: #B7EB8F;
+    --warning: #FAAD14;
+    --warning-bg: #FFFBE6;
+    --warning-border: #FFE58F;
+    --danger: #F5222D;
+    --danger-bg: #FFF1F0;
+    --danger-border: #FFA39E;
+    --info: #1890FF;
+    --info-bg: #E6F7FF;
+    --info-border: #91D5FF;
+    --shadow-dropdown: 0 8px 24px rgba(0,0,0,0.12);
+    /* ===== 兼容别名（旧页面引用）===== */
+    --border-strong: #D9D9D9;
+    --bg-page: #F0F2F5;
+    --accent-orange: #FAAD14;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--text-primary); background: var(--bg-base); -webkit-font-smoothing: antialiased; }
+  a { color: var(--brand); text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
+
+  .demo-page { min-height: calc(100vh - 140px); padding: 40px 20px; background: var(--bg-base); }
+  .demo-wrap { max-width: 1000px; margin: 0 auto; }
+  .demo-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .demo-head h1 { font-size: 22px; margin: 0; color: var(--text-primary); }
+  .demo-head .sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+  .demo-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .demo-card h3 { margin: 0 0 12px; font-size: 15px; color: var(--text-primary); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 12px; font-size: 13.5px; border-bottom: 1px solid var(--border); color: var(--text-primary); }
+  th { color: var(--text-muted); font-weight: 600; background: var(--bg-page); }
+  tr:last-child td { border-bottom: none; }
+  .btn-copy { padding: 3px 7px; border: 1px solid var(--border-strong); border-radius: 6px; font-size: 13px; line-height: 1.2; cursor: pointer; background: var(--bg-page); color: var(--text-secondary); vertical-align: middle; }
+  .btn-copy:hover { border-color: var(--brand); color: var(--brand); }
+  .btn-copy svg { display: block; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 12px; }
+  .badge.active { background: rgba(46,160,67,.12); color: #2ea043; }
+  .badge.expired { background: rgba(219,171,9,.12); color: #dbab09; }
+  .badge.disabled { background: rgba(255,77,79,.12); color: #ff4d4f; }
+  .empty { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 14px; }
+  .add-btn { padding: 8px 18px; background: var(--brand); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .add-btn:hover { background: var(--brand-hover); }
+  .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .modal-mask.show { display: flex; }
+  .modal { background: var(--bg-card); border-radius: 14px; padding: 28px; width: 480px; max-width: 92vw; }
+  .modal h3 { margin: 0 0 18px; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 13px; color: var(--text-primary); margin-bottom: 5px; font-weight: 600; }
+  .form-group input { width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: var(--bg-page); color: var(--text-primary); }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  .modal-actions button { padding: 9px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  .btn-primary { background: var(--brand); color: #fff; border: none; font-weight: 600; }
+  .btn-plain { background: transparent; border: 1px solid var(--border-strong); color: var(--text-primary); }
+  .tip { font-size: 12.5px; color: var(--accent-orange); background: rgba(219,171,9,.08); border: 1px solid rgba(219,171,9,.25); padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; }
+  .del-btn { color: #ff4d4f; background: none; border: none; cursor: pointer; font-size: 12.5px; }
+  .btn-enter { padding: 4px 12px; background: var(--brand); color: #fff; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; margin-right: 4px; }
+  .btn-enter:hover { background: var(--brand-hover); }
+  .btn-materials { padding: 4px 12px; background: transparent; color: var(--brand); border: 1px solid var(--brand); border-radius: 6px; font-size: 12px; cursor: pointer; margin-right: 4px; }
+  .btn-materials:hover { background: rgba(24,144,255,.08); }
+  .nav-back { font-size: 13px; color: var(--text-muted); text-decoration: none; display: inline-block; margin-bottom: 12px; }
+  .nav-back:hover { color: var(--brand); }
+  /* ===== 左侧导航栏 ===== */
+  .demo-sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 200px; background: var(--bg-card); border-right: 1px solid var(--border); padding: 20px 0 0; display: flex; flex-direction: column; z-index: 50; overflow-y: auto; }
+  .demo-sidebar .sb-brand { padding: 0 20px 18px; font-weight: 800; color: var(--text-primary); font-size: 15px; letter-spacing: .5px; }
+  .demo-sidebar .sb-group { padding: 14px 20px 6px; font-size: 11px; color: var(--text-muted); letter-spacing: 1px; }
+  .demo-sidebar a { display: block; padding: 10px 20px; font-size: 15.5px; color: var(--text-muted); text-decoration: none; }
+  .demo-sidebar a:hover { color: var(--brand); background: rgba(24,144,255,.05); }
+  .demo-sidebar a.active { color: var(--brand); background: rgba(24,144,255,.08); border-right: 3px solid var(--brand); font-weight: 600; }
+  .demo-sidebar .sb-logout { margin-top: auto; padding: 14px 20px; font-size: 13px; color: var(--text-muted); cursor: pointer; border-top: 1px solid var(--border); }
+  .demo-sidebar .sb-logout:hover { color: #ff4d4f; }
+  .demo-page { margin-left: 200px; }
+  @media (max-width: 768px) { .demo-sidebar { display: none; } .demo-page { margin-left: 0; } }
+</style>
+<link rel="stylesheet" href="/partner-shared.css">
+</head>
+<body>
+
+<aside class="demo-sidebar">
+  <div class="sb-brand">DDW AI HUB</div>
+  <a href="/admin.html">仪表盘</a>
+  <a href="/admin.html#plugins">插件管理</a>
+  <a href="/admin.html#users">用户管理</a>
+  <a href="/admin.html#llm">LLM 配置</a>
+  <a href="/admin.html#whitelist">白名单</a>
+  <a href="/admin.html#channels">渠道商</a>
+  <div class="sb-group">经销商</div>
+  <a href="/partner-demo-accounts.html" class="active">客户Demo账号</a>
+  <a href="/partner-paid-customers.html">付费客户</a>
+  <a href="/partner-customer-materials.html">演示物料</a>
+  <a href="/partner-tools.html">常用工具</a>
+  <a href="/docs.html">📘 文档中心</a>
+  <div class="sb-logout" id="sbLogout">退出登录</div>
+</aside>
+
+<div class="demo-page">
+  <div class="demo-wrap">
+    <a class="nav-back" href="/admin.html">← 返回工作台</a>
+    <div class="demo-head">
+      <div>
+        <h1>客户 Demo 账号清单</h1>
+        <div class="sub">我名下客户的演示环境登录账号 · 供带客户体验使用</div>
+      </div>
+      <button class="add-btn" id="addBtn">＋ 新增 Demo 账号</button>
+    </div>
+
+    <div class="tip">⚠️ 安全说明：以下均为演示（demo）环境账号，仅用于客户体验。客户的正式生产环境账号由客户内部管理，经销商无权查看或登录。</div>
+
+    <div class="demo-card">
+      <table>
+        <thead>
+          <tr>
+            <th>客户</th>
+            <th>行业</th>
+            <th>Demo 地址</th>
+            <th>账号</th>
+            <th>密码</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty" id="empty" style="display:none;">暂无 demo 账号。点击右上角「新增 Demo 账号」添加。</div>
+    </div>
+  </div>
+</div>
+
+<!-- 新增/编辑弹窗 -->
+<div class="modal-mask" id="modalMask">
+  <div class="modal">
+    <h3 id="modalTitle">新增 Demo 账号</h3>
+    <div class="form-group"><label>客户名称 *</label><input id="f_client_name" placeholder="输入客户名称（不显示其他客户名）"></div>
+    <div class="form-group"><label>行业</label>
+      <select id="f_industry" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg-page);color:var(--text-primary);">
+        <option value="">— 请选择行业（国标分类）—</option>
+        <option value="农、林、牧、渔业">农、林、牧、渔业</option>
+        <option value="采矿业">采矿业</option>
+        <option value="制造业">制造业</option>
+        <option value="电力、热力、燃气及水生产和供应业">电力、热力、燃气及水生产和供应业</option>
+        <option value="建筑业">建筑业</option>
+        <option value="批发和零售业">批发和零售业</option>
+        <option value="交通运输、仓储和邮政业">交通运输、仓储和邮政业</option>
+        <option value="住宿和餐饮业">住宿和餐饮业</option>
+        <option value="信息传输、软件和信息技术服务业">信息传输、软件和信息技术服务业</option>
+        <option value="金融业">金融业</option>
+        <option value="房地产业">房地产业</option>
+        <option value="租赁和商务服务业">租赁和商务服务业</option>
+        <option value="科学研究和技术服务业">科学研究和技术服务业</option>
+        <option value="水利、环境和公共设施管理业">水利、环境和公共设施管理业</option>
+        <option value="居民服务、修理和其他服务业">居民服务、修理和其他服务业</option>
+        <option value="教育">教育</option>
+        <option value="卫生和社会工作">卫生和社会工作</option>
+        <option value="文化、体育和娱乐业">文化、体育和娱乐业</option>
+        <option value="公共管理、社会保障和社会组织">公共管理、社会保障和社会组织</option>
+        <option value="国际组织">国际组织</option>
+      </select>
+    </div>
+    <div class="form-group"><label>测试截止日期</label><input type="date" id="f_expires" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg-page);color:var(--text-primary);"><div style="font-size:12px;color:var(--text-muted);margin-top:4px;">默认账号建立后 30 个自然日，最长 90 天</div></div>
+    <div class="form-group"><label>Demo 登录地址 *</label><input id="f_url" placeholder="https://ddw.9cio.com"></div>
+    <div class="form-group"><label>账号（手机号）*</label><input id="f_phone" placeholder="13800000000"></div>
+    <div class="form-group"><label>密码 *</label><input id="f_password" placeholder="演示密码"></div>
+    <div class="form-group"><label>备注</label><input id="f_note" placeholder="如：30天测试期"></div>
+    <div class="modal-actions">
+      <button class="btn-plain" id="cancelBtn">取消</button>
+      <button class="btn-primary" id="saveBtn">保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+(function () {
+  var tbody = document.getElementById('tbody');
+  var empty = document.getElementById('empty');
+  var editingId = null;
+
+  function loadList() {
+    DDW.api.get('/plugins/ddw-partner-directory/demo-accounts').then(function (resp) {
+      if (!resp.ok || !resp.data) { showToast('加载失败'); return; }
+      var items = resp.data.items || [];
+      empty.style.display = items.length ? 'none' : 'block';
+      // 按客户分组合并（同一客户多个演示账号显示为一行，账号/密码多值展示）
+      var groups = {};
+      items.forEach(function (a) {
+        var key = a.client_name;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(a);
+      });
+      var rows = [];
+      Object.keys(groups).forEach(function (name) {
+        var list = groups[name];
+        var first = list[0];
+        var badgeCls = first.status === 'active' ? 'active' : (first.status || 'disabled');
+        var phones = list.map(function (a) {
+          return '<div style="margin:2px 0">' + esc(a.demo_phone) +
+            ' <button class="btn-copy" title="复制" onclick="copyText(\'' + esc(a.demo_phone) + '\')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>';
+        }).join('');
+        var pwds = list.map(function (a) {
+          return '<div style="margin:2px 0">' + esc(a.demo_password) +
+            ' <button class="btn-copy" title="复制" onclick="copyText(\'' + esc(a.demo_password) + '\')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>';
+        }).join('');
+        var ops = list.map(function (a) {
+          return '<div style="margin:2px 0">' +
+            (a.status === 'active' ? '<button class="btn-enter" onclick="enterDemo(' + a.id + ')">进入演示</button> ' : '') +
+            '<button class="btn-materials" onclick="openMaterials(' + a.id + ')">物料</button></div>';
+        }).join('');
+        var editBtns = list.map(function (a) {
+          return '<button class="btn-copy" onclick="editAccount(' + a.id + ')">编辑</button> ' +
+            '<button class="del-btn" onclick="delAccount(' + a.id + ')">删除</button>';
+        }).join(' ');
+        rows.push('<tr>' +
+          '<td><strong>' + esc(name) + '</strong>' + (list.length > 1 ? '<div style="color:var(--text-muted);font-size:12px;margin-top:2px">' + list.length + ' 个演示账号</div>' : '') + '</td>' +
+          '<td>' + esc(first.client_industry || '-') + '</td>' +
+          '<td><a href="' + esc(first.demo_url) + '" target="_blank" style="color:var(--brand);">' + esc(first.demo_url) + '</a></td>' +
+          '<td>' + phones + '</td>' +
+          '<td>' + pwds + '</td>' +
+          '<td><span class="badge ' + badgeCls + '">' + (first.status === 'active' ? '可用' : first.status === 'expired' ? '已过期' : '已停用') + '</span></td>' +
+          '<td>' + ops + editBtns + '</td>' +
+          '</tr>');
+      });
+      tbody.innerHTML = rows.join('');
+    });
+  }
+
+  // 新增/编辑
+  function openModal(item) {
+    editingId = item ? item.id : null;
+    document.getElementById('modalTitle').textContent = item ? '编辑 Demo 账号' : '新增 Demo 账号';
+    document.getElementById('f_client_name').value = item ? (item.client_name || '') : '';
+    // 行业下拉：值匹配国标选项；旧数据不匹配时动态加选项保留
+    var indSel = document.getElementById('f_industry');
+    var indVal = item ? (item.client_industry || '') : '';
+    var matched = false;
+    for (var i = 0; i < indSel.options.length; i++) {
+      if (indSel.options[i].value === indVal) { matched = true; break; }
+    }
+    if (indVal && !matched) {
+      var opt = document.createElement('option');
+      opt.value = indVal; opt.textContent = indVal;
+      indSel.appendChild(opt);
+    }
+    indSel.value = indVal;
+    // 截止日期：编辑时回填，新增默认 +30 天
+    var expInput = document.getElementById('f_expires');
+    if (item && item.expires_at) {
+      expInput.value = String(item.expires_at).slice(0, 10);
+    } else if (!item) {
+      var d = new Date();
+      d.setDate(d.getDate() + 30);
+      expInput.value = d.toISOString().slice(0, 10);
+      expInput.min = new Date().toISOString().slice(0, 10);
+      var maxD = new Date();
+      maxD.setDate(maxD.getDate() + 90);
+      expInput.max = maxD.toISOString().slice(0, 10);
+    }
+    document.getElementById('f_url').value = item ? (item.demo_url || '') : '';
+    document.getElementById('f_phone').value = item ? (item.demo_phone || '') : '';
+    document.getElementById('f_password').value = item ? (item.demo_password || '') : '';
+    document.getElementById('f_note').value = item ? (item.demo_note || '') : '';
+    document.getElementById('modalMask').classList.add('show');
+  }
+
+  function closeModal() {
+    document.getElementById('modalMask').classList.remove('show');
+  }
+
+  function saveAccount() {
+    var expVal = document.getElementById('f_expires').value;
+    var payload = {
+      client_name: document.getElementById('f_client_name').value.trim(),
+      client_industry: document.getElementById('f_industry').value || null,
+      demo_url: document.getElementById('f_url').value.trim(),
+      demo_phone: document.getElementById('f_phone').value.trim(),
+      demo_password: document.getElementById('f_password').value.trim(),
+      demo_note: document.getElementById('f_note').value.trim() || null,
+    };
+    // 截止日期：ISO 格式提交；校验最长 90 天
+    if (expVal) {
+      var expDate = new Date(expVal + 'T00:00:00');
+      var maxD = new Date();
+      maxD.setDate(maxD.getDate() + 90);
+      if (expDate > maxD) { showToast('测试截止日期最长 90 天'); return; }
+      if (expDate < new Date()) { showToast('测试截止日期不能早于今天'); return; }
+      payload.expires_at = expVal + 'T00:00:00';
+    }
+    if (!payload.client_name || !payload.demo_url || !payload.demo_phone || !payload.demo_password) {
+      showToast('请填写客户名称、Demo地址、账号、密码');
+      return;
+    }
+    var req = editingId
+      ? DDW.api.put('/plugins/ddw-partner-directory/demo-accounts/' + editingId, payload)
+      : DDW.api.post('/plugins/ddw-partner-directory/demo-accounts', payload);
+    req.then(function (resp) {
+      if (resp.ok) {
+        showToast(editingId ? '已更新' : '已添加');
+        closeModal();
+        loadList();
+      } else {
+        showToast('保存失败: ' + (resp.data && resp.data.detail || ''));
+      }
+    });
+  }
+
+  window.editAccount = function (id) {
+    DDW.api.get('/plugins/ddw-partner-directory/demo-accounts').then(function (resp) {
+      var items = (resp.data && resp.data.items) || [];
+      var it = items.find(function (x) { return x.id === id; });
+      if (it) openModal(it);
+    });
+  };
+
+  window.delAccount = function (id) {
+    if (!confirm('确定删除该 Demo 账号？')) return;
+    DDW.api.del('/plugins/ddw-partner-directory/demo-accounts/' + id).then(function (resp) {
+      if (resp.ok) { showToast('已删除'); loadList(); }
+      else showToast('删除失败');
+    });
+  };
+
+  window.enterDemo = function (id) {
+    DDW.api.post('/plugins/ddw-partner-directory/enter-demo', { account_id: id }).then(function (resp) {
+      if (resp.ok && resp.data && resp.data.demo_token) {
+        var url = resp.data.demo_url || '/';
+        var sep = url.indexOf('?') >= 0 ? '&' : '?';
+        // 直接跳转（不用 window.open，避免浏览器弹窗拦截）
+        window.location.href = url + sep + 'demo_token=' + encodeURIComponent(resp.data.demo_token);
+      } else {
+        showToast('进入失败: ' + (resp.data && resp.data.detail || '请重试'));
+      }
+    });
+  };
+
+  // 打开客户演示中心（物料页）
+  window.openMaterials = function (id) {
+    window.location.href = '/partner-customer-materials.html?account_id=' + id;
+  };
+
+  window.copyText = function (t) {
+    var ta = document.createElement('textarea');
+    ta.value = t; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); showToast('已复制'); } catch (e) {}
+    document.body.removeChild(ta);
+  };
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function showToast(msg) {
+    var t = document.getElementById('toast-host');
+    if (!t) { t = document.createElement('div'); t.id = 'toast-host'; t.className = 'toast-host'; document.body.appendChild(t); }
+    var d = document.createElement('div'); d.className = 'toast-item'; d.textContent = msg;
+    t.appendChild(d); setTimeout(function () { d.remove(); }, 2200);
+  }
+
+  document.getElementById('addBtn').addEventListener('click', function () { openModal(null); });
+  document.getElementById('cancelBtn').addEventListener('click', closeModal);
+  document.getElementById('saveBtn').addEventListener('click', saveAccount);
+  document.getElementById('modalMask').addEventListener('click', function (e) { if (e.target === this) closeModal(); });
+
+  loadList();
+})();
+
+// 侧边栏退出登录
+document.getElementById('sbLogout').addEventListener('click', function () {
+  try { localStorage.removeItem('ddw_token'); } catch (e) {}
+  try { document.cookie = 'ddw_logged_in=; Domain=.9cio.com; Path=/; Max-Age=0'; } catch (e) {}
+  window.location.href = '/login.html';
+});
+</script>
+
+</body>
+</html>

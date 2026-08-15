@@ -1,0 +1,56 @@
+name: ddw-llm-gateway
+tier: core
+version: 1.0.0
+engine: ">=0.1.0"
+description: "LLM 统一网关插件 — 渠道管理、负载均衡、失败重试、流式转发"
+category: infrastructure
+author: "DDW AI Hub"
+license: free
+
+dependencies:
+  plugins:
+    ddw-core: ">=0.1.0"
+    ddw-token-manager: ">=0.1.0"
+
+permissions:
+  - "database:channels"
+  - "database:channel_groups"
+  - "api:llm:relay"
+  - "api:llm:admin"
+  - "event:channel.health"
+
+config_schema:
+  default_provider:
+    type: string
+    default: "minimax"
+    description: "默认 LLM Provider"
+  retry_max_attempts:
+    type: integer
+    default: 3
+    description: "最大重试次数"
+  retry_backoff_base:
+    type: float
+    default: 1.0
+    description: "重试退避基数（秒）"
+  channel_disable_threshold:
+    type: float
+    default: 0.5
+    description: "渠道自动禁用成功率阈值"
+  channel_test_interval:
+    type: integer
+    default: 300
+    description: "渠道自动测试间隔（秒）"
+  stream_buffer_size:
+    type: integer
+    default: 1024
+    description: "SSE 流式缓冲区大小（字节）"
+
+isolation: inline
+
+ecosystem:
+  depends_on: ["ddw-core", "ddw-token-manager"]
+  enhances: ["ddw-ai-engine"]
+  category: "infrastructure"
+  tags: ["llm", "gateway", "relay", "routing", "load-balancing"]
+
+obfuscation: disabled

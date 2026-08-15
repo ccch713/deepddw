@@ -1,0 +1,96 @@
+from __future__ import annotations
+from typing import Optional
+"""DDW 许可证管理插件 ORM 模型。
+
+继承 DDW 平台核心：
+- core.database.models.Base: DeclarativeBase 根
+- core.database.models.TenantMixin: 自动注入 tenant_id + 标记租户感知
+- core.database.models.TimestampMixin: 自动注入 created_at / updated_at
+"""
+
+from datetime import date
+
+from sqlalchemy import JSON, BigInteger, Date, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
+
+from core.database.models import Base, TenantMixin, TimestampMixin
+
+# BigInteger 在 SQLite 不支持 -> 退化到 Integer
+BigInt = BigInteger().with_variant(Integer(), "sqlite")
+
+
+class License(Base, TenantMixin, TimestampMixin):
+    """许可证主表。
+
+    业务含义：
+    - 销售端为客户企业签发的软件使用许可（trial / formal / renewal 三种类型）
+    - license_no 单号自动生成：LIC-YYYYMMDD-NNN
+    - product_ids 关联产品 ID 列表（JSON 数组）
+    - plugin_entitlements 插件授权清单（JSON 数组，元素为 plugin_code 字符串）
+    - max_users / max_nodes 容量上限
+    - valid_from / valid_to 生效区间
+    - status 状态机：
+        * active     在用
+        * expired    已过期（valid_to < today）
+        * suspended  暂停（可恢复 active）
+        * revoked    吊销（终态）
+        * renewed    已被续费（终态，原 license 指向 renewal 之后变成这个）
+    - parent_license_id 续费关系：续费创建的新 license 指向原 license
+
+    关联（外键 ON DELETE SET NULL，关联对象删除不级联删许可证）：
+    - company_id        -> crm_companies.id
+    - parent_license_id -> crm_licenses.id (self-FK)
+    """
+
+    __tablename__ = "crm_licenses"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[int] = mapped_column(BigInt, primary_key=True, autoincrement=True)
+
+    # ---- 业务关联 ----
+    company_id: Mapped[Optional[int]] = mapped_column(        BigInt,
+        ForeignKey("crm_companies.id", ondelete="SET NULL", use_alter=True),
+        nullable=True,
+        index=True,
+    parent_license_id: Mapped[Optional[int]] = mapped_column(        BigInt,
+        ForeignKey("crm_licenses.id", ondelete="SET NULL", use_alter=True),
+        nullable=True,
+        index=True,
+
+    # ---- 单号 / 类型 ----
+    license_no: Mapped[Optional[str]] = mapped_column(        String(50), unique=True, index=True, nullable=False
+    )  # LIC-YYYYMMDD-NNN
+    license_type: Mapped[Optional[str]] = mapped_column(        String(20), nullable=False, index=True
+    # trial / formal / renewal
+
+    # ---- 授权清单 ----
+    product_ids: Mapped[Optional[list]] = mapped_column(JSON, default=list)
+    # 关联产品 ID 列表，例如 [101, 102, 103]
+    plugin_entitlements: Mapped[Optional[list]] = mapped_column(JSON, default=list)
+    # 插件授权清单，例如 ["ddw-crm-core", "ddw-voice-capture"]
+
+    # ---- 容量 ----
+    max_users: Mapped[Optional[int]] = mapped_column(Integer, default=5, nullable=False)
+    max_nodes: Mapped[Optional[int]] = mapped_column(Integer, default=1, nullable=False)
+
+    # ---- 有效期 ----
+    valid_from: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    valid_to: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+
+    # ---- 状态 ----
+    status: Mapped[Optional[str]] = mapped_column(        String(20), default="active", nullable=False, index=True
+    # active / expired / suspended / revoked / renewed
+    # 服务端在 read 类操作（list/get/stats）前自动把 active 且 valid_to<today
+    # 的标记为 expired；suspend/resume/revoke/renewal 由服务显式迁移。
+
+    # ---- 备注 / 审计 ----
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_by: Mapped[Optional[int]] = mapped_column(BigInt, nullable=True)
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return (
+            f"<License id={self.id} no={self.license_no!r} "
+            f"type={self.license_type!r} status={self.status!r}>"
+
+
+__all__ = ["License"]

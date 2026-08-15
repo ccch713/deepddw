@@ -305,11 +305,19 @@ def create_app() -> FastAPI:
                 )
             from fastapi.responses import Response
 
+            content = resp.content
+            ctype = resp.headers.get("content-type", "")
+            # SPA 子路径反代：dsh 页面里的资源是根绝对路径（/assets/...），
+            # 经 /dsh/ 反代后会丢前缀 404。HTML 响应重写为 /dsh/ 前缀。
+            if "text/html" in ctype and content:
+                text = content.decode("utf-8", errors="replace")
+                text = text.replace('href="/', 'href="/dsh/').replace('src="/', 'src="/dsh/')
+                content = text.encode("utf-8")
             return Response(
-                content=resp.content,
+                content=content,
                 status_code=resp.status_code,
                 headers={k: v for k, v in resp.headers.items() if k.lower() not in ("content-length", "transfer-encoding", "connection")},
-                media_type=resp.headers.get("content-type"),
+                media_type=ctype,
             )
     else:
         logger.warning("frontend directory not found: %s", frontend)

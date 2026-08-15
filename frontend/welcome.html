@@ -132,7 +132,16 @@ nav button.active{color:var(--brand)}
   });
   var statusEl = document.getElementById("status");
   function setStatus(s) { statusEl.textContent = s; }
-  if (token) setStatus("已连接"); else setStatus("待 Token");
+  // LAN 免密模式：无 Token 也可用（服务端内网自动放行），状态显示"免密连接"
+  if (token) setStatus("已连接");
+  else if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+    // 同源/内网场景默认免密可用；先探测一次，成功则标记免密连接
+    fetch("/api/v1/gateway/verify", { headers: headers() })
+      .then(function (r) { if (r.ok) { setStatus("免密连接"); window.__lanFree = true; } else { setStatus("待 Token"); } })
+      .catch(function () { setStatus("待 Token"); });
+  } else {
+    setStatus("待 Token");
+  }
 
   function headers() {
     var h = { "Content-Type": "application/json" };
@@ -169,7 +178,8 @@ nav button.active{color:var(--brand)}
   function sendChat() {
     var message = chatInput.value.trim();
     if (!message) return;
-    if (!token) { out("chat-out", "请先通过启动页填写 Token"); return; }
+    // LAN 免密模式：无 Token 也放行（服务端内网自动放行）；外网无 Token 才提示
+    if (!token && !window.__lanFree) { out("chat-out", "请先通过启动页填写 Token（外网访问需要）"); return; }
     out("chat-out", "思考中…");
     fetch("/api/v1/chat/", {
       method: "POST", headers: headers(),

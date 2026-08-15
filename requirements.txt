@@ -36,3 +36,6 @@ pytest-asyncio>=0.21.0
 
 # --- 扫码配对（体验优化 C：/api/v1/gateway/pair 生成二维码 SVG） ---
 qrcode>=7.4.0
+
+# --- dsh WebSocket 反代（/api/events.mux 等事件推送通道） ---
+websockets>=12.0

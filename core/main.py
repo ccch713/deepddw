@@ -20,7 +20,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -360,6 +360,54 @@ def create_app() -> FastAPI:
         @app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"], include_in_schema=False)
         async def dsh_api_proxy(path: str, request: Request):
             return await _proxy_to_dsh(path, request, rewrite_html=False, path_prefix="/api")
+
+        # ---- dsh WebSocket 反代（2026-08-16）：dsh 对话/事件推送走 WebSocket
+        #     （/api/events.mux 等）。普通 HTTP 反代不处理升级握手 → 403。
+        #     用 websockets 库连接 dsh 并双向转发；Origin 改写为 dsh 自身地址过 fence。
+        @app.websocket("/api/{path:path}")
+        async def dsh_ws_proxy(websocket: WebSocket, path: str):
+            import websockets
+
+            await websocket.accept()
+            dsh_base = os.environ.get("DEEPDDW_DSH_URL", "http://127.0.0.1:3080").rstrip("/")
+            ws_url = dsh_base.replace("http://", "ws://").replace("https://", "wss://")
+            target = f"{ws_url}/api/{path}"
+            if websocket.query_params:
+                target += "?" + str(websocket.query_params)
+            try:
+                async with websockets.connect(
+                    target,
+                    additional_headers={"Origin": dsh_base},
+                    open_timeout=10,
+                ) as upstream:
+                    async def pump_up():
+                        try:
+                            while True:
+                                msg = await websocket.receive_text()
+                                await upstream.send(msg)
+                        except Exception:
+                            pass
+
+                    async def pump_down():
+                        try:
+                            async for msg in upstream:
+                                if isinstance(msg, bytes):
+                                    await websocket.send_bytes(msg)
+                                else:
+                                    await websocket.send_text(msg)
+                        except Exception:
+                            pass
+
+                    import asyncio
+
+                    await asyncio.gather(pump_up(), pump_down())
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("dsh ws proxy failed: %s", exc)
+            finally:
+                try:
+                    await websocket.close()
+                except Exception:  # noqa: BLE001
+                    pass
     else:
         logger.warning("frontend directory not found: %s", frontend)
 

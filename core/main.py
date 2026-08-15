@@ -274,15 +274,43 @@ def create_app() -> FastAPI:
 
         @app.get("/", include_in_schema=False)
         async def root(request: Request):
-            # 体验优化 A2（2026-08-16 竞品抢生态位提速）：LAN 免密时根路径直接跳 dsh 工作台
-            # （dsh 原版界面，零配置直达）；外网/需 Token 才走启动页。
-            # dsh 引擎地址可配置：env DEEPDDW_DSH_URL > 默认 http://127.0.0.1:3080
+            # 体验优化 A2（2026-08-16 竞品抢生态位提速）：LAN 免密时根路径直接进 dsh 工作台
+            # （经 deepDDW 网关反代，零配置直达；dsh 保持 localhost 安全绑定）。
+            # 外网/需 Token 才走启动页。
             from core.security.token_gate import client_ip, lan_bypass_enabled, is_lan_client
 
-            dsh_url = os.environ.get("DEEPDDW_DSH_URL", "http://127.0.0.1:3080")
             if lan_bypass_enabled() and is_lan_client(client_ip(request)):
-                return RedirectResponse(url=dsh_url)
+                return RedirectResponse(url="/dsh/")
             return RedirectResponse(url="/ui/deepddw-launcher.html")
+
+        # ---- dsh 工作台反代（2026-08-16）：手机/浏览器只连 deepDDW 网关，
+        #     网关把 /dsh/* 代理到本机 dsh 引擎（127.0.0.1:3080，dsh 安全绑定 localhost）。
+        #     避免直接暴露 dsh 到局域网（dsh 拒绝 0.0.0.0：防远程代码执行）。
+        #     可用 env DEEPDDW_DSH_URL 指向其他 dsh 地址。
+        @app.api_route("/dsh/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"], include_in_schema=False)
+        async def dsh_proxy(path: str, request: Request):
+            import httpx
+
+            dsh_base = os.environ.get("DEEPDDW_DSH_URL", "http://127.0.0.1:3080").rstrip("/")
+            url = f"{dsh_base}/{path}" if path else f"{dsh_base}/"
+            # 转发查询参数
+            if request.url.query:
+                url += f"?{request.url.query}"
+            headers = {k: v for k, v in request.headers.items() if k.lower() not in ("host", "content-length")}
+            body = await request.body() if request.method in ("POST", "PUT", "DELETE") else None
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.request(
+                    request.method, url, headers=headers, content=body,
+                    follow_redirects=False,
+                )
+            from fastapi.responses import Response
+
+            return Response(
+                content=resp.content,
+                status_code=resp.status_code,
+                headers={k: v for k, v in resp.headers.items() if k.lower() not in ("content-length", "transfer-encoding", "connection")},
+                media_type=resp.headers.get("content-type"),
+            )
     else:
         logger.warning("frontend directory not found: %s", frontend)
 

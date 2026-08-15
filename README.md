@@ -1,114 +1,139 @@
-# deepDDW 0.1
+# deepDDW — Memory & Knowledge Base for DeepSeek Harness, Reachable from Any Device on Your LAN
 
-deepDDW 0.1 是由 **DDW AI Hub 6.0**（商业仓，Gitea `chenye/ddw-ai-hub-workspace` @ `0f2343e`）
-裁剪而来的**开源一体包**。两库自 2026-08-16 起**彻底分家、永无交集**：本仓库只含白名单组件，
-商业插件、账号体系、计费授权、多租户等一律不进入本仓库。
+> **Extends DeepSeek Harness (DSH) with memory, a knowledge base, and LAN deployment — built on our production-grade DDW AI HUB platform.**
+>
+> - ✅ Breaks DSH's "local-only" limit — **usable from any device on your LAN**
+> - ✅ Memory + Knowledge Base + Document Search — **via DSH's official standard MCP interface; DSH source untouched**
+> - ✅ Packaged, easy to deploy, low ops cost — **ready for small businesses up to ~20 people**
 
-## 组件（白名单）
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-| 组件 | 说明 | 许可证 |
-|---|---|---|
-| 底座壳 | 网关 + 插件装载框架 + Token 门禁（无账号体系） | MIT（本项目） |
-| DSH 引擎 | DeepSeek Harness 官方 MIT，子进程/独立服务拉起 | MIT |
-| 个人级知识库 | SQLite（FTS5/LIKE 检索），LanceDB 向量增强预留 | Public Domain / Apache-2.0 |
-| 记忆 | SQLite 轻量实现（namespace/key/tags），可接 agentmemory MCP | Apache-2.0（agentmemory） |
-| LiteLLM 通道 | DeepSeek（云端）+ Ollama（本地） | MIT（本项目实现） |
-| SearXNG | 聚合搜索（独立服务，可选） | AGPL-3.0（服务端 HTTP 调用豁免评估通过） |
-| PWA | 启动页 + 手机浏览器工作台（/ui） | MIT（本项目） |
-| MCP 双协议 | streamable-http（2025-03-26）+ 经典（2024-11-05），自研 | MIT（本项目） |
+> **English** · [简体中文](README.zh-CN.md)
 
-> 许可证红线：仅允许 Public Domain / MIT / Apache-2.0 / BSD / PostgreSQL License；
-> 禁止 SSPL / RSAL / Elastic License；GPL/AGPL 引库需评估（SearXNG 为服务端 HTTP 调用，已评估豁免）。
+---
 
-## 快速开始
+## Who We Are: Not Just an Open-Source Tool — a Commercial-Grade Solution
+
+deepDDW is built on **DDW AI HUB**, a production-grade AI platform validated in enterprise deployments. We packaged that mature platform capability into the DSH ecosystem, addressing three key gaps that many open-source projects have not yet covered:
+
+| Official DSH limitation | deepDDW solution |
+|------------------------|------------------|
+| 🔒 **Local-only access** | ✅ **LAN-wide access**: deploy once on a server; desktops, laptops, phones and tablets on the same network all connect |
+| 🧠 **No memory** | ✅ Long-term memory write/search — conversation experience can be accumulated |
+| 📚 **No knowledge base** | ✅ Knowledge base search/ingest — industry docs, SOPs, research notes, callable anytime |
+
+**In one sentence**: turn a "personal toy" into a tool a small team can actually use — **fully packaged, easy to deploy, low maintenance, ready for small businesses** (up to ~20 people) for their daily AI workflow.
+
+---
+
+## How It Works (Technical Path)
+
+```
+📱 Phone / 💻 Desktop / 📱 Tablet / 🖥️ Laptop — any device on the LAN
+   │                  (browser access, no App install)
+   ▼
+deepDDW Gateway (one server on the LAN)
+   ├─ /dsh/*   proxy → DSH engine (official UI, model config & chat untouched)
+   ├─ /api/*   proxy → DSH RPC/API
+   └─ /api/v1/*  deepDDW capabilities: Knowledge Base / Memory / Docs / LLM config
+        │
+        │  DSH official MCP client (streamable-http)
+        ▼
+deepDDW MCP tools (auto-invoked by the model)
+   ├─ mcp__deepddw__ddw_kb_search          knowledge base search
+   ├─ mcp__deepddw__ddw_memory_put         write memory
+   ├─ mcp__deepddw__ddw_memory_search      search memory
+   └─ mcp__deepddw__ddw_docs_portal_search document search
+```
+
+**Integration = DSH standard MCP**: DSH natively supports MCP clients; deepDDW exposes a standard `streamable-http` endpoint — **zero intrusion, zero changes to DSH source**. The UI, settings and model configuration all remain official.
+
+---
+
+## Why Does It Work on Your LAN?
+
+The official DSH listens on `localhost` only (for security), so phones/tablets cannot connect. deepDDW solves this with **gateway proxying**:
+
+- **DSH stays bound to localhost** (official security design preserved)
+- **deepDDW gateway listens on the LAN**, any device opens `http://<server-ip>:8600/` to reach the original DSH workbench
+- All data stays on **your** server — never leaves the LAN
+
+**Deploy once, the whole family/team can use it** — a capability the official DSH does not provide.
+
+---
+
+## Quick Start
 
 ```bash
-# 本地 venv
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-export DDW_ACCESS_TOKEN=$(openssl rand -hex 24)   # 或写入 .env
-python -m uvicorn core.main:app --host 0.0.0.0 --port 8500
+# 1. Install DSH (official) on the server
+npm i -g @deepseek-ai/dsh
 
-# 或 Docker 一键（推荐全新服务器）
-cp .env.example .env   # 填写 DDW_ACCESS_TOKEN
-docker compose -f deepddw-compose.yml up -d --build
+# 2. Install deepDDW (packaged, one command)
+git clone https://github.com/ccch713/deepddw.git
+cd deepddw && ./install.sh --with-dsh
+
+# 3. Start
+./install.sh --port 8600
+
+# 4. Open from any device on the LAN:
+#    http://<server-ip>:8600/   → original DSH workbench
+#    Phones/tablets: "Add to Home Screen" for an App-like experience
+
+# 5. Add your API Key in DSH Settings → Models
+# 6. In chat, ask the model to "search the knowledge base" or "remember ..."
+#    → it auto-invokes the mcp__deepddw__* tools
 ```
 
-打开 `http://<host>:8500/` → PWA 启动页 → 填 Token → 进入工作台（dsh 原版界面）。
+**Requirements**: one ordinary computer/server (**8 GB RAM minimum, 16 GB+ recommended**), Python 3.11+, no GPU needed (LLM via cloud API or local Ollama).
 
-## 工作台（v2.0：dsh 原版界面 + 插件注入）
+---
 
-工作台 = **dsh 原版界面（100% 原样，不改 dsh 源码/bundle、不重写界面）**，
-deepDDW 能力通过官方用户插件机制（cordis 插件包 `@deepddw/dsh-workbench`）注入：
+## Security & Privacy
 
-- 设置页左侧新增：📚 知识库 / 🧠 记忆 / 🤖 模型配置（`settings.section` slots）
-- 右上角 📄 按钮 → 可隐藏的右侧文档栏（`conversation.session.header.utilities`）
-- LLM/模型配置用 dsh 原版设置；deepDDW 插件只做补充快捷入口（key 只写不读明文）
-- dsh 通过原生 MCP 客户端调 deepDDW 网关（5 工具：`ddw.llm.chat` /
-  `ddw.kb.search` / `ddw.memory.put` / `ddw.memory.search` / `ddw.docs_portal.search`）
+| Capability | Description |
+|-----------|-------------|
+| 🔐 Local-only data | Knowledge base & memory stay on your server, never leave the LAN |
+| 🏠 LAN password-free | Out-of-the-box access on your LAN (password-free mode by default) |
+| 🌐 External access | Optional Token gate (short-code supported); unauthorized → 401 |
+| 🛡️ DSH secure binding | DSH stays on localhost; gateway exposes it — official security design preserved |
 
-安装（详见 `deepddw-plugins/dsh/README.md` 与 `install.sh --with-dsh`）：
+---
 
-```bash
-bash install.sh --with-dsh          # 一键：安装插件到 dsh web profile + 写 MCP 桥
-# 或手动：
-#   dsh plugin --profile web add ./deepddw-plugins/dsh
-#   （重启 dsh web 后生效；插件卸载后 dsh 恢复原版）
-```
+## Tech Stack & License
 
-> ⚠️ **LLM 未配置 = mock 演示（不是真实 AI 回答）**：未配置 `DDW_DEEPSEEK_API_KEY` 且未接 Ollama 时，
-> `ddw.llm.chat` 返回 `[DeepSeek V4 Pro mock]` 占位文本，仅用于演示链路，**不代表真实模型输出**。
-> 配置 LLM 后即为真实回答。知识库检索 / 记忆 / 文档检索不依赖 LLM，始终真实可用。
+| Component | Description | License |
+|-----------|-------------|---------|
+| DSH engine | Official DeepSeek Harness (source untouched) | MIT |
+| deepDDW gateway | FastAPI + SQLite + MCP dual-protocol | MIT |
+| Memory / Knowledge base | SQLite storage (agentmemory / vectors optional) | MIT |
+| Search | Optional SearXNG | AGPL-3.0 (server-side HTTP, exemption assessed) |
 
-## 安全模型（P0-1）
+**deepDDW itself: MIT License** — free to use, modify, and commercially deploy; keep the copyright notice.
 
-- 无账号体系：只有静态访问 Token（`DDW_ACCESS_TOKEN` / `config/deployment.yaml auth.access_token`）。
-- ⚠️ **未配置 Token 时 deepDDW 拒绝启动**（fail-fast）——绝不使用公开默认值，门禁形同虚设比不启动更危险。
-- ⚠️ **Token 请使用纯 ASCII 字符**：HTTP header 传输中文/非 ASCII 可能被客户端编码破坏导致 401（建议 `openssl rand -hex 24` 生成）。
-- 全部 MCP 端点（`/api/v1/mcp` streamable-http、`/api/v1/mcp/jsonrpc|sse|info` 经典）与网关 API
-  必须携带 `Authorization: Bearer <token>` 或 `X-DDW-Token`，缺失/无效 → **401**。
-- MCP `tools/list` 按白名单过滤（core / ddw-docs-portal / ddw-searxng）——商业插件工具绝不注册、绝不外露。
-- 前端 iframe 内不携带明文 Token：Token 存本机会话（sessionStorage / postMessage），不进入 URL。
+See [`NOTICE`](NOTICE) for full third-party attribution.
 
-## MCP 接入
+---
 
-```jsonc
-// DSH / Claude Code / 任意 MCP 客户端
-{
-  "mcpServers": {
-    "deepddw": {
-      "type": "http",
-      "url": "http://<host>:8500/api/v1/mcp",
-      "headers": { "Authorization": "Bearer <token>" }
-    }
-  }
-}
-```
+## Ecosystem & Feedback
 
-工具：`ddw.llm.chat` / `ddw.kb.search` / `ddw.memory.put` / `ddw.memory.search` / `ddw.docs_portal.search`。
+- **Extend with official DSH plugins**: deepDDW keeps DSH's native plugin mechanism intact. Install official plugins straight from the npm registry via the DSH official command — the only channel we recommend, to avoid supply-chain poisoning:
+  ```bash
+  dsh plugin --profile web add <npm-package>   # official npm registry only
+  ```
+  See [`SECURITY.md`](SECURITY.md) for our third-party plugin disclaimer and what deepDDW guarantees (memory & knowledge base only; no data theft/exploitation/sale).
+- **Knowledge distillation**: use whatever **distillation skill / workflow** you prefer — the methodology is yours; deepDDW provides the complete pipeline "distilled output → searchable knowledge base → model-usable". More plugins and tools are on the way.
+- **Memory / knowledge migration**: knowledge base uses standard SQLite; memory is organized by namespace/key/value — import from other agents or tools.
+- **Feedback**: we'd love to hear how you use it; stronger open-source tools are coming in future releases.
 
-## 开发与测试
+---
 
-```bash
-pip install -r requirements.txt
-python -m pytest tests/ plugins/ -q          # 全量（含 MCP 鉴权/时序/加固）
-ruff check --select=E,W,F core plugins sdk tests
-```
+## Roadmap
 
-## 目录
+- [ ] **Docker one-click deployment** (in progress, simpler install)
+- [ ] **Remote access while traveling**: securely reach your company's DSH server from mobile devices, capture and discuss ideas anytime
+- [ ] **Session → document auto-ingest**: conversation output auto-saved, searchable and traceable
+- [ ] **Vector search enhancement** (optional, requires an embedding model)
 
-```
-core/               底座壳（网关/插件框架/安全/LLM 网关/MCP 双协议）
-plugins/            白名单插件：ddw-docs-portal、ddw-searxng
-frontend/           PWA：deepddw-launcher.html（启动页，iframe 内嵌 dsh 原版界面）/ docs
-deepddw-plugins/    dsh 工作台插件（@deepddw/dsh-workbench，cordis 包）
-sdk/                插件开发 SDK（PluginBase 等）
-config/             部署配置模板（deployment.yaml 被 gitignore，不入库）
-data/               运行时数据（gitignore）
-```
+---
 
-## 分家声明
-
-- 本仓库与 `ddw-ai-hub-workspace`（商业仓）无任何共同 remote、无互相 merge、无互相依赖。
-- 本仓库不含任何商业插件代码、商业文档、密钥或客户数据。
-- 本仓库不包含《deepDDW 0.1 裁剪与修复任务书》（内部策略文档）。
+*deepDDW — enterprise-grade capability, open-sourced for everyone.*

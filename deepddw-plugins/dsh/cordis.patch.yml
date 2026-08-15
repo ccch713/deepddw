@@ -1,6 +1,0 @@
-# deepddw-workbench bundle patch: mounts the plugin into a profile layer stack.
-# The profile's own cordis.patch.yml and any --patch overlays still apply
-# after this layer; rows here can be overridden by id in later layers.
-- insert:
-    - id: deepddw-workbench
-      name: '@deepddw/dsh-workbench'

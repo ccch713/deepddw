@@ -79,16 +79,20 @@ if [ ! -f .env ] && [ -z "${DDW_ACCESS_TOKEN:-}" ]; then
 fi
 
 # ---- dsh 工作台插件（v2.0：dsh 原版界面 + deepDDW 插件注入） ----
-# 安装 @deepddw/dsh-workbench 到 dsh web profile + 写 MCP 桥配置。
+# 配置 dsh 官方 MCP 桥（deepDDW 知识库/记忆/文档以官方 MCP 标准接入 dsh 原版界面）。
 # 需要本机已安装 dsh（npm i -g @deepseek-ai/dsh）。重启 dsh web 后生效。
+# v2.1（2026-08-16）：废弃自研 UI 插件方案（污染 dsh 原版），纯官方 MCP 接入。
 if [ "$WITH_DSH" = true ]; then
-    log "安装 dsh 工作台插件..."
+    log "配置 dsh MCP 桥（官方标准接入 deepDDW 工具）..."
     DSH_BIN="$(command -v dsh || true)"
     if [ -z "$DSH_BIN" ]; then
-        log "⚠️  未找到 dsh 命令，跳过插件安装（可手动执行 dsh plugin --profile web add ./deepddw-plugins/dsh）"
+        log "⚠️  未找到 dsh 命令，跳过 MCP 配置（可手动执行 dsh plugin 相关命令）"
     else
-        # 1) 插件包安装（link 到本地源码；bundle 层自动登记）
-        dsh plugin --profile web add "$SCRIPT_DIR/deepddw-plugins/dsh" || log "⚠️  插件安装失败，跳过"
+        # 1) 确保 mcp-client 包已装进 web profile（patch insert 引用它，不装则静默跳过）
+        if ! ls "$HOME/.dsh/profiles/web/node_modules/@deepseek-ai/dsh-mcp-client" >/dev/null 2>&1; then
+            (cd "$HOME/.dsh/profiles/web" && pnpm add "@deepseek-ai/dsh-mcp-client@0.1.0-rc.6" >/dev/null 2>&1) \
+                && log "mcp-client 包已安装" || log "⚠️  mcp-client 安装失败，MCP 桥可能不生效"
+        fi
         # 2) MCP 桥配置追加到 profile patch（deepDDW 5 工具；LAN 免密可直接连）
         PATCH_FILE="$HOME/.dsh/profiles/web/cordis.patch.yml"
         if [ -f "$PATCH_FILE" ] && ! grep -q "mcp-deepddw" "$PATCH_FILE" 2>/dev/null; then
@@ -109,7 +113,7 @@ if [ "$WITH_DSH" = true ]; then
 MCPEOF
             log "MCP 桥已写入 $PATCH_FILE（重启 dsh web 后生效）"
         fi
-        log "完成：重启 dsh web（dsh web）后，设置页左侧出现知识库/记忆/模型配置，右上角出现文档栏按钮"
+        log "完成：重启 dsh web（dsh web）后，deepDDW 工具（知识库/记忆/文档）以官方 MCP 出现在 dsh 对话工具列表"
     fi
 fi
 

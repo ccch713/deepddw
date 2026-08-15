@@ -1,10 +1,11 @@
 # deepDDW 0.1 — Python 依赖（开源裁剪版）
-# Python >= 3.11, < 3.14
+# Python >= 3.11, < 3.15（3.11-3.14 实测可用；3.14 + mcp 1.29 验证通过）
 
 # --- Web 框架 ---
-fastapi>=0.110.0,<0.116.0
-uvicorn[standard]>=0.23.0,<0.30.0
-starlette>=0.36.0,<0.50
+# 版本组合（32G/16G 实测兼容）：fastapi 0.141.1 + starlette 0.49.3 + mcp 1.29.0
+fastapi>=0.141.0,<0.142.0
+uvicorn[standard]>=0.23.0,<0.60.0
+starlette>=0.49.0,<0.50.0
 
 # --- 数据层（async SQLAlchemy 2.0 + SQLite async driver） ---
 sqlalchemy>=2.0.30,<2.1.0
@@ -21,9 +22,10 @@ httpx>=0.24.0
 pyyaml>=6.0
 
 # --- MCP（双协议：streamable-http 2025-03-26 + 经典 2024-11-05） ---
-# 注意：mcp 2.x 已移除 mcp.server.fastmcp（FastMCP），deepDDW 固定使用 1.x 系列
-# （实测 1.29.0 与 fastapi<0.116 / starlette<0.50 依赖组合兼容）。
-mcp>=1.2,<2
+# 注意：mcp 2.x 已移除 mcp.server.fastmcp（FastMCP），deepDDW 固定使用 1.x 系列；
+# 1.29.0 为实测兼容版本（1.12.x 在 3.14 上 FastMCP issubclass 字符串注解会崩）。
+# 必须锁 ==1.29.0：1.x 内部版本对注解处理有差异，宽松范围会拉到不兼容版。
+mcp==1.29.0
 
 # --- 插件打包验签（core/plugin_manager/installer + scripts/package_plugin.py） ---
 cryptography>=42.0.0

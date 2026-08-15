@@ -321,6 +321,22 @@ def create_app() -> FastAPI:
                     .replace('"url":"/', '"url":"/dsh/')
                     .replace("'url':'/", "'url':'/dsh/")
                 )
+                # 非安全上下文（HTTP 非 localhost，如手机经网关反代访问）没有
+                # crypto.randomUUID → dsh 模型页"加载提供方目录失败"。注入 polyfill：
+                # 用 crypto.getRandomValues 实现 UUID v4（getRandomValues 无需安全上下文）。
+                polyfill = (
+                    "<script>"
+                    "if(window.crypto&&!window.crypto.randomUUID){(function(){"  # noqa: E501
+                    "var c=new Uint8Array(16);"
+                    "window.crypto.randomUUID=function(){"
+                    "crypto.getRandomValues(c);c[6]=(c[6]&15)|64;c[8]=(c[8]&63)|128;"
+                    "var h=function(b){return(b<16?'0':'')+b.toString(16)};"
+                    "return h(c[0])+h(c[1])+h(c[2])+h(c[3])+'-'+h(c[4])+h(c[5])+'-'+"
+                    "h(c[6])+h(c[7])+'-'+h(c[8])+h(c[9])+'-'+"
+                    "h(c[10])+h(c[11])+h(c[12])+h(c[13])+h(c[14])+h(c[15])};})();}"
+                    "</script>"
+                )
+                text = text.replace("</head>", polyfill + "</head>", 1)
                 content = text.encode("utf-8")
             return Response(
                 content=content,

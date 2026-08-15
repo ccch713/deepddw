@@ -61,10 +61,27 @@ footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--text-muted
   var addrEl = document.getElementById("addr");
   var tokenEl = document.getElementById("token");
 
+  // URL 参数预填（手机分享链接场景）：?token=xxx 或 ?server=xxx&token=xxx
+  // 优先级高于 localStorage/sessionStorage（新链接优先，避免旧值覆盖）
+  // ⚠️ 预填后立即从地址栏清除 token（replaceState），防止 token 留在 URL/历史中
+  try {
+    var qp = new URLSearchParams(window.location.search);
+    var urlToken = (qp.get("token") || "").trim();
+    var urlServer = (qp.get("server") || "").trim();
+    if (urlToken) tokenEl.value = urlToken;
+    if (urlServer) addrEl.value = urlServer;
+    if (urlToken || urlServer) {
+      qp.delete("token");
+      qp.delete("server");
+      var clean = window.location.pathname + (qp.toString() ? "?" + qp.toString() : "");
+      window.history.replaceState({}, "", clean);
+    }
+  } catch (e) { /* 忽略解析失败 */ }
+
   // 恢复上次地址/token（仅本机 localStorage，用户可清除）
   try {
-    if (localStorage.getItem("deepddw_addr")) addrEl.value = localStorage.getItem("deepddw_addr");
-    if (sessionStorage.getItem("deepddw_token")) tokenEl.value = sessionStorage.getItem("deepddw_token");
+    if (!urlServer && localStorage.getItem("deepddw_addr")) addrEl.value = localStorage.getItem("deepddw_addr");
+    if (!urlToken && sessionStorage.getItem("deepddw_token")) tokenEl.value = sessionStorage.getItem("deepddw_token");
   } catch (e) { /* 隐私模式忽略 */ }
 
   function baseAddr() {

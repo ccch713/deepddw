@@ -109,6 +109,15 @@ def _build_fastmcp():
         streamable_http_path="/",  # 挂载到 /api/v1/mcp 后，根路径即端点
         host="0.0.0.0",
     )
+    # 会话空闲超时拉长到 30 分钟：SDK 默认较短导致 dsh 工具调用间隔稍长就
+    # "Session not found"（2026-08-16 实测）。FastMCP 不接受该参数，改私有属性
+    # （P1-2 模式：try/except 降级，SDK 版本差异不阻塞）。
+    try:
+        manager = mcp._session_manager  # type: ignore[attr-defined]
+        if manager is not None:
+            manager.session_idle_timeout = 1800
+    except Exception:  # noqa: BLE001
+        pass
     # P1-2：SDK 私有属性访问加 try/except 降级（不同 SDK 版本属性名可能不同）
     try:
         mcp._mcp_server.version = SERVER_INFO["version"]  # type: ignore[attr-defined]

@@ -284,21 +284,22 @@ def create_app() -> FastAPI:
             return RedirectResponse(url="/ui/deepddw-launcher.html")
 
         # ---- dsh 工作台反代（2026-08-16）：手机/浏览器只连 deepDDW 网关，
-        #     网关把 /dsh/* 代理到本机 dsh 引擎（127.0.0.1:3080，dsh 安全绑定 localhost）。
-        #     避免直接暴露 dsh 到局域网（dsh 拒绝 0.0.0.0：防远程代码执行）。
+        #     网关把 /dsh/* 和 /api/*（dsh 的 RPC/API）代理到本机 dsh 引擎
+        #     （127.0.0.1:3080，dsh 安全绑定 localhost）。避免直接暴露 dsh
+        #     到局域网（dsh 拒绝 0.0.0.0：防远程代码执行）。
         #     可用 env DEEPDDW_DSH_URL 指向其他 dsh 地址。
-        @app.api_route("/dsh/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"], include_in_schema=False)
-        async def dsh_proxy(path: str, request: Request):
+
+        async def _proxy_to_dsh(path: str, request: Request, rewrite_html: bool):
+            """把请求转发到 dsh 引擎；rewrite_html 时重写 SPA 资源前缀 + 注入 polyfill。"""
             import httpx
 
             dsh_base = os.environ.get("DEEPDDW_DSH_URL", "http://127.0.0.1:3080").rstrip("/")
             url = f"{dsh_base}/{path}" if path else f"{dsh_base}/"
-            # 转发查询参数
             if request.url.query:
                 url += f"?{request.url.query}"
             headers = {k: v for k, v in request.headers.items() if k.lower() not in ("host", "content-length")}
             body = await request.body() if request.method in ("POST", "PUT", "DELETE") else None
-            async with httpx.AsyncClient(timeout=30) as client:
+            async with httpx.AsyncClient(timeout=60) as client:
                 resp = await client.request(
                     request.method, url, headers=headers, content=body,
                     follow_redirects=False,
@@ -307,11 +308,7 @@ def create_app() -> FastAPI:
 
             content = resp.content
             ctype = resp.headers.get("content-type", "")
-            # SPA 子路径反代：dsh 页面里的资源/模块是根绝对路径（/assets/... /plugins/...），
-            # 经 /dsh/ 反代后会丢前缀 404。HTML 响应重写为 /dsh/ 前缀：
-            #   - HTML 属性：src="/  href="/  action="/  fetch("/  url:"/
-            #   - __DSH_BOOT__ JSON 里的模块 url："url":"/plugins/...
-            if "text/html" in ctype and content:
+            if rewrite_html and "text/html" in ctype and content:
                 text = content.decode("utf-8", errors="replace")
                 text = (
                     text.replace('href="/', 'href="/dsh/')
@@ -344,6 +341,17 @@ def create_app() -> FastAPI:
                 headers={k: v for k, v in resp.headers.items() if k.lower() not in ("content-length", "transfer-encoding", "connection")},
                 media_type=ctype,
             )
+
+        @app.api_route("/dsh/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"], include_in_schema=False)
+        async def dsh_proxy(path: str, request: Request):
+            return await _proxy_to_dsh(path, request, rewrite_html=True)
+
+        # dsh 的 RPC/API 端点（/api/llm.providers 等）：浏览器经反代访问时请求发到
+        # 网关根路径 /api/*（dsh 前端 API 基址 = location.origin）。
+        # deepDDW 自己的 API 是 /api/v1/*，路径前缀不同不冲突；此处代理其余 /api/* 到 dsh。
+        @app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"], include_in_schema=False)
+        async def dsh_api_proxy(path: str, request: Request):
+            return await _proxy_to_dsh(path, request, rewrite_html=False)
     else:
         logger.warning("frontend directory not found: %s", frontend)
 

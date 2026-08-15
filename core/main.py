@@ -307,11 +307,20 @@ def create_app() -> FastAPI:
 
             content = resp.content
             ctype = resp.headers.get("content-type", "")
-            # SPA 子路径反代：dsh 页面里的资源是根绝对路径（/assets/...），
-            # 经 /dsh/ 反代后会丢前缀 404。HTML 响应重写为 /dsh/ 前缀。
+            # SPA 子路径反代：dsh 页面里的资源/模块是根绝对路径（/assets/... /plugins/...），
+            # 经 /dsh/ 反代后会丢前缀 404。HTML 响应重写为 /dsh/ 前缀：
+            #   - HTML 属性：src="/  href="/  action="/  fetch("/  url:"/
+            #   - __DSH_BOOT__ JSON 里的模块 url："url":"/plugins/...
             if "text/html" in ctype and content:
                 text = content.decode("utf-8", errors="replace")
-                text = text.replace('href="/', 'href="/dsh/').replace('src="/', 'src="/dsh/')
+                text = (
+                    text.replace('href="/', 'href="/dsh/')
+                    .replace('src="/', 'src="/dsh/')
+                    .replace('action="/', 'action="/dsh/')
+                    .replace('fetch("/', 'fetch("/dsh/')
+                    .replace('"url":"/', '"url":"/dsh/')
+                    .replace("'url':'/", "'url':'/dsh/")
+                )
                 content = text.encode("utf-8")
             return Response(
                 content=content,

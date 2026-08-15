@@ -301,7 +301,11 @@ def create_app() -> FastAPI:
             target = f"{dsh_base}{path_prefix}/{path}" if path else f"{dsh_base}{path_prefix}/"
             if request.url.query:
                 target += f"?{request.url.query}"
-            headers = {k: v for k, v in request.headers.items() if k.lower() not in ("host", "content-length")}
+            # 改写 Origin：dsh 的 browser-trust fence 只信任自身绑定地址的 Origin
+            # （127.0.0.1:3080），手机经网关反代后 Origin 是网关地址 → 403。
+            # 反代场景下把 Origin 改写为 dsh 自身地址，dsh 视为同源放行。
+            headers = {k: v for k, v in request.headers.items() if k.lower() not in ("host", "content-length", "origin")}
+            headers["Origin"] = dsh_base
             body = await request.body() if request.method in ("POST", "PUT", "DELETE") else None
             async with httpx.AsyncClient(timeout=60) as client:
                 resp = await client.request(

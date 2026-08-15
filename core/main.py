@@ -20,7 +20,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -32,7 +32,7 @@ from core.config import get_settings
 from core.database.session import dispose_db, init_db
 from core.mcp.protocol import SERVER_CAPABILITIES, SERVER_INFO
 from core.mcp.server import get_mcp_server
-from core.security.token_gate import require_access_token
+from core.security.token_gate import lan_bypass_enabled, require_access_token
 
 # 版本唯一来源：仓库根 VERSION 文件
 _APP_VERSION_FILE = Path(__file__).resolve().parent.parent / "VERSION"
@@ -185,6 +185,45 @@ def create_app() -> FastAPI:
             "version": APP_VERSION,
             "authenticated": True,
             "token_valid": True,
+        }
+
+    # 体验优化 C：扫码配对端点——返回"带 Token 的启动 URL"及二维码 SVG。
+    # 仅 LAN 或已授权可调；启动页显示二维码，手机扫码自动预填 Token。
+    @app.get("/api/v1/gateway/pair")
+    async def gateway_pair(
+        request: Request, claims: Dict[str, Any] = Depends(require_access_token)
+    ) -> Dict[str, Any]:
+        from core.security.token_gate import get_access_token
+
+        token = get_access_token()
+        # 构造扫码 URL：优先用请求 Host（含端口），确保手机可访问
+        host = request.headers.get("x-forwarded-host") or request.headers.get(
+            "host"
+        ) or "localhost"
+        scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
+        pair_url = f"{scheme}://{host}/?token={token}"
+        qr_svg = ""
+        try:
+            import io
+
+            import qrcode
+            from qrcode.image.svg import SvgPathImage
+
+            qr = qrcode.QRCode(border=1, box_size=8)
+            qr.add_data(pair_url)
+            qr.make(fit=True)
+            img = qr.make_image(image_factory=SvgPathImage)
+            buf = io.StringIO()
+            img.save(buf)
+            qr_svg = buf.getvalue()
+        except Exception as exc:  # noqa: BLE001  # 二维码不可用不影响主流程
+            logger.warning("pair qr generation failed: %s", exc)
+        return {
+            "ok": True,
+            "pair_url": pair_url,
+            "qr_svg": qr_svg,
+            "lan_bypass": lan_bypass_enabled(),
+            "hint": "手机扫码打开此链接即自动填入 Token",
         }
 
     # ---- MCP（经典端点 + streamable-http，全部过 Token 门禁）----

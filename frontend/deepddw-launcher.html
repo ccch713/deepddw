@@ -33,23 +33,35 @@ input:focus{border-color:var(--border-hover)}
 .msg{margin-top:14px;font-size:13px;min-height:20px}
 .msg.err{color:var(--danger)}
 .msg.ok{color:var(--accent-green)}
+.pair{margin-top:16px;padding:14px;border:1px dashed var(--border,#888);border-radius:12px;text-align:center}
+.pair-title{font-size:13px;font-weight:600;margin-bottom:10px}
+.qrcode{display:flex;justify-content:center;align-items:center;min-height:120px}
+.qrcode svg{width:180px;height:180px;border-radius:8px;background:#fff;padding:6px}
+.qrcode a{display:inline-block;padding:10px 14px;border-radius:8px;background:#fff;border:1px solid var(--border,#888);color:var(--text,#333);font-size:12px;text-decoration:none;word-break:break-all;max-width:100%}
 footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--text-muted)}
 </style>
 </head>
 <body>
 <div class="card">
   <div class="logo"><img src="/ui/assets/logo-ju.svg" alt="deepDDW"><h1>deepDDW 启动器</h1></div>
-  <p class="sub">填好服务器地址与访问 Token，校验通过后进入工作台。<br>Token 仅存于本机会话，绝不写入 iframe URL。</p>
+  <p class="sub">局域网内免 Token 直连；外网访问需 Token。<br>Token 仅存于本机会话，绝不写入 iframe URL。</p>
 
   <label for="addr">服务器地址</label>
   <input id="addr" type="url" placeholder="http://192.168.1.10:8500" autocomplete="off">
   <div class="hint">留空 = 当前服务器（手机浏览器默认场景）</div>
 
-  <label for="token">访问 Token</label>
-  <input id="token" type="password" placeholder="部署时配置的 DDW_ACCESS_TOKEN" autocomplete="off">
+  <label for="token">访问 Token（局域网内可留空）</label>
+  <input id="token" type="password" placeholder="外网访问才需要" autocomplete="off">
 
-  <button class="btn" id="connect">校验并进入</button>
+  <button class="btn" id="connect">进入工作台</button>
   <div class="msg" id="msg"></div>
+
+  <div id="pairArea" class="pair" style="display:none">
+    <div class="pair-title">手机扫码自动填入（电脑端显示）</div>
+    <div id="qrcode" class="qrcode"></div>
+    <div class="hint" id="pairHint"></div>
+  </div>
+
   <footer>deepDDW 0.1 · 开源个人 AI 底座</footer>
 </div>
 
@@ -91,40 +103,79 @@ footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--text-muted
 
   btn.addEventListener("click", async function () {
     var token = tokenEl.value.trim();
-    if (!token) { msg.className = "msg err"; msg.textContent = "请填写访问 Token"; return; }
     var base = baseAddr();
     if (!/^https?:\/\//.test(base)) { msg.className = "msg err"; msg.textContent = "地址需以 http(s):// 开头"; return; }
 
-    btn.disabled = true; btn.textContent = "校验中…";
+    btn.disabled = true; btn.textContent = "连接中…";
     msg.className = "msg"; msg.textContent = "";
     try {
+      // 第一步：无 Token 试连（局域网免密模式，体验优化 A）——
+      // 内网请求服务端自动放行，无需 Token，手机连 WiFi 直接进。
       var resp = await fetch(base + "/api/v1/gateway/verify", {
-        headers: { "X-DDW-Token": token },
+        headers: token ? { "X-DDW-Token": token } : {},
       });
-      if (resp.status === 401) {
+      if (resp.status === 401 && token) {
+        // 带了 Token 仍 401：Token 错，提示并给扫码配对
         msg.className = "msg err"; msg.textContent = "Token 无效或已过期（401）";
-      } else if (!resp.ok) {
-        msg.className = "msg err"; msg.textContent = "网关校验失败（HTTP " + resp.status + "）";
-      } else {
-        var data = await resp.json();
-        if (data.authenticated !== true) {
-          msg.className = "msg err"; msg.textContent = "网关未放行";
-          return;
-        }
-        // 校验通过 → 放行：Token 存会话存储，iframe 不携带明文 Token 到工作台
-        try {
-          sessionStorage.setItem("deepddw_token", token);
-          localStorage.setItem("deepddw_addr", base);
-        } catch (e) { /* ignore */ }
-        msg.className = "msg ok"; msg.textContent = "校验通过 ✓ " + (data.version || "");
-        enterWorkbench(base, token);
+        showPair(base);
+        return;
       }
+      if (resp.status === 401 && !token) {
+        // 无 Token 且不在免密范围（如外网）：需要 Token，给扫码配对
+        msg.className = "msg err"; msg.textContent = "需要访问 Token（外网访问）";
+        showPair(base);
+        return;
+      }
+      if (!resp.ok) { msg.className = "msg err"; msg.textContent = "网关校验失败（HTTP " + resp.status + "）"; return; }
+      var data = await resp.json();
+      if (data.authenticated !== true) { msg.className = "msg err"; msg.textContent = "网关未放行"; return; }
+      // 通过 → 放行（token 可能为空=LAN 免密；非空才存会话）
+      try {
+        if (token) sessionStorage.setItem("deepddw_token", token);
+        localStorage.setItem("deepddw_addr", base);
+      } catch (e) { /* ignore */ }
+      msg.className = "msg ok"; msg.textContent = "连接成功 ✓";
+      enterWorkbench(base, token);
     } catch (e) {
       msg.className = "msg err"; msg.textContent = "无法连接服务器：" + e.message;
     } finally {
-      btn.disabled = false; btn.textContent = "校验并进入";
+      btn.disabled = false; btn.textContent = "进入工作台";
     }
   });
+
+  // 体验优化 C：扫码配对——调 /api/v1/gateway/pair 拿带 Token 的 URL，渲染二维码。
+  // 手机扫这个码打开链接，URL 参数自动预填 Token（launcher 已支持 ?token=），
+  // 免去手输长 Token。仅局域网内可调（pair 端点同样过 LAN 免密/Token 门禁）。
+  function showPair(base) {
+    var area = document.getElementById("pairArea");
+    var hint = document.getElementById("pairHint");
+    var qr = document.getElementById("qrcode");
+    area.style.display = "block";
+    hint.textContent = "请在电脑端打开此页面显示二维码，手机扫码自动填入 Token…";
+    fetch(base + "/api/v1/gateway/pair")
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !d.pair_url) { hint.textContent = "扫码配对不可用（请手动填写 Token）"; return; }
+        hint.textContent = "手机扫码自动填入 Token（或直接点下方链接）：";
+        renderQR(qr, d.qr_svg, d.pair_url);
+      })
+      .catch(function () { hint.textContent = "扫码配对不可用（请手动填写 Token）"; });
+  }
+
+  // 渲染扫码配对：优先显示服务端生成的二维码 SVG（手机真可扫码），
+  // 无 SVG 时回退为可点击链接兜底。
+  function renderQR(el, qrSvg, url) {
+    el.innerHTML = "";
+    if (qrSvg && qrSvg.indexOf("<svg") !== -1) {
+      el.innerHTML = qrSvg;
+      return;
+    }
+    var a = document.createElement("a");
+    a.href = url; a.target = "_blank"; a.rel = "noopener";
+    a.textContent = "点此打开（含 Token 的启动链接）";
+    a.style.cssText = "display:block;padding:14px;background:var(--bg-card,#fff);border:1px solid var(--border,#888);border-radius:10px;color:var(--text,#333);word-break:break-all;font-size:12px;text-decoration:none";
+    el.appendChild(a);
+  }
 
   function enterWorkbench(base, token) {
     var iframe = document.createElement("iframe");

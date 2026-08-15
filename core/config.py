@@ -55,6 +55,11 @@ DEFAULTS: Dict[str, Any] = {
         # 此处留空 → token_gate 使用开发默认值并告警（生产必须显式配置）
         "access_token": "",
     },
+    "security": {
+        # 局域网免密模式（体验优化 A）：内网访问免 Token，外网仍要求。
+        # 默认开（开源个人场景易用优先）；公网部署应设 DDW_LAN_BYPASS=0 关闭。
+        "lan_bypass": True,
+    },
     "events": {"backend": "inprocess"},
     "plugins": {"root_dir": "./plugins", "sandbox_timeout": 30},
     "logging": {"level": "INFO", "path": "./data/logs"},

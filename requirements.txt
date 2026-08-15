@@ -33,3 +33,6 @@ cryptography>=42.0.0
 # --- 测试 ---
 pytest>=8.0.0
 pytest-asyncio>=0.21.0
+
+# --- 扫码配对（体验优化 C：/api/v1/gateway/pair 生成二维码 SVG） ---
+qrcode>=7.4.0

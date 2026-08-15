@@ -1,4 +1,4 @@
-"""MCP 传输层（DDW AI Hub v5.4 — 模块 D1）。
+"""MCP 传输层（deepDDW — 模块 D1）。
 
 - StdioTransport：本地 CLI，stdin/stdout
 - SSETransport：服务器推送

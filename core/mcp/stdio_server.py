@@ -10,7 +10,7 @@
       "ddw": {
         "command": "python",
         "args": ["-m", "core.mcp.stdio_server"],
-        "cwd": "/path/to/ddw-ai-hub"
+        "cwd": "/path/to/deepddw"
       }
     }
 

@@ -1,4 +1,4 @@
-"""DDW AI Hub 测试配置。"""
+"""deepDDW 测试配置。"""
 
 from __future__ import annotations
 

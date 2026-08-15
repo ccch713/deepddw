@@ -1,7 +1,7 @@
 """LLM Gateway - Unified entry point for LLM provider calls.
 
 This is a lightweight stub suitable for plugin development. The real
-implementation lives in the DDW AI Hub core; plugins only need to
+implementation lives in the deepDDW core; plugins only need to
 import :func:`get_gateway` and use the returned object.
 
 The stub preserves the contract so plugins can be tested in isolation

@@ -1,4 +1,4 @@
-"""DDW AI Hub SDK - Plugin development toolkit (v2 merged)."""
+"""deepDDW SDK - Plugin development toolkit."""
 
 from sdk.plugin_base import (
     DDWPlugin,

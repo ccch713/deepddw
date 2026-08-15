@@ -1,4 +1,4 @@
-"""MCP 协议消息定义（DDW AI Hub v6.0 — 模块 D1，双协议）。
+"""MCP 协议消息定义（deepDDW — 模块 D1，双协议）。
 
 遵循 MCP 2024-11-05（经典）+ 2025-03-26（streamable-http）+ JSON-RPC 2.0。
 版本协商：initialize 时返回客户端请求的协议版本（受支持时），

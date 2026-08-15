@@ -14,10 +14,10 @@ echo "[$(date +%H:%M:%S)] backup start → $DEST"
 /opt/ddw/venv311/bin/python - "$DEST" << 'EOF'
 import sqlite3, sys, pathlib
 dest = pathlib.Path(sys.argv[1])
-for db in ["/opt/ddw/ddw-ai-hub/data/ddw_main.db",
-           "/opt/ddw/ddw-ai-hub/data/ddw_audit.db",
-           "/opt/ddw/ddw-ai-hub/data/ddw_errors.db",
-           "/opt/ddw/ddw-ai-hub/data/ddw_medical.db"]:
+for db in ["/opt/deepddw/data/ddw_main.db",
+           "/opt/deepddw/data/ddw_audit.db",
+           "/opt/deepddw/data/ddw_errors.db",
+           "/opt/deepddw/data/ddw_medical.db"]:
     out = dest / f"{pathlib.Path(db).stem}.db"
     if not pathlib.Path(db).exists():
         print(f"  skip (missing): {db}")
@@ -30,7 +30,7 @@ for db in ["/opt/ddw/ddw-ai-hub/data/ddw_main.db",
 EOF
 
 # 插件库（cp 即可，量小；WAL 模式下先 checkpoint）
-find /opt/ddw/ddw-ai-hub/plugins -name '*.db' -not -path '*__pycache__*' 2>/dev/null | while read db; do
+find /opt/deepddw/plugins -name '*.db' -not -path '*__pycache__*' 2>/dev/null | while read db; do
   plugin_name=$(basename "$(dirname "$db")")
   cp "$db" "$DEST/${plugin_name}-$(basename "$db")"
 done

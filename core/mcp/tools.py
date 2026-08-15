@@ -27,7 +27,8 @@ class Tool:
     name: str
     description: str
     parameters: Dict[str, Any] = field(default_factory=dict)  # JSON Schema
-    handler: Optional[Callable[[Dict[str, Any], Dict[str, Any]], Awaitable[Dict[str, Any]]]] = None
+    handler: Optional[Callable[[Dict[str, Any], Dict[str, Any]],
+        Awaitable[Dict[str, Any]]]] = None
     is_read_only: bool = True
     plugin_name: str = "core"
 
@@ -296,7 +297,8 @@ def convert_mcp_result(result: dict[str, Any]) -> dict[str, Any]:
                         "mimeType": block.get("mimeType", "image/png"),
                     })
                 else:
-                    content.append({"type": "text", "text": json.dumps(block, default=str, ensure_ascii=False)})
+                    content.append({"type": "text", "text": json.dumps(
+                        block, default=str, ensure_ascii=False)})
     elif "toolResult" in result:
         raw = result["toolResult"]
         content.append({

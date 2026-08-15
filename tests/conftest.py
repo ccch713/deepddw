@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import asyncio
 import os
 from typing import AsyncGenerator
 
-import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -14,10 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 # 测试前设置环境
 os.environ.setdefault("DDW_JWT_SECRET", "test-secret-key-for-testing-32bytes-ok")
 
-from core.database.session import Base, get_engine, get_session_maker  # noqa: E402
+from core.database.session import Base  # noqa: E402
 from core.main import app  # noqa: E402
-
-
 
 
 @pytest_asyncio.fixture(scope="session")

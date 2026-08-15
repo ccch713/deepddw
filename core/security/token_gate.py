@@ -93,7 +93,8 @@ def require_access_token(request: Request) -> Dict[str, Any]:
     """FastAPI 依赖：校验静态访问 Token，失败 → 401。
 
     返回 claims dict（兼容原有 current_user 的调用方签名）：
-    ``{"sub": "token", "token": <token>, "tenant_id": 0, "user_id": 0, "role": "superadmin"}``
+    ``{"sub": "token", "token": <token>, "tenant_id": 0,
+    "user_id": 0, "role": "superadmin"}``
     —— deepDDW 单用户模型：token 持有者即平台管理员（无账号/租户体系）。
     """
     headers = {k.lower(): v for k, v in request.headers.items()}

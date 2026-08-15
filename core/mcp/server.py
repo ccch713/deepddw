@@ -131,7 +131,8 @@ class DDWMCPServer:
             params=params,
         )
 
-    def _handle_initialize(self, req: JsonRpcRequest, params: Dict[str, Any]) -> Any:  # type: ignore[return-value]
+    # type: ignore[return-value]
+    def _handle_initialize(self, req: JsonRpcRequest, params: Dict[str, Any]) -> Any:
         self.initialized = True
         # v6.0 双协议：版本协商（客户端请求版本受支持则返回，否则返回最高版）
         requested = (params or {}).get("protocolVersion")

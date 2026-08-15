@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0f24">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/ui/manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="/ui/assets/logo-ju.svg">
+<title>deepDDW · 启动</title>
+<style>
+:root{
+  --bg-base:#050816;--bg-page:#0a0f24;--bg-card:#111a3a;--bg-input:#0d1330;
+  --text-primary:#e8ecf8;--text-secondary:#a8b3d0;--text-muted:#6b7899;
+  --brand:#00e5ff;--brand-hover:#33ecff;--accent-green:#00ff9d;
+  --border:#233052;--border-hover:#00e5ff;--danger:#ff5c5c;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg-page);color:var(--text-primary);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:36px 28px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,229,255,.08)}
+.logo{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.logo img{width:34px;height:34px}
+h1{font-size:22px;font-weight:800;letter-spacing:.5px}
+.sub{color:var(--text-muted);font-size:13px;margin-bottom:28px;line-height:1.6}
+label{display:block;font-size:13px;color:var(--text-secondary);margin:16px 0 6px}
+input{width:100%;height:46px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;color:var(--text-primary);padding:0 14px;font-size:15px;outline:none;transition:border-color .2s}
+input:focus{border-color:var(--border-hover)}
+.hint{font-size:12px;color:var(--text-muted);margin-top:6px}
+.btn{width:100%;height:48px;border:none;border-radius:12px;background:linear-gradient(135deg,#00e5ff,#0099ff);color:#04121f;font-size:16px;font-weight:700;cursor:pointer;margin-top:24px;transition:opacity .2s}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn:not(:disabled):active{opacity:.85}
+.msg{margin-top:14px;font-size:13px;min-height:20px}
+.msg.err{color:var(--danger)}
+.msg.ok{color:var(--accent-green)}
+footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--text-muted)}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo"><img src="/ui/assets/logo-ju.svg" alt="deepDDW"><h1>deepDDW 启动器</h1></div>
+  <p class="sub">填好服务器地址与访问 Token，校验通过后进入工作台。<br>Token 仅存于本机会话，绝不写入 iframe URL。</p>
+
+  <label for="addr">服务器地址</label>
+  <input id="addr" type="url" placeholder="http://192.168.1.10:8500" autocomplete="off">
+  <div class="hint">留空 = 当前服务器（手机浏览器默认场景）</div>
+
+  <label for="token">访问 Token</label>
+  <input id="token" type="password" placeholder="部署时配置的 DDW_ACCESS_TOKEN" autocomplete="off">
+
+  <button class="btn" id="connect">校验并进入</button>
+  <div class="msg" id="msg"></div>
+  <footer>deepDDW 0.1 · 开源个人 AI 底座</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var btn = document.getElementById("connect");
+  var msg = document.getElementById("msg");
+  var addrEl = document.getElementById("addr");
+  var tokenEl = document.getElementById("token");
+
+  // 恢复上次地址/token（仅本机 localStorage，用户可清除）
+  try {
+    if (localStorage.getItem("deepddw_addr")) addrEl.value = localStorage.getItem("deepddw_addr");
+    if (sessionStorage.getItem("deepddw_token")) tokenEl.value = sessionStorage.getItem("deepddw_token");
+  } catch (e) { /* 隐私模式忽略 */ }
+
+  function baseAddr() {
+    var v = addrEl.value.trim().replace(/\/+$/, "");
+    return v || window.location.origin;
+  }
+
+  btn.addEventListener("click", async function () {
+    var token = tokenEl.value.trim();
+    if (!token) { msg.className = "msg err"; msg.textContent = "请填写访问 Token"; return; }
+    var base = baseAddr();
+    if (!/^https?:\/\//.test(base)) { msg.className = "msg err"; msg.textContent = "地址需以 http(s):// 开头"; return; }
+
+    btn.disabled = true; btn.textContent = "校验中…";
+    msg.className = "msg"; msg.textContent = "";
+    try {
+      var resp = await fetch(base + "/api/v1/gateway/verify", {
+        headers: { "X-DDW-Token": token },
+      });
+      if (resp.status === 401) {
+        msg.className = "msg err"; msg.textContent = "Token 无效或已过期（401）";
+      } else if (!resp.ok) {
+        msg.className = "msg err"; msg.textContent = "网关校验失败（HTTP " + resp.status + "）";
+      } else {
+        var data = await resp.json();
+        if (data.authenticated !== true) {
+          msg.className = "msg err"; msg.textContent = "网关未放行";
+          return;
+        }
+        // 校验通过 → 放行：Token 存会话存储，iframe 不携带明文 Token 到工作台
+        try {
+          sessionStorage.setItem("deepddw_token", token);
+          localStorage.setItem("deepddw_addr", base);
+        } catch (e) { /* ignore */ }
+        msg.className = "msg ok"; msg.textContent = "校验通过 ✓ " + (data.version || "");
+        enterWorkbench(base, token);
+      }
+    } catch (e) {
+      msg.className = "msg err"; msg.textContent = "无法连接服务器：" + e.message;
+    } finally {
+      btn.disabled = false; btn.textContent = "校验并进入";
+    }
+  });
+
+  function enterWorkbench(base, token) {
+    var iframe = document.createElement("iframe");
+    iframe.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:none;background:#fff";
+    iframe.src = base + "/ui/welcome.html";  // URL 中绝不携带 token
+    document.body.appendChild(iframe);
+    document.querySelector(".card").style.display = "none";
+    // 通过 postMessage 把 token 交给同源工作台（不经过 URL / 请求头之外的明文通道）
+    iframe.onload = function () {
+      iframe.contentWindow.postMessage({ type: "deepddw-token", token: token }, base);
+    };
+    // 回退：工作台也可从 sessionStorage 读取（同源场景）
+    setTimeout(function () {
+      try { iframe.contentWindow.postMessage({ type: "deepddw-token", token: token }, base); } catch (e) {}
+    }, 800);
+  }
+})();
+</script>
+</body>
+</html>

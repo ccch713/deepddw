@@ -140,13 +140,15 @@ class LLMRouter:
         ctx = ctx or RouteContext()
         ctx.rule = chosen.name
 
-        chain = [chosen.provider] + [p for p in get_deployment().llm.fallback_chain if p != chosen.provider]
+        chain = [chosen.provider] + \
+            [p for p in get_deployment().llm.fallback_chain if p != chosen.provider]
         last_error: Optional[Exception] = None
         for provider_name in chain:
             try:
                 provider = self.get(provider_name)
                 response = await provider.chat(messages, model=chosen.model, **kwargs)
-                self.usage.record(provider=provider_name, model=chosen.model, response=response, ctx=ctx, ok=response.finish_reason != "error")
+                self.usage.record(provider=provider_name, model=chosen.model,
+                                  response=response, ctx=ctx, ok=response.finish_reason != "error")
                 if response.finish_reason == "error":
                     # Provider 内部吞掉了异常并返回 error response（如 [minimax-error]）：
                     # 同样视为失败，继续走 fallback 链。

@@ -15,10 +15,13 @@ import uuid
 from datetime import datetime
 from typing import Any, AsyncIterator, List
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import BigInteger, Column, DateTime, Float, Integer, MetaData, String, Table, Text, select
+from sqlalchemy import (
+    BigInteger, Column, DateTime, Float, Integer,
+    MetaData, String, Table, Text, select,
+)
 
 from core.api_response import ok
 from core.database.session import session_scope
@@ -64,7 +67,9 @@ class StreamRequest(ChatRequest):
 
 
 @router.post("/")
-async def post_chat(payload: ChatRequest, claims: dict = Depends(require_access_token)) -> Any:
+async def post_chat(
+    payload: ChatRequest, claims: dict = Depends(require_access_token),
+) -> Any:
     user_id = 0
     tenant_id = 0
     messages: List[LLMChatMessage] = []
@@ -78,26 +83,39 @@ async def post_chat(payload: ChatRequest, claims: dict = Depends(require_access_
     try:
         async with session_scope() as session:
             # 表 id 非自增（四库合并遗留），显式取 max+1
-            max_id = (await session.execute(select(_chat_table.c.id).order_by(_chat_table.c.id.desc()).limit(1))).scalar() or 0
-            for role, content in (("user", payload.message), ("assistant", response.content)):
+            max_id = (
+                await session.execute(
+                    select(_chat_table.c.id).order_by(_chat_table.c.id.desc()).limit(1)
+                )
+            ).scalar() or 0
+            for role, content in (
+                ("user", payload.message), ("assistant", response.content)
+            ):
                 await session.execute(_chat_table.insert().values(
-                    id=max_id + 1, user_id=user_id, tenant_id=tenant_id, conversation_id=conv_id,
+                    id=max_id + 1, user_id=user_id, tenant_id=tenant_id,
+                    conversation_id=conv_id,
                     role=role, content=content,
                     provider=response.provider, model=response.model,
-                    tokens_in=response.tokens_in, tokens_out=response.tokens_out, cost=response.cost,
+                    tokens_in=response.tokens_in, tokens_out=response.tokens_out,
+                    cost=response.cost,
                     created_at=now, updated_at=now,
                 ))
                 max_id += 1
             await session.commit()
     except Exception as exc:  # noqa: BLE001  # 历史落库失败不阻塞回复
         logger.warning("chat history persist degraded: %s", exc)
-    return ok({"content": response.content, "model": response.model, "provider": response.provider,
-               "tokens_in": response.tokens_in, "tokens_out": response.tokens_out, "cost": response.cost,
+    return ok({
+        "content": response.content, "model": response.model,
+        "provider": response.provider,
+        "tokens_in": response.tokens_in, "tokens_out": response.tokens_out,
+        "cost": response.cost,
                "conversation_id": conv_id})
 
 
 @router.post("/stream")
-async def post_stream(payload: StreamRequest, claims: dict = Depends(require_access_token)) -> StreamingResponse:
+async def post_stream(
+    payload: StreamRequest, claims: dict = Depends(require_access_token),
+) -> StreamingResponse:
     messages: List[LLMChatMessage] = []
     if payload.system:
         messages.append(LLMChatMessage(role="system", content=payload.system))
@@ -117,17 +135,29 @@ async def post_stream(payload: StreamRequest, claims: dict = Depends(require_acc
 
 
 @router.get("/history")
-async def history(conversation_id: str, claims: dict = Depends(require_access_token)) -> Any:
+async def history(
+    conversation_id: str, claims: dict = Depends(require_access_token),
+) -> Any:
     user_id = 0
     try:
         async with session_scope() as session:
             stmt = (
                 select(_chat_table)
-                .where(_chat_table.c.user_id == user_id, _chat_table.c.conversation_id == conversation_id)
+                .where(
+                    _chat_table.c.user_id == user_id,
+                    _chat_table.c.conversation_id == conversation_id,
+                )
                 .order_by(_chat_table.c.id)
             )
             rows = (await session.execute(stmt)).all()
-        return ok([{"role": r.role, "content": r.content, "created_at": r.created_at.isoformat() if r.created_at else None} for r in rows])
+        return ok([
+            {
+                "role": r.role,
+                "content": r.content,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in rows
+        ])
     except Exception as exc:  # noqa: BLE001
         logger.warning("chat history degraded: %s", exc)
         return ok([])

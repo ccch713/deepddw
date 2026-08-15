@@ -7,5 +7,5 @@ _ROOT = os.path.dirname(os.path.abspath(__file__))
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
-# 测试环境显式 opt-in 调试万能码（与生产行为分离）
-os.environ.setdefault("DDW_ALWAYS_ACCEPT_CODE", "8888")
+# 测试环境默认使用独立访问 Token（P0-1 门禁）
+os.environ.setdefault("DDW_ACCESS_TOKEN", "test-token-deepddw")

@@ -31,7 +31,8 @@ _fastmcp = None
 
 def _safe_identifier(name: Any) -> bool:
     """参数名必须为合法 Python 标识符（P1-2：非标识符参数名直接拒绝，不 exec）。"""
-    return isinstance(name, str) and name.isidentifier() and name not in {"_handler", "args", "kwargs"}
+    return (isinstance(name, str) and name.isidentifier()
+            and name not in {"_handler", "args", "kwargs"})
 
 
 def _build_wrapped(handler, parameters: Dict[str, Any]):
@@ -54,7 +55,8 @@ def _build_wrapped(handler, parameters: Dict[str, Any]):
     parts = []
     for name, ps in props.items():
         if not _safe_identifier(name):
-            logger.warning("mcp schema param %r is not a safe identifier, skipped", name)
+            logger.warning(
+                "mcp schema param %r is not a safe identifier, skipped", name)
             continue
         t = ps.get("type")
         type_map = {
@@ -171,9 +173,11 @@ class _RootPathNormalizer:
 
     async def _ensure_manager(self):
         # run() 只能调用一次：仅当 task group 尚未初始化时惰性进入。
-        # 若调用方（如 lifespan / 测试 fixture）已 async with manager.run()，这里直接跳过。
+        # 若调用方（如 lifespan / 测试 fixture）已 async with manager.run()，
+        # 这里直接跳过。
         try:
-            if self._manager._task_group is None and self._exit_stack is None:  # type: ignore[attr-defined]
+            # type: ignore[attr-defined]
+            if self._manager._task_group is None and self._exit_stack is None:
                 from contextlib import AsyncExitStack
 
                 stack = AsyncExitStack()
@@ -209,7 +213,8 @@ class _LazyMCPApp:
     async def __call__(self, scope, receive, send):
         fastmcp = get_fastmcp()
         if self._normalizer is None or fastmcp is not self._fastmcp:
-            # 注意：fastmcp._session_manager 在 streamable_http_app() 首次调用前为 None，
+            # 注意：fastmcp._session_manager 在 streamable_http_app() 首次调用前
+            # 为 None，
             # 必须先构建应用再取 manager（P1-2：私有属性访问 try/except 降级）。
             sdk_app = fastmcp.streamable_http_app()
             manager = None

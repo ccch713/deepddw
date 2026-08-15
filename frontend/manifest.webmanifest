@@ -1,0 +1,17 @@
+{
+  "name": "deepDDW 工作台",
+  "short_name": "deepDDW",
+  "description": "deepDDW — 开源个人 AI 底座工作台",
+  "start_url": "/ui/deepddw-launcher.html",
+  "display": "standalone",
+  "background_color": "#0a0f24",
+  "theme_color": "#0a0f24",
+  "icons": [
+    {
+      "src": "/ui/assets/logo-ju.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

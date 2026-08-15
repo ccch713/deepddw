@@ -1,11 +1,13 @@
-"""deepDDW MCP 测试：Token 门禁（P0-1）+ 工具时序一致性（P0-2）+ 经典回归 + exec 加固（P1-2）。
+"""deepDDW MCP 测试：Token 门禁（P0-1）+ 工具时序一致性（P0-2）
++ 经典回归 + exec 加固（P1-2）。
 
 验收对齐任务书 §3 / §6：
 - 鉴权：无 Token → 401；错误 Token → 401；正确 Token → initialize/tools/list 正常；
   X-DDW-Token 头可用；Bearer 头可用（≥5 条）
 - 时序：load_plugins 后 rebuild_fastmcp → streamable-http == 经典端点工具集合；
   插件 override 工具（ddw.docs_portal.search）在 streamable-http 可见（≥2 条）
-- 回归：经典端点带 Token 正常；tools/list 无 commercial 工具；kb.search 真实结果（≥3 条）
+- 回归：经典端点带 Token 正常；tools/list 无 commercial 工具；
+  kb.search 真实结果（≥3 条）
 - 加固：P1-2 exec 动态签名（恶意 schema 不崩、不注入）
 """
 
@@ -73,7 +75,12 @@ def _build_mini_app() -> FastAPI:
 
         async def event_stream():
             import asyncio
-            yield f"data: {json.dumps({'event': 'hello', 'server': SERVER_INFO['name']}, ensure_ascii=False)}\n\n"
+            yield (
+                "data: " + json.dumps(
+                    {"event": "hello", "server": SERVER_INFO["name"]},
+                    ensure_ascii=False,
+                ) + "\n\n"
+            )
             while True:
                 await asyncio.sleep(15)
                 yield ": keep-alive\n\n"
@@ -372,7 +379,9 @@ async def test_exec_signature_hardening_rejects_malicious_params():
     # enum 值注入引号 → repr 转义后不破坏语法
     enum_tool = {
         "properties": {
-            "mode": {"type": "string", "enum": ["a\"); import os; os.system('echo pwned') #", "safe"]},
+                        "mode": {"type": "string", "enum": [
+                "a\"); import os; os.system('echo pwned') #", "safe"
+            ]},
         },
         "required": ["mode"],
     }

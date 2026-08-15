@@ -12,7 +12,6 @@ IM 审计等商业模型一律移除（deepDDW 0.1 无账号、无租户、无�
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import (
     DateTime,
@@ -66,7 +65,8 @@ class KnowledgeBasePermission(Base):
     base_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("kb_bases.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    tenant_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True, default=0)
+    tenant_id: Mapped[int] = mapped_column(
+        Integer, nullable=False, index=True, default=0)
     permissions: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False

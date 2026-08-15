@@ -25,3 +25,13 @@ build/
 *.pem
 *.key
 .env.production
+
+# deepDDW 运行时数据与本地配置
+data/*
+!data/.gitkeep
+config/deployment.yaml
+logs/
+*.db
+*.sqlite
+*.sqlite3
+.deepddw.pid

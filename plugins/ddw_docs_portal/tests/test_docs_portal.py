@@ -121,9 +121,11 @@ async def test_05_update_bumps_version_and_keeps_history(service):
         )
     ).scalars().all()
     assert updated["version"] == "v1.1"
-    assert updated["content_hash"] == hashlib.sha256("新内容 v2".encode("utf-8")).hexdigest()
+    assert updated["content_hash"] == hashlib.sha256(
+        "新内容 v2".encode("utf-8")).hexdigest()
     assert len(versions) == 1
-    assert versions[0].source_ref == hashlib.sha256("旧内容 v1".encode("utf-8")).hexdigest()
+    assert versions[0].source_ref == hashlib.sha256(
+        "旧内容 v1".encode("utf-8")).hexdigest()
 
 
 # ─── 6. publish → deepDDW 记忆 upsert（同 doc 多次 publish 只一条） ──

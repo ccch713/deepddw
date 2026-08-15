@@ -57,7 +57,7 @@ class DocCategory(Base, TimestampMixin):
 
 
 class DocItem(Base, TimestampMixin):
-    """文档元数据。正文内联存储（content），deepDDW 不再依赖 ddw_doc_assistant。"""
+    """文档元数据。正文内联存储（content），deepDDW 不再依赖外部文档助手。"""
 
     __tablename__ = "docs_item"
     __table_args__ = (
@@ -67,7 +67,8 @@ class DocItem(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(BigInt, primary_key=True, autoincrement=True)
     tenant_id: Mapped[int] = _tenant_column()
-    category_id: Mapped[Optional[int]] = mapped_column(BigInt, nullable=True, index=True)
+    category_id: Mapped[Optional[int]] = mapped_column(
+        BigInt, nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     slug: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     doc_type: Mapped[str] = mapped_column(
@@ -80,10 +81,11 @@ class DocItem(Base, TimestampMixin):
         String(16), default="draft", nullable=False
     )  # draft/published/archived
     version: Mapped[str] = mapped_column(String(16), default="v1.0", nullable=False)
-    content: Mapped[str] = mapped_column(Text, default="", nullable=False)  # 正文（deepDDW 内联）
+    content: Mapped[str] = mapped_column(
+        Text, default="", nullable=False)  # 正文（deepDDW 内联）
     source_ref: Mapped[str] = mapped_column(
         String(64), default="", nullable=False
-    )  # 兼容字段：原指向 ddw_doc_assistant，现保留为空/内容哈希
+    )  # 兼容字段：原指向外部文档助手，现保留为空/内容哈希
     content_hash: Mapped[Optional[str]] = mapped_column(
         String(64), nullable=True, index=True
     )  # 正文 sha256（离线包导入去重幂等）
@@ -124,7 +126,8 @@ class CategoryUpdateReq(BaseModel):
     """改分类请求（字段可选）。"""
 
     name: Optional[str] = Field(None, min_length=1, max_length=200)
-    slug: Optional[str] = Field(None, min_length=1, max_length=128, pattern=r"^[a-z0-9-]+$")
+    slug: Optional[str] = Field(
+        None, min_length=1, max_length=128, pattern=r"^[a-z0-9-]+$")
     parent_id: Optional[int] = None
     sort_order: Optional[int] = Field(None, ge=0)
 
@@ -138,7 +141,8 @@ class DocCreateReq(BaseModel):
     doc_type: str = Field("whitepaper")
     visibility: str = Field("tenant")
     content: str = Field(..., min_length=1, description="文档正文（markdown 或纯文本）")
-    summary: Optional[str] = Field(None, max_length=500, description="≤200 字摘要，publish 时进 enterprise 记忆")
+    summary: Optional[str] = Field(
+        None, max_length=500, description="≤200 字摘要，publish 时进 enterprise 记忆")
     version: Optional[str] = Field(None, description="显式指定版本号（默认 v1.0）")
 
 
@@ -146,7 +150,8 @@ class DocUpdateReq(BaseModel):
     """更新文档请求（content 与 version 可选）。"""
 
     title: Optional[str] = Field(None, min_length=1, max_length=500)
-    slug: Optional[str] = Field(None, min_length=1, max_length=128, pattern=r"^[a-z0-9-]+$")
+    slug: Optional[str] = Field(
+        None, min_length=1, max_length=128, pattern=r"^[a-z0-9-]+$")
     category_id: Optional[int] = None
     doc_type: Optional[str] = None
     visibility: Optional[str] = None
@@ -159,7 +164,8 @@ class ImportPackageReq(BaseModel):
     """离线更新包导入请求（决策 4，按 content_hash 去重幂等）。"""
 
     tenant_id: int = Field(0, description="导入归属租户（0=平台级产品文档包；>0=租户制度包）")
-    docs: list[dict] = Field(default_factory=list, description="每项: {doc_id, slug, version, title, content_hash, exported_at, content, visibility}")
+    docs: list[dict] = Field(
+        default_factory=list, description="每项: {doc_id, slug, version, title, content_hash, exported_at, content, visibility}")
 
 
 __all__ = [

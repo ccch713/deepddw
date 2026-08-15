@@ -32,7 +32,7 @@ from core.config import get_settings
 from core.database.session import dispose_db, get_engine, init_db
 from core.mcp.protocol import SERVER_CAPABILITIES, SERVER_INFO
 from core.mcp.server import get_mcp_server
-from core.security.token_gate import require_access_token, verify_token
+from core.security.token_gate import require_access_token
 
 # 版本唯一来源：仓库根 VERSION 文件
 _APP_VERSION_FILE = Path(__file__).resolve().parent.parent / "VERSION"

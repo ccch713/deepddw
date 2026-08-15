@@ -19,7 +19,6 @@ from __future__ import annotations
 import importlib
 import json
 import logging
-import os
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -41,7 +40,8 @@ AUDIT_FILE_DEFAULT = "./data/plugin_runtime_audit.jsonl"
 def resolve_license_gate(settings: Any) -> Dict[str, Any]:
     """解析当前授权门控（deepDDW 开源版：无授权体系，恒放行）。
 
-    返回与商业版同形：``{production: False, authorized_plugins: None, license_present: False}``，
+    返回与商业版同形：``{production: False, authorized_plugins: None,
+    license_present: False}``，
     语义 = 全部插件可加载（插件目录本身只含白名单组件）。
     """
     return {
@@ -344,7 +344,7 @@ class PluginRuntime:
     def reload_one(self, plugin_name: str, *, operator: str = "system") -> bool:
         """滚动重挂：停用入口 → 重新加载（更新策略）。
 
-        模块级单例插件（如 ddw_memory）热替换不彻底：若该插件此前已加载
+        模块级单例插件热替换不彻底：若该插件此前已加载
         （模块已在 sys.modules），重载后自动标记 ``pending_restart``，
         管理端据此提示"需重启彻底生效"（诚实边界）。
         """

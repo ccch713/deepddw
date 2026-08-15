@@ -1,0 +1,31 @@
+# deepDDW 0.1 部署配置模板（可选；不提供则使用 core/config.py 内置默认值）
+# 复制为 config/deployment.yaml 并按需修改（deployment.yaml 已被 .gitignore 忽略）
+
+mode: standalone
+server:
+  host: 0.0.0.0
+  port: 8500
+  workers: 1
+
+databases:
+  main:
+    engine: sqlite
+    path: ./data/ddw_main.db
+
+llm_gateway:
+  default_provider: deepseek
+  providers:
+    deepseek:
+      base_url: https://api.deepseek.com/v1
+      api_key: "${DDW_DEEPSEEK_API_KEY}"
+      default_model: deepseek-chat
+    ollama:
+      base_url: http://localhost:11434
+      default_model: qwen2.5:7b
+
+auth:
+  # 静态访问 Token：强烈建议用环境变量 DDW_ACCESS_TOKEN（本模板占位符不生效）
+  # access_token: ""
+
+plugins:
+  root_dir: ./plugins

@@ -51,8 +51,9 @@ DEFAULTS: Dict[str, Any] = {
         },
     },
     "auth": {
-        # 静态访问 Token（P0-1 门禁）：环境变量 DDW_ACCESS_TOKEN 优先
-        "access_token": "${DDW_ACCESS_TOKEN}",
+        # 静态访问 Token（P0-1 门禁）：环境变量 DDW_ACCESS_TOKEN 优先；
+        # 此处留空 → token_gate 使用开发默认值并告警（生产必须显式配置）
+        "access_token": "",
     },
     "events": {"backend": "inprocess"},
     "plugins": {"root_dir": "./plugins", "sandbox_timeout": 30},
@@ -83,7 +84,8 @@ class Settings:
     def load(cls, deployment_yaml: Optional[Path] = None) -> "Settings":
         merged: Dict[str, Any] = dict(DEFAULTS)
         if deployment_yaml is None:
-            candidate = Path(__file__).resolve().parent.parent / "config" / "deployment.yaml"
+            candidate = Path(__file__).resolve().parent.parent / \
+                             "config" / "deployment.yaml"
             if candidate.exists():
                 deployment_yaml = candidate
         if deployment_yaml and Path(deployment_yaml).exists():
@@ -222,4 +224,5 @@ class DeploymentProxy:
         return getattr(self._settings, name)
 
 
-__all__ = ["Settings", "get_settings", "reload_settings", "get_deployment", "LLMRouteRule"]
+__all__ = ["Settings", "get_settings",
+    "reload_settings", "get_deployment", "LLMRouteRule"]

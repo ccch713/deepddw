@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>文档中心 · DDW AI Hub</title>
+<title>文档中心 · deepDDW</title>
 <style>
 :root{
   --bg-base:#050816;--bg-page:#0a0f24;--bg-card:#111a3a;--bg-elevated:#16204a;
   --text-primary:#e8ecf8;--text-secondary:#a8b3d0;--text-muted:#6b7899;
-  --brand:#00e5ff;--brand-hover:#33ecff;--brand-glow:rgba(0,229,255,.25);
+  --brand:#00e5ff;--brand-hover:#33ecff;
   --accent-green:#00ff9d;--accent-blue:#4f9eff;--accent-purple:#b388ff;--accent-orange:#ffab40;
   --border:#233052;--border-hover:#00e5ff;
 }
@@ -26,46 +26,51 @@ body{background:var(--bg-base);color:var(--text-primary);font-family:-apple-syst
 .hero p{color:var(--text-muted);font-size:15px}
 .doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;padding-bottom:70px}
 .doc-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:26px;text-decoration:none;color:inherit;display:block;transition:all .3s}
-.doc-card:hover{border-color:var(--border-hover);box-shadow:var(--shadow-glow);transform:translateY(-3px)}
+.doc-card:hover{border-color:var(--border-hover);transform:translateY(-3px)}
 .doc-card .icon{font-size:30px;margin-bottom:14px}
 .doc-card h3{font-size:17px;margin-bottom:8px}
 .doc-card p{color:var(--text-secondary);font-size:14px;margin-bottom:12px}
 .doc-card .meta{color:var(--text-muted);font-size:12.5px}
 .badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;margin-right:8px}
 .badge-green{background:rgba(0,255,157,.12);color:var(--accent-green);border:1px solid rgba(0,255,157,.3)}
-.empty{background:var(--bg-card);border:1px dashed var(--border);border-radius:14px;padding:40px;text-align:center;color:var(--text-muted);font-size:14px}
 footer{border-top:1px solid var(--border);padding:28px 0;text-align:center;color:var(--text-muted);font-size:13px}
 </style>
 </head>
 <body>
-
 <nav class="nav"><div class="wrap">
-  <div class="nav-brand">DDW AI Hub · <b>文档中心</b></div>
+  <div class="nav-brand">deep<b>DDW</b> · <span style="color:var(--text-secondary)">文档中心</span></div>
   <div class="nav-links">
-    <a href="/">产品首页</a>
-    <a href="/docs/">文档中心</a>
+    <a href="/ui/index.html">产品首页</a>
+    <a href="/ui/deepddw-launcher.html">启动器</a>
   </div>
 </div></nav>
 
 <div class="hero"><div class="wrap">
   <h1>📚 文档中心</h1>
-  <p>DDW 平台解决方案与能力说明文档 · 持续建设中</p>
+  <p>deepDDW 0.1 部署与使用说明 · 持续建设中</p>
 </div></div>
 
 <div class="wrap doc-grid">
-  <a class="doc-card" href="/docs/unlimited-ocr-intro.html">
-    <div class="icon">📄</div>
-    <h3>Unlimited-OCR 文档智能解析</h3>
-    <p>本地私有化部署的端到端文档解析引擎：一次推理完整解析数十页 PDF 扫描件，将非结构化文档转化为结构化数据，为企业 RAG 知识库注入高质量内容。</p>
-    <div><span class="badge badge-green">客户可见</span><span class="meta">2026-08 · 方案介绍</span></div>
+  <a class="doc-card" href="https://github.com/chenye/deepddw" target="_blank" rel="noopener">
+    <div class="icon">📦</div>
+    <h3>仓库与发布</h3>
+    <p>deepDDW 开源仓库：源码、Docker Compose 一键部署、DELIVERY 记录。</p>
+    <div><span class="badge badge-green">GitHub</span><span class="meta">外部链接</span></div>
+  </a>
+  <a class="doc-card" href="/health" target="_blank" rel="noopener">
+    <div class="icon">🩺</div>
+    <h3>健康检查</h3>
+    <p>GET /health 与 GET /api/v1/gateway/verify —— 部署后先确认服务与 Token 正常。</p>
+    <div><span class="badge badge-green">公开</span><span class="meta">API</span></div>
   </a>
 </div>
 
-<div class="wrap empty">更多文档正在建设中 —— DDW 产品手册、插件说明、行业解决方案将陆续上线</div>
+<div class="wrap" style="background:var(--bg-card);border:1px dashed var(--border);border-radius:14px;padding:40px;text-align:center;color:var(--text-muted);font-size:14px">
+  更多文档建设中 —— 部署指南、MCP 客户端接入、插件开发规范将陆续上线
+</div>
 
 <footer>
-  <div class="wrap">DDW AI Hub · 武汉锐果互动信息技术有限公司 · 文档中心</div>
+  <div class="wrap">deepDDW 0.1 · 开源（DSH MIT + 各组件许可证） · 与商业仓物理隔离</div>
 </footer>
-
 </body>
 </html>

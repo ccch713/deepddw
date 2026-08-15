@@ -1,0 +1,38 @@
+# deepDDW 0.1 — 许可证声明（NOTICE）
+
+本项目由 **DDW AI Hub 6.0**（商业仓，Gitea `chenye/ddw-ai-hub-workspace` @ `0f2343e`，
+内部策略决策 2026-08-16）裁剪而来。**本开源仓库与商业仓物理隔离**，不含任何商业组件。
+
+## 整体许可
+
+deepDDW 0.1 自身代码以 **MIT License** 发布（见 `LICENSE`），署名：
+
+```
+Copyright (c) 2026 deepDDW contributors
+Copyright (c) 2026 DeepSeek (DSH engine, MIT)
+```
+
+## 第三方组件许可证
+
+| 组件 | 版本/来源 | 许可证 |
+|---|---|---|
+| DSH 引擎（@deepseek-ai/dsh） | 官方 DeepSeek Harness | MIT |
+| FastAPI / Starlette / Uvicorn | PyPI | BSD-3-Clause |
+| SQLAlchemy（异步 + SQLite） | PyPI | MIT |
+| aiosqlite / greenlet | PyPI | MIT / MIT |
+| Pydantic / pydantic-core | PyPI | MIT |
+| httpx | PyPI | BSD-3-Clause |
+| PyYAML | PyPI | MIT |
+| MCP Python SDK（mcp 1.x） | PyPI | MIT |
+| cryptography | PyPI | Apache-2.0 OR BSD |
+| pytest / pytest-asyncio | PyPI | MIT / Apache-2.0 |
+| SQLite | 内置于 Python | Public Domain |
+| SearXNG（独立服务，可选） | Docker Hub searxng/searxng | AGPL-3.0（服务端 HTTP 调用，豁免评估通过） |
+| agentmemory（可选外部记忆后端） | @agentmemory/agentmemory + @agentmemory/mcp | Apache-2.0 |
+| LanceDB（可选向量增强） | 未随包分发，部署可选 | Apache-2.0 |
+
+## 禁止项（红线）
+
+- SSPL / RSAL / Elastic License 组件一律不引入。
+- GPL/AGPL 组件仅允许"服务端 HTTP 调用"形态（如 SearXNG），不静态链接进本项目。
+- 任何商业仓（ddw-ai-hub-workspace）模块/数据/文档不得进入本仓库。

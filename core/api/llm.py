@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from pathlib import Path
 from typing import Any, Dict
 
@@ -116,7 +115,8 @@ async def create_provider(payload: ProviderCreate, claims: Dict[str, Any] = Depe
     """
     # 1) 内存注册（带 key）
     if payload.api_key:
-        provider = _build_provider(payload.provider, payload.model, payload.api_key, payload.base_url)
+        provider = _build_provider(
+            payload.provider, payload.model, payload.api_key, payload.base_url)
         register_provider(provider)
 
     # 2) 元数据持久化（无 key）

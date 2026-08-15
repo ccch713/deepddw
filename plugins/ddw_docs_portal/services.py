@@ -1,9 +1,9 @@
 """产品文档栏目业务逻辑（deepDDW 开源裁剪版）。
 
 相对商业仓 6.0 的变更：
-- 删除对 ``ddw_doc_assistant``（内容存储/向量检索）的依赖：正文内联存储于
+- 删除对商业文档助手（内容存储/向量检索）的依赖：正文内联存储于
   ``docs_item.content``，检索为本地关键词评分（title/content LIKE + 命中加权）；
-- 删除对 ``ddw_memory`` 四层记忆的依赖：publish/archive 时把摘要写入 deepDDW
+- 删除对商业四层记忆的依赖：publish/archive 时把摘要写入 deepDDW
   内置记忆（``core.knowledge.memory_put``，namespace=docs_portal），失败不阻塞；
 - 单用户模型：无账号/租户体系，token 持有者即管理员（superadmin 语义）；
   tenant_id 保留为 0。
@@ -133,7 +133,8 @@ class DocsPortalService:
                 tags=tags,
             )
         except Exception as exc:  # noqa: BLE001
-            logger.warning("docs_portal: memory upsert failed for doc %s: %s", doc.id, exc)
+            logger.warning(
+                "docs_portal: memory upsert failed for doc %s: %s", doc.id, exc)
 
     async def _publish_event(self, event: str, payload: dict[str, Any]) -> None:
         try:
@@ -154,7 +155,8 @@ class DocsPortalService:
         """目录树（deepDDW：全量）。"""
         rows = (
             await self._db.execute(
-                select(DocCategory).order_by(DocCategory.sort_order.asc(), DocCategory.id.asc())
+                select(DocCategory).order_by(
+                    DocCategory.sort_order.asc(), DocCategory.id.asc())
             )
         ).scalars().all()
         nodes = {c.id: self._category_to_dict(c) for c in rows}
@@ -252,7 +254,8 @@ class DocsPortalService:
         total = int(count)
         rows = (
             await self._db.execute(
-                stmt.order_by(DocItem.published_at.desc().nulls_last(), DocItem.id.desc())
+                stmt.order_by(DocItem.published_at.desc().nulls_last(),
+                              DocItem.id.desc())
                 .offset((page - 1) * page_size)
                 .limit(page_size)
             )
@@ -358,7 +361,8 @@ class DocsPortalService:
             doc.doc_type = data.doc_type
         if data.visibility:
             if data.visibility not in VISIBILITY:
-                raise HTTPException(status_code=422, detail=f"visibility 必须是 {VISIBILITY}")
+                raise HTTPException(
+                    status_code=422, detail=f"visibility 必须是 {VISIBILITY}")
             doc.visibility = data.visibility
         if data.summary is not None:
             doc.summary = data.summary
@@ -377,7 +381,8 @@ class DocsPortalService:
             )
             doc.content = data.content
             doc.content_hash = _sha256(data.content)
-            doc.version = _bump_version(doc.version) if not data.version else data.version
+            doc.version = _bump_version(
+                doc.version) if not data.version else data.version
 
         await self._commit(doc)
         await self._db.commit()  # 释放 SQLite 写锁（记忆写入走独立连接）
@@ -398,7 +403,8 @@ class DocsPortalService:
         await self._memory_upsert(doc)  # 失败不阻塞
         await self._publish_event(
             "docs.portal.published",
-            {"doc_id": doc.id, "slug": doc.slug, "version": doc.version, "tenant_id": doc.tenant_id},
+            {"doc_id": doc.id, "slug": doc.slug,
+                "version": doc.version, "tenant_id": doc.tenant_id},
         )
         return self._doc_to_dict(doc)
 
@@ -413,7 +419,8 @@ class DocsPortalService:
         await self._memory_upsert(doc, archived=True)
         await self._publish_event(
             "docs.portal.archived",
-            {"doc_id": doc.id, "slug": doc.slug, "version": doc.version, "tenant_id": doc.tenant_id},
+            {"doc_id": doc.id, "slug": doc.slug,
+                "version": doc.version, "tenant_id": doc.tenant_id},
         )
         return self._doc_to_dict(doc)
 
@@ -459,7 +466,8 @@ class DocsPortalService:
         sources = scored[: max(1, min(int(top_k), 20))]
         await self._publish_event(
             "docs.portal.searched",
-            {"query": query[:200], "tenant_id": user.get("tenant_id"), "hits": len(sources)},
+            {"query": query[:200], "tenant_id": user.get(
+                "tenant_id"), "hits": len(sources)},
         )
         return {"query": query, "answer": "", "sources": sources}
 

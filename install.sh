@@ -118,11 +118,26 @@ MCPEOF
 fi
 
 log "启动 deepDDW (端口 $PORT)..."
+# P1-2（multidevice）：可选 TLS——deployment.yaml security.tls.enabled=true 时
+# 自动加 ssl 参数（证书由 ./scripts/gen_self_signed_cert.sh 生成）。
+UVICORN_SSL_ARGS=""
+if python -c "import yaml,sys; c=yaml.safe_load(open('config/deployment.yaml')) if __import__('os').path.exists('config/deployment.yaml') else {}; print('1' if (c.get('security',{}).get('tls',{}) or {}).get('enabled') else '0')" 2>/dev/null | grep -q 1; then
+  CERT="$(python -c "import yaml,os; c=yaml.safe_load(open('config/deployment.yaml')); t=(c.get('security',{}).get('tls',{}) or {}); print(t.get('cert_file','./data/tls/cert.pem'))" 2>/dev/null)"
+  KEY="$(python -c "import yaml,os; c=yaml.safe_load(open('config/deployment.yaml')); t=(c.get('security',{}).get('tls',{}) or {}); print(t.get('key_file','./data/tls/key.pem'))" 2>/dev/null)"
+  if [ -f "$CERT" ] && [ -f "$KEY" ]; then
+    UVICORN_SSL_ARGS="--ssl-certfile $CERT --ssl-keyfile $KEY"
+    log "TLS 已启用（$CERT）→ https://<host>:$PORT"
+  else
+    log "警告: security.tls.enabled=true 但证书缺失，请先运行 ./scripts/gen_self_signed_cert.sh"
+  fi
+fi
 if [ "$BG_MODE" = true ]; then
-    nohup python -m uvicorn core.main:app --host 0.0.0.0 --port "$PORT" > logs/deepddw.log 2>&1 &
+    # shellcheck disable=SC2086  # UVICORN_SSL_ARGS 故意分词
+    nohup python -m uvicorn core.main:app --host 0.0.0.0 --port "$PORT" $UVICORN_SSL_ARGS > logs/deepddw.log 2>&1 &
     echo $! > .deepddw.pid
     sleep 2
     log "后台启动 PID=$(cat .deepddw.pid) 日志 logs/deepddw.log"
 else
-    python -m uvicorn core.main:app --host 0.0.0.0 --port "$PORT"
+    # shellcheck disable=SC2086
+    python -m uvicorn core.main:app --host 0.0.0.0 --port "$PORT" $UVICORN_SSL_ARGS
 fi

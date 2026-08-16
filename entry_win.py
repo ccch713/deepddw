@@ -25,9 +25,20 @@ def main() -> None:
     _bootstrap()
     import uvicorn
 
+    from core.config import get_tls_config
+
     host = os.environ.get("DDW_HOST", "0.0.0.0")
     port = int(os.environ.get("DDW_PORT", "8500"))
-    uvicorn.run("core.main:app", host=host, port=port, reload=False)
+    kwargs: dict = {"reload": False}
+    # P1-2（multidevice）：可选 TLS——deployment.yaml security.tls.* / env 启用
+    tls = get_tls_config()
+    if tls.get("enabled") and tls.get("cert_file") and tls.get("key_file"):
+        kwargs["ssl_certfile"] = tls["cert_file"]
+        kwargs["ssl_keyfile"] = tls["key_file"]
+        if tls.get("port"):
+            port = int(tls["port"])
+        print(f"TLS enabled on port {port} ({tls['cert_file']})")
+    uvicorn.run("core.main:app", host=host, port=port, **kwargs)
 
 
 if __name__ == "__main__":

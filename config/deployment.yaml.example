@@ -42,5 +42,14 @@ security:
     global: 300          # req/min 全网关总容量（超过 → 503 过载保护）
     window_seconds: 60
 
+  # P1-2（multidevice）：可选 TLS（默认关闭；启用需先生成证书）
+  # 生成: ./scripts/gen_self_signed_cert.sh data/tls localhost
+  # env 覆盖: DDW_TLS_ENABLED / DDW_TLS_CERT / DDW_TLS_KEY / DDW_TLS_PORT
+  tls:
+    enabled: false
+    cert_file: ./data/tls/cert.pem
+    key_file: ./data/tls/key.pem
+    port: 0             # 0 = 沿用主端口（HTTP 同端口升级为 HTTPS）
+
 plugins:
   root_dir: ./plugins

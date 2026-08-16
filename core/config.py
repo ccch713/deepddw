@@ -196,6 +196,45 @@ def get_deployment() -> "DeploymentProxy":
     return DeploymentProxy(get_settings())
 
 
+def get_tls_config() -> Dict[str, Any]:
+    """P1-2（multidevice）：TLS 配置（deployment.yaml security.tls.* + env 覆盖）。
+
+    返回: {"enabled": bool, "cert_file": str, "key_file": str, "port": int}
+    默认 enabled=false（fail-closed；不影响现有 HTTP）。
+    env 覆盖: DDW_TLS_ENABLED / DDW_TLS_CERT / DDW_TLS_KEY / DDW_TLS_PORT
+    """
+    cfg: Dict[str, Any] = {
+        "enabled": False, "cert_file": "", "key_file": "", "port": 0,
+    }
+    try:
+        raw = get_settings().raw.get("security", {}).get("tls", {}) or {}
+        for k in ("enabled", "cert_file", "key_file", "port"):
+            if k in raw and raw[k] not in (None, ""):
+                cfg[k] = raw[k]
+    except Exception:  # noqa: BLE001
+        pass
+    env_map = {
+        "DDW_TLS_ENABLED": "enabled",
+        "DDW_TLS_CERT": "cert_file",
+        "DDW_TLS_KEY": "key_file",
+        "DDW_TLS_PORT": "port",
+    }
+    for env_key, cfg_key in env_map.items():
+        val = os.environ.get(env_key)
+        if val is None:
+            continue
+        if cfg_key == "enabled":
+            cfg[cfg_key] = val.lower() in ("1", "true", "yes", "on")
+        elif cfg_key == "port":
+            try:
+                cfg[cfg_key] = int(val)
+            except ValueError:
+                logger.warning("invalid DDW_TLS_PORT=%r, ignored", val)
+        else:
+            cfg[cfg_key] = val
+    return cfg
+
+
 @dataclass
 class DatabaseInstanceConfig:
     """数据库实例配置（typed；消除 core/database/factory.py ImportError）。

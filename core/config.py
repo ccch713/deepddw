@@ -56,9 +56,11 @@ DEFAULTS: Dict[str, Any] = {
         "access_token": "",
     },
     "security": {
-        # 局域网免密模式（体验优化 A）：内网访问免 Token，外网仍要求。
-        # 默认开（开源个人场景易用优先）；公网部署应设 DDW_LAN_BYPASS=0 关闭。
-        "lan_bypass": True,
+        # P0-4：局域网免密默认关闭（公网误部署不暴露）；需要时显式开启
+        "lan_bypass": False,
+        # 可信反代白名单（IP/CIDR）：仅直连 peer 在此列表时才信任
+        # X-Forwarded-For / X-Real-IP（防伪造头绕过门禁）
+        "trusted_proxies": [],
     },
     "events": {"backend": "inprocess"},
     "plugins": {"root_dir": "./plugins", "sandbox_timeout": 30},
@@ -122,6 +124,14 @@ class Settings:
     def databases(self) -> Dict[str, Any]:
         return self.raw.get("databases", {})
 
+    def db_configs(self) -> Dict[str, DatabaseInstanceConfig]:
+        """各数据库实例的 typed 配置（factory 等消费方用）。"""
+        raw = self.raw.get("databases", {}) or {}
+        return {
+            name: DatabaseInstanceConfig.from_raw(cfg)
+            for name, cfg in raw.items()
+        }
+
     @property
     def main_db_url(self) -> str:
         cfg = self.databases.get("main", {})
@@ -180,6 +190,33 @@ def get_deployment() -> "DeploymentProxy":
     return DeploymentProxy(get_settings())
 
 
+@dataclass
+class DatabaseInstanceConfig:
+    """数据库实例配置（typed；消除 core/database/factory.py ImportError）。
+
+    ``from_raw`` 从 deployment.yaml 的 databases.<name> dict 构造。
+    """
+
+    engine: str = "sqlite"
+    path: str = "./data/ddw_main.db"
+    url: str = ""
+    pool_size: int = 5
+    max_overflow: int = 10
+    echo: bool = False
+
+    @classmethod
+    def from_raw(cls, raw: Optional[Dict[str, Any]]) -> "DatabaseInstanceConfig":
+        raw = raw or {}
+        return cls(
+            engine=str(raw.get("engine", "sqlite")),
+            path=str(raw.get("path", "./data/ddw_main.db")),
+            url=str(raw.get("url", "")),
+            pool_size=int(raw.get("pool_size", 5)),
+            max_overflow=int(raw.get("max_overflow", 10)),
+            echo=bool(raw.get("echo", False)),
+        )
+
+
 class LLMRouteRule:
     """LLM 路由规则（llm_gateway 依赖）。"""
 
@@ -225,9 +262,15 @@ class DeploymentProxy:
     def llm(self) -> _LLMProxy:
         return self._llm
 
+    @property
+    def databases(self) -> Dict[str, DatabaseInstanceConfig]:
+        return self._settings.db_configs()
+
     def __getattr__(self, name: str) -> Any:
         return getattr(self._settings, name)
 
 
-__all__ = ["Settings", "get_settings",
-    "reload_settings", "get_deployment", "LLMRouteRule"]
+__all__ = [
+    "Settings", "get_settings", "reload_settings", "get_deployment",
+    "LLMRouteRule", "DatabaseInstanceConfig",
+]

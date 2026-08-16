@@ -18,9 +18,9 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-from fastapi import Depends, FastAPI, Request, WebSocket
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -122,6 +122,45 @@ async def lifespan(app: FastAPI):
 
 
 # ---------------------------------------------------------------------------
+# 扫码配对一次性码（P0-2：QR 只带 code，不裸拼长期 Token）
+# ---------------------------------------------------------------------------
+
+_PAIR_TTL_SECONDS = 60
+_PAIR_MAX_ENTRIES = 128
+_pair_codes: Dict[str, Dict[str, Any]] = {}
+
+
+def _issue_pair_code(token: str) -> str:
+    """签发 60 秒一次性配对码（带过期时间；超过上限时惰性清理最旧项）。"""
+    import secrets
+    import time
+
+    now = time.time()
+    # 惰性清理过期项 + 上限保护（防内存膨胀）
+    expired = [k for k, v in _pair_codes.items() if v.get("expires", 0) <= now]
+    for k in expired:
+        _pair_codes.pop(k, None)
+    if len(_pair_codes) >= _PAIR_MAX_ENTRIES:
+        oldest = min(_pair_codes, key=lambda k: _pair_codes[k].get("expires", 0))
+        _pair_codes.pop(oldest, None)
+    code = secrets.token_urlsafe(16)
+    _pair_codes[code] = {"token": token, "expires": now + _PAIR_TTL_SECONDS}
+    return code
+
+
+def _redeem_pair_code(code: str) -> Optional[str]:
+    """兑换配对码：有效返回 token 并立即作废；无效返回 None。"""
+    import time
+
+    entry = _pair_codes.pop(code, None)
+    if entry is None:
+        return None
+    if entry.get("expires", 0) <= time.time():
+        return None
+    return entry.get("token")
+
+
+# ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
 
@@ -195,15 +234,21 @@ def create_app() -> FastAPI:
     async def gateway_pair(
         request: Request, claims: Dict[str, Any] = Depends(require_access_token)
     ) -> Dict[str, Any]:
+        """扫码配对：签发 60 秒一次性配对码，QR/URL 只带 code（不裸拼长期 Token）。
+
+        手机扫码打开 ``?pair_code=<code>`` → launcher 调
+        ``/api/v1/gateway/exchange`` 兑换 Token 并自动填入。
+        """
         from core.security.token_gate import get_access_token
 
         token = get_access_token()
+        code = _issue_pair_code(token)
         # 构造扫码 URL：优先用请求 Host（含端口），确保手机可访问
         host = request.headers.get("x-forwarded-host") or request.headers.get(
             "host"
         ) or "localhost"
         scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
-        pair_url = f"{scheme}://{host}/?token={token}"
+        pair_url = f"{scheme}://{host}/?pair_code={code}"
         qr_svg = ""
         try:
             import io
@@ -225,8 +270,20 @@ def create_app() -> FastAPI:
             "pair_url": pair_url,
             "qr_svg": qr_svg,
             "lan_bypass": lan_bypass_enabled(),
-            "hint": "手机扫码打开此链接即自动填入 Token",
+            "hint": "手机扫码打开此链接即自动填入 Token（一次性，60 秒有效）",
         }
+
+    @app.get("/api/v1/gateway/exchange")
+    async def gateway_exchange(
+        code: str = Query(..., min_length=8, max_length=64),
+    ) -> Dict[str, Any]:
+        """兑换一次性配对码 → Token（成功即作废；失败 401，不泄露原因）。"""
+        token = _redeem_pair_code(code)
+        if token is None:
+            raise HTTPException(
+                status_code=401, detail="配对码无效或已过期"
+            )
+        return {"ok": True, "token": token}
 
     # ---- MCP（经典端点 + streamable-http，全部过 Token 门禁）----
     @app.get("/api/v1/mcp/info")

@@ -78,21 +78,40 @@ footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--text-muted
   var tokenEl = document.getElementById("token");
   var dshEl = document.getElementById("dsh");
 
-  // URL 参数预填（手机分享链接场景）：?token=xxx / ?server=xxx / ?dsh=xxx
+  // URL 参数预填（手机分享链接场景）：?token=xxx / ?server=xxx / ?dsh=xxx / ?pair_code=xxx
   // 优先级高于 localStorage/sessionStorage（新链接优先，避免旧值覆盖）
-  // ⚠️ 预填后立即从地址栏清除 token（replaceState），防止 token 留在 URL/历史中
+  // ⚠️ 预填后立即从地址栏清除 token/code（replaceState），防止留在 URL/历史中
+  // ⚠️ P0-2：扫码配对链接只带一次性 pair_code（60s 有效），在此兑换为 Token——
+  //    QR/URL/日志/历史中绝不出现长期 Token 明文。
   try {
     var qp = new URLSearchParams(window.location.search);
     var urlToken = (qp.get("token") || "").trim();
     var urlServer = (qp.get("server") || "").trim();
     var urlDsh = (qp.get("dsh") || "").trim();
+    var urlPairCode = (qp.get("pair_code") || "").trim();
     if (urlToken) tokenEl.value = urlToken;
     if (urlServer) addrEl.value = urlServer;
     if (urlDsh) dshEl.value = urlDsh;
-    if (urlToken || urlServer || urlDsh) {
+    if (urlPairCode) {
+      // 扫码配对：调网关兑换端点换 Token（一次性，失败提示重扫/手输）
+      fetch(new URL("/api/v1/gateway/exchange", window.location.origin) +
+            "?code=" + encodeURIComponent(urlPairCode))
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (d && d.token) { tokenEl.value = d.token; }
+          else {
+            var m = document.getElementById("msg");
+            m.className = "msg err";
+            m.textContent = "配对码无效或已过期，请重新扫码或手动填写 Token";
+          }
+        })
+        .catch(function () { /* 忽略；用户可手动填写 */ });
+    }
+    if (urlToken || urlServer || urlDsh || urlPairCode) {
       qp.delete("token");
       qp.delete("server");
       qp.delete("dsh");
+      qp.delete("pair_code");
       var clean = window.location.pathname + (qp.toString() ? "?" + qp.toString() : "");
       window.history.replaceState({}, "", clean);
     }

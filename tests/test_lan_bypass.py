@@ -1,6 +1,7 @@
 """LAN 免密模式专项测试（体验优化 A，2026-08-16）。
 
 - 开启 DDW_LAN_BYPASS=1：本机/内网访问免 Token 放行；
+- 默认关闭（P0-4）；
 - 关闭（DDW_LAN_BYPASS=0，conftest 默认）：无 Token → 401（保持安全语义）；
 - 外网 IP（模拟 X-Forwarded-For 公网地址）即使开启免密也要求 Token。
 
@@ -28,10 +29,10 @@ def _reset_env(monkeypatch):
     monkeypatch.delenv("DDW_LAN_BYPASS", raising=False)
 
 
-def test_lan_bypass_enabled_default_true(monkeypatch):
-    """未显式配置时 LAN 免密默认开启（开源个人场景易用优先）。"""
+def test_lan_bypass_enabled_default_false(monkeypatch):
+    """未显式配置时 LAN 免密默认关闭（P0-4 安全优先；公网误部署不暴露）。"""
     _reset_env(monkeypatch)
-    assert lan_bypass_enabled() is True
+    assert lan_bypass_enabled() is False
 
 
 def test_lan_bypass_disabled_by_env(monkeypatch):

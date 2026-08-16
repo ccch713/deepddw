@@ -51,7 +51,10 @@ class AccessTokenNotConfiguredError(RuntimeError):
 
 
 def lan_bypass_enabled() -> bool:
-    """局域网免密开关：env ``DDW_LAN_BYPASS`` > config ``security.lan_bypass`` > 默认开。"""
+    """局域网免密开关：env > config ``security.lan_bypass`` > 默认关。
+
+    P0-4：默认关闭——公网误部署不因默认值暴露；需要局域网免密时显式开启。
+    """
     env = os.environ.get("DDW_LAN_BYPASS")
     if env is not None:
         return env.strip().lower() not in ("0", "false", "no", "off")
@@ -65,18 +68,28 @@ def lan_bypass_enabled() -> bool:
             return v.strip().lower() not in ("0", "false", "no", "off")
     except Exception:  # noqa: BLE001
         pass
-    return True  # 默认开（开源个人场景优先易用；公网部署应显式关闭）
+    return False  # 默认关（安全优先；显式开启才生效）
+
+
+# P0-4：严格三网段（RFC 1918）+ 回环；不用 is_private 广义判定（避免
+# 100.64/10 CGNAT、厂商内网段等被误判为 LAN 放行）
+_LAN_NETWORKS = (
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("127.0.0.0/8"),
+)
 
 
 def is_lan_client(host: Optional[str]) -> bool:
-    """判断客户端 IP 是否属于内网/回环地址。"""
+    """判断客户端 IP 是否属于内网/回环地址（严格三网段 + 回环）。"""
     if not host:
         return False
     try:
         ip = ipaddress.ip_address(host.split("%")[0])
     except ValueError:
         return False
-    return ip.is_private or ip.is_loopback or ip.is_link_local
+    return any(ip in net for net in _LAN_NETWORKS)
 
 
 def get_access_token() -> str:
@@ -129,17 +142,57 @@ def unauthorized() -> HTTPException:
     )
 
 
+def _trusted_proxies() -> list:
+    """可信反代白名单（env DDW_TRUSTED_PROXIES > config security.trusted_proxies）。"""
+    env = os.environ.get("DDW_TRUSTED_PROXIES")
+    if env:
+        return [
+            c.strip() for c in env.split(",") if c.strip()
+        ]
+    try:
+        from core.config import get_settings
+
+        return list(get_settings().raw.get("security", {}).get("trusted_proxies", []) or [])
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _peer_is_trusted_proxy(peer_host: Optional[str]) -> bool:
+    """直连 peer 是否在可信反代白名单（IP 或 CIDR）。"""
+    if not peer_host:
+        return False
+    try:
+        peer = ipaddress.ip_address(peer_host.split("%")[0])
+    except ValueError:
+        return False
+    for item in _trusted_proxies():
+        try:
+            net = ipaddress.ip_network(item, strict=False)
+            if peer in net:
+                return True
+        except ValueError:
+            continue
+    return False
+
+
 def client_ip(request: Request) -> Optional[str]:
-    """取客户端 IP（考虑 X-Forwarded-For / X-Real-IP，回退 request.client）。"""
-    fwd = request.headers.get("x-forwarded-for")
-    if fwd:
-        first = fwd.split(",")[0].strip()
-        if first:
-            return first
-    real = request.headers.get("x-real-ip")
-    if real:
-        return real.strip()
-    return request.client.host if request.client else None
+    """取客户端真实 IP。
+
+    P0-4：仅当直连 peer 在 trusted_proxies 白名单时才信任
+    ``X-Forwarded-For`` / ``X-Real-IP``（防伪造头绕过 LAN/Token 判定）；
+    否则一律用 ``request.client.host``。
+    """
+    peer = request.client.host if request.client else None
+    if _peer_is_trusted_proxy(peer):
+        fwd = request.headers.get("x-forwarded-for")
+        if fwd:
+            first = fwd.split(",")[0].strip()
+            if first:
+                return first
+        real = request.headers.get("x-real-ip")
+        if real:
+            return real.strip()
+    return peer
 
 
 def _authorized(token: Optional[str], host: Optional[str]) -> bool:

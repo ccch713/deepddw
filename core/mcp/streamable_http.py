@@ -36,61 +36,72 @@ def _safe_identifier(name: Any) -> bool:
 
 
 def _build_wrapped(handler, parameters: Dict[str, Any]):
-    """按 DDW 工具 JSON Schema 生成扁平参数签名的异步包装函数。
+    """按 DDW 工具 JSON Schema 生成扁平参数签名的异步包装函数（P0-3：无 exec）。
 
     FastMCP 根据函数签名生成 tools/list 的 inputSchema，所以包装函数必须
     把 DDW 工具的 properties/required 展开为真实参数（含类型注解），而不是
     收一个 ``arguments: dict``——后者会让客户端被迫传嵌套参数。
     enum 通过 Literal 表达；可选参数默认 None。
 
-    加固（P1-2）：
-    - 参数名必须 ``str.isidentifier()``，否则跳过该参数（防 exec 注入）；
-    - enum 值一律 ``repr()`` 转义后拼进 Literal（防引号注入）；
-    - 无合法参数时回退 ``*args`` 收 dict，不拼危险签名。
+    实现（P0-3 修复，替代原 exec 拼源码）：
+    - 用 ``inspect.Signature`` + ``inspect.Parameter`` 构造签名对象，挂到
+      ``__signature__``（FastMCP 经 ``inspect.signature`` 读取，schema 能力不变）；
+    - 包装函数本体为普通 ``*args, **kwargs`` 分发——**不 exec、不拼代码**，
+      静态审计可见，注入面归零；
+    - 参数名 ``str.isidentifier()`` 校验；enum 值只接受 str/int/float/bool/None
+      字面量（其余降级 Any），不 eval、不拼字符串；
+    - 必填参数排在可选参数之前；无合法参数时 ``*args`` 兜底。
     """
+    import inspect
+
     from typing import Any, Literal, Optional
 
     props = (parameters or {}).get("properties", {})
     required = set((parameters or {}).get("required", []))
-    parts = []
+    type_map = {
+        "string": str,
+        "integer": int,
+        "number": float,
+        "boolean": bool,
+    }
+    params: list = []
     for name, ps in props.items():
         if not _safe_identifier(name):
             logger.warning(
                 "mcp schema param %r is not a safe identifier, skipped", name)
             continue
-        t = ps.get("type")
-        type_map = {
-            "string": "str",
-            "integer": "int",
-            "number": "float",
-            "boolean": "bool",
-        }
-        ann = type_map.get(t, "Any")
-        if ps.get("enum"):
-            # repr 转义 enum 值：任何非法标识符/引号内容都安全落在 Literal 字符串内
-            choices = ", ".join(repr(c) for c in ps["enum"])
-            ann = f"Literal[{choices}]"
+        ann: Any = type_map.get(ps.get("type"), Any)
+        enum_vals = ps.get("enum")
+        if enum_vals:
+            literal_args = [
+                c for c in enum_vals
+                if isinstance(c, (str, int, float, bool)) or c is None
+            ]
+            if literal_args:
+                try:
+                    ann = Literal[tuple(literal_args)]  # type: ignore[index]
+                except TypeError:  # 非字面量成员 → 降级 Any
+                    ann = Any
         if name not in required:
-            ann = f"Optional[{ann}]"
-        default = "" if name in required else " = None"
-        parts.append((name, f"{name}: {ann}{default}", name in required))
+            ann = Optional[ann]
+        params.append(inspect.Parameter(
+            name,
+            kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            annotation=ann,
+            default=inspect.Parameter.empty if name in required else None,
+        ))
 
-    # 必填参数必须排在可选参数之前（否则生成非法签名 SyntaxError）
-    parts.sort(key=lambda item: (not item[2], item[0]))
-    signature = ", ".join(p[1] for p in parts) or "*args"
-    if parts:
-        body = "return await _handler(locals(), {})"
-    else:
-        body = "return await _handler(dict(args or ()), {})"
-    src = f"async def _wrapped({signature}):\n    {body}\n"
-    ns: Dict[str, Any] = {
-        "_handler": handler,
-        "Any": Any,
-        "Optional": Optional,
-        "Literal": Literal,
-    }
-    exec(src, ns)  # noqa: S102  # 参数名已 isidentifier 校验、enum 已 repr 转义
-    return ns["_wrapped"]
+    # 必填参数排在可选参数之前
+    params.sort(key=lambda p: (p.default is not inspect.Parameter.empty, p.name))
+    signature = inspect.Signature(params)
+
+    async def _wrapped(*args: Any, **kwargs: Any) -> Any:
+        bound = signature.bind(*args, **kwargs)
+        return await handler(dict(bound.arguments), {})
+
+    # FastMCP 经 inspect.signature 读 __signature__ → 扁平参数 schema 能力保持
+    _wrapped.__signature__ = signature  # type: ignore[attr-defined]
+    return _wrapped
 
 
 def _build_fastmcp():

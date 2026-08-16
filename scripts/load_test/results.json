@@ -1,0 +1,156 @@
+{
+  "target": "http://127.0.0.1:8555",
+  "devices_per_round": [
+    5,
+    10,
+    20
+  ],
+  "rounds": 3,
+  "req_per_device": 5,
+  "timestamp": "2026-08-17 04:00:32",
+  "rounds_data": {
+    "5": [
+      {
+        "devices": 5,
+        "requests": 50,
+        "success": 50,
+        "errors": 0,
+        "error_rate": 0.0,
+        "error_codes": {},
+        "p50_ms": 14.9,
+        "p95_ms": 38.4,
+        "elapsed_s": 0.09,
+        "rps": 528.3
+      },
+      {
+        "devices": 5,
+        "requests": 50,
+        "success": 50,
+        "errors": 0,
+        "error_rate": 0.0,
+        "error_codes": {},
+        "p50_ms": 10.6,
+        "p95_ms": 48.3,
+        "elapsed_s": 0.09,
+        "rps": 541.8
+      },
+      {
+        "devices": 5,
+        "requests": 50,
+        "success": 50,
+        "errors": 0,
+        "error_rate": 0.0,
+        "error_codes": {},
+        "p50_ms": 11.2,
+        "p95_ms": 20.0,
+        "elapsed_s": 0.07,
+        "rps": 730.8
+      }
+    ],
+    "10": [
+      {
+        "devices": 10,
+        "requests": 100,
+        "success": 100,
+        "errors": 0,
+        "error_rate": 0.0,
+        "error_codes": {},
+        "p50_ms": 29.3,
+        "p95_ms": 69.5,
+        "elapsed_s": 0.2,
+        "rps": 507.7
+      },
+      {
+        "devices": 10,
+        "requests": 100,
+        "success": 100,
+        "errors": 0,
+        "error_rate": 0.0,
+        "error_codes": {},
+        "p50_ms": 25.6,
+        "p95_ms": 37.9,
+        "elapsed_s": 0.14,
+        "rps": 714.4
+      },
+      {
+        "devices": 10,
+        "requests": 100,
+        "success": 100,
+        "errors": 0,
+        "error_rate": 0.0,
+        "error_codes": {},
+        "p50_ms": 24.9,
+        "p95_ms": 65.2,
+        "elapsed_s": 0.18,
+        "rps": 563.9
+      }
+    ],
+    "20": [
+      {
+        "devices": 20,
+        "requests": 200,
+        "success": 200,
+        "errors": 0,
+        "error_rate": 0.0,
+        "error_codes": {},
+        "p50_ms": 49.3,
+        "p95_ms": 154.3,
+        "elapsed_s": 0.34,
+        "rps": 585.1
+      },
+      {
+        "devices": 20,
+        "requests": 200,
+        "success": 200,
+        "errors": 0,
+        "error_rate": 0.0,
+        "error_codes": {},
+        "p50_ms": 62.0,
+        "p95_ms": 151.0,
+        "elapsed_s": 0.44,
+        "rps": 457.0
+      },
+      {
+        "devices": 20,
+        "requests": 200,
+        "success": 200,
+        "errors": 0,
+        "error_rate": 0.0,
+        "error_codes": {},
+        "p50_ms": 44.6,
+        "p95_ms": 72.8,
+        "elapsed_s": 0.26,
+        "rps": 779.7
+      }
+    ]
+  },
+  "aggregate": {
+    "5": {
+      "devices": 5,
+      "requests": 50,
+      "success_avg": 50.0,
+      "error_rate_avg": 0.0,
+      "p50_avg_ms": 12.2,
+      "p95_avg_ms": 35.6,
+      "rps_avg": 600.3
+    },
+    "10": {
+      "devices": 10,
+      "requests": 100,
+      "success_avg": 100.0,
+      "error_rate_avg": 0.0,
+      "p50_avg_ms": 26.6,
+      "p95_avg_ms": 57.5,
+      "rps_avg": 595.3
+    },
+    "20": {
+      "devices": 20,
+      "requests": 200,
+      "success_avg": 200.0,
+      "error_rate_avg": 0.0,
+      "p50_avg_ms": 52.0,
+      "p95_avg_ms": 126.0,
+      "rps_avg": 607.3
+    }
+  }
+}

@@ -92,6 +92,28 @@ cd deepddw && ./install.sh --with-dsh
 
 ---
 
+## 局域网多设备联机（0.2.0）
+
+deepDDW 面向**局域网内最多 20 台设备共享一个网关**的场景：
+
+- **设备身份**：每台浏览器在 localStorage 持久化 `device_id`，启动页可设置设备名称；
+  重连后身份不变（刷新/重启仍是同一台设备）。
+- **在线状态**：设备向网关注册/心跳；`/api/v1/status`（Token 保护）返回谁在线、
+  活跃 WebSocket 数、请求计数、数据库大小与版本；启动页为管理员渲染实时状态卡片。
+- **网关限流**：滑动窗口，按 Token + 按 IP 双维度（默认 60 req/min/token，
+  全网关总容量耗尽 → 503 过载保护）；可通过 `config/deployment.yaml` 的
+  `security.rate_limit.*` 或 `DDW_RATE_LIMIT_*` 环境变量覆盖。
+- **SQLite 并发加固**：所有连接统一 WAL + `busy_timeout=5000` + `synchronous=NORMAL`，
+  跨表写事务走进程级写锁（已用 20 并发写验证，无 `database is locked`）。
+
+```
+POST /api/v1/device/register    # 注册/改名本设备（幂等）
+POST /api/v1/device/heartbeat   # 心跳保活
+GET  /api/v1/status             # 状态面板（需 Token）
+```
+
+---
+
 ## 安全与隐私
 
 | 能力 | 说明 |
@@ -131,10 +153,18 @@ cd deepddw && ./install.sh --with-dsh
 
 ## Roadmap
 
-- [ ] **Docker 一键部署**（进行中，简化安装）
-- [ ] **外出/出差远程访问**：移动设备经安全通道访问公司 dsh 服务器，随时记录和讨论您的 idea
-- [ ] **会话 → 文档自动沉淀**：对话产出自动落库，可检索、可追溯
-- [ ] **知识库向量检索增强**（可选，需配置 embedding 模型）
+只列出已交付或真实在计划内的事项。
+
+**已交付：**
+- [x] **局域网多设备联机（0.2.0）** — 设备身份/在线注册表、状态面板、网关限流、SQLite WAL 并发（最多 20 台设备）
+- [x] **Docker 一键部署** — `docker compose -f deepddw-compose.yml up -d --build`（已在真实 macOS arm64 主机验证：core + SearXNG 容器启动、health/MCP/chat 端到端全绿）
+- [x] **会话 → 文档沉淀** — 对话经 `ddw.docs.save` / `ddw.session.docs` MCP 工具 + REST API 保存到知识库，按会话可检索可追溯
+- [x] **知识库向量检索增强** — 混合检索（SQLite FTS5/LIKE + LanceDB，RRF 融合；可选，无 LanceDB 时自动降级纯关键词）
+
+**计划中：**
+- [ ] **反思与沉淀 LLM 化** — 基于最近日志自动生成每日反思；对话自动沉淀进每日记忆（基座已交付，LLM 打磨中）
+- [ ] **记忆检索质量** — 关键词扩写缓存与跨层排序优化
+- [ ] **Windows 打包** — 评估见 `docs/windows-packaging.md`（PyInstaller one-dir + CI 自动出包；执行阶段，待用户确认）
 
 ---
 

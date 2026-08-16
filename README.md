@@ -110,6 +110,30 @@ Upgrades are cheap: replace the whole folder with a newer zip — your data (und
 
 ---
 
+## Multi-Device on LAN (0.2.0)
+
+deepDDW is built for **up to 20 devices on your LAN** sharing one gateway:
+
+- **Device identity** — each browser persists a `device_id` (localStorage) and
+  can set a friendly name on the launcher; reconnects keep the same identity.
+- **Online status** — devices register/heartbeat to the gateway; `/api/v1/status`
+  (Token-protected) shows who is online, active WebSockets, request counts,
+  DB size and version. The launcher renders a live status card for admins.
+- **Rate limiting** — sliding-window per Token + per IP (default 60 req/min/token,
+  global cap → 503 overload protection); configurable via
+  `config/deployment.yaml` → `security.rate_limit.*` or `DDW_RATE_LIMIT_*` env.
+- **SQLite concurrency** — WAL + `busy_timeout=5000` + `synchronous=NORMAL` on
+  every connection, plus a process-wide write lock for cross-table transactions
+  (20 concurrent writers verified, no `database is locked`).
+
+```
+GET  /api/v1/device/register    # register / rename this device (idempotent)
+POST /api/v1/device/heartbeat   # keep-alive
+GET  /api/v1/status             # status panel (token required)
+```
+
+---
+
 ## Security & Privacy
 
 | Capability | Description |
@@ -154,6 +178,7 @@ See [`NOTICE`](NOTICE) for full third-party attribution.
 Only items actually planned or already delivered are listed here.
 
 **Delivered:**
+- [x] **Multi-device on LAN (0.2.0)** — device identity/online registry, status panel, rate limiting, SQLite WAL concurrency (up to 20 devices)
 - [x] **Docker one-click deployment** — `docker compose -f deepddw-compose.yml up -d --build` (verified on a real macOS arm64 host: core + SearXNG containers up, health/MCP/chat end-to-end green)
 - [x] **Session → document auto-ingest** — conversations saved to the knowledge base via `ddw.docs.save` / `ddw.session.docs` MCP tools + REST API, searchable and traceable per session
 - [x] **Vector search enhancement** — hybrid retrieval (SQLite FTS5/LIKE + LanceDB, RRF fusion; optional, degrades to keyword-only when LanceDB is absent)

@@ -49,11 +49,13 @@ _stats_lock = threading.Lock()
 class DeviceRegisterReq(BaseModel):
     device_id: str = Field(..., min_length=8, max_length=64)
     device_name: str = Field(default="", max_length=60)
+    workspace: str = Field(default="shared", max_length=32)
 
 
 class DeviceHeartbeatReq(BaseModel):
     device_id: str = Field(..., min_length=8, max_length=64)
     device_name: str = Field(default="", max_length=60)
+    workspace: str = Field(default="shared", max_length=32)
 
 
 def _db_path() -> Path:
@@ -71,12 +73,21 @@ def _ensure_devices_table(conn) -> None:  # noqa: ANN001
             device_id   TEXT PRIMARY KEY,
             device_name TEXT NOT NULL DEFAULT '',
             ip          TEXT NOT NULL DEFAULT '',
+            workspace   TEXT NOT NULL DEFAULT 'shared',
             first_seen  TEXT NOT NULL,
             last_seen   TEXT NOT NULL
         )
         """
     )
     conn.commit()
+    # P1-1：workspace 列幂等迁移（旧表补列）
+    try:
+        conn.execute(
+            "ALTER TABLE devices ADD COLUMN workspace TEXT NOT NULL DEFAULT 'shared'"
+        )
+        conn.commit()
+    except Exception:  # noqa: BLE001  # 列已存在（幂等）
+        pass
 
 
 def _get_conn():
@@ -138,11 +149,18 @@ def _purge_stale() -> None:
 
 def register_device(
     device_id: str, device_name: str = "", ip: str = "", ts: Optional[float] = None,
+    workspace: str = "shared",
 ) -> Dict[str, Any]:
-    """注册/更新设备（幂等：device_id 不变，刷新 last_seen）。"""
+    """注册/更新设备（幂等：device_id 不变，刷新 last_seen）。
+
+    P1-1：设备携带 workspace（默认 shared，向后兼容）。
+    """
     device_id = (device_id or "").strip()
     if len(device_id) < 8:
         return {"ok": False, "note": "invalid device_id (min 8 chars)"}
+    w = (workspace or "").strip() or "shared"
+    if not __import__("re").match(r"^[A-Za-z0-9_\-]{1,32}$", w):
+        w = "shared"
     ts = ts or time.time()
     conn = _get_conn()
     try:
@@ -152,14 +170,15 @@ def register_device(
         if row is None:
             conn.execute(
                 "INSERT INTO devices "
-                "(device_id, device_name, ip, first_seen, last_seen) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (device_id, (device_name or "")[:60], ip, _iso(ts), _iso(ts)),
+                "(device_id, device_name, ip, workspace, first_seen, last_seen) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (device_id, (device_name or "")[:60], ip, w, _iso(ts), _iso(ts)),
             )
         else:
             conn.execute(
-                "UPDATE devices SET device_name=?, ip=?, last_seen=? WHERE device_id=?",
-                ((device_name or "")[:60], ip, _iso(ts), device_id),
+                "UPDATE devices SET device_name=?, ip=?, workspace=?, "
+                "last_seen=? WHERE device_id=?",
+                ((device_name or "")[:60], ip, w, _iso(ts), device_id),
             )
         conn.commit()
         with _active_lock:
@@ -177,7 +196,7 @@ def heartbeat_device(
     device_id: str, device_name: str = "", ip: str = "", ts: Optional[float] = None,
 ) -> Dict[str, Any]:
     """心跳：刷新内存活跃表 + 落库（幂等；未注册设备自动注册）。"""
-    return register_device(device_id, device_name, ip, ts)
+    return register_device(device_id, device_name, ip, ts, workspace)
 
 
 def touch_device(device_id: str) -> None:
@@ -217,7 +236,8 @@ def status_snapshot() -> Dict[str, Any]:
     online_count = 0
     try:
         rows = conn.execute(
-            "SELECT device_id, device_name, ip, first_seen, last_seen FROM devices "
+            "SELECT device_id, device_name, ip, workspace, first_seen, last_seen "
+            "FROM devices "
             "ORDER BY last_seen DESC"
         ).fetchall()
         for r in rows:
@@ -235,6 +255,7 @@ def status_snapshot() -> Dict[str, Any]:
                 "device_name": r["device_name"],
                 "ip": r["ip"],
                 "first_seen": r["first_seen"],
+                "workspace": r["workspace"] if "workspace" in r.keys() else "shared",
                 "last_seen": r["last_seen"],
                 "online": online,
             })
@@ -281,6 +302,7 @@ async def device_register(
     """设备注册/改名（幂等；刷新在线状态）。"""
     result = register_device(
         payload.device_id, payload.device_name, ip=_client_ip(claims),
+        workspace=payload.workspace,
     )
     return ok(result)
 
@@ -293,6 +315,7 @@ async def device_heartbeat(
     """设备心跳（在线保活；未注册自动注册）。"""
     result = heartbeat_device(
         payload.device_id, payload.device_name, ip=_client_ip(claims),
+        workspace=payload.workspace,
     )
     return ok(result)
 

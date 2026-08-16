@@ -179,9 +179,11 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
             ON session_docs(session_id);
         CREATE TABLE IF NOT EXISTS memory_user (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            key TEXT NOT NULL UNIQUE,
+            key TEXT NOT NULL,
             value TEXT NOT NULL,
-            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+            workspace TEXT NOT NULL DEFAULT 'shared',
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE (workspace, key)
         );
         CREATE TABLE IF NOT EXISTS memory_notes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -216,6 +218,43 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         );
         """
     )
+    conn.commit()
+    # P1-1（multidevice）：workspace 列幂等迁移——已存在的旧表补列
+    # （新表已含列；ALTER 对已有列抛 duplicate column，捕获忽略）。
+    for table, col_sql in (
+        ("memory_notes", "workspace TEXT NOT NULL DEFAULT 'shared'"),
+        ("memory_logs", "workspace TEXT NOT NULL DEFAULT 'shared'"),
+        ("memory_reflections", "workspace TEXT NOT NULL DEFAULT 'shared'"),
+    ):
+        try:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {col_sql}")
+        except sqlite3.OperationalError:
+            pass  # 列已存在（幂等）
+    # memory_user 特例：老表 UNIQUE(key) 无法支持 (workspace,key) 隔离——
+    # 重建表并回填（幂等：老表存在且无 workspace 唯一约束时才做）。
+    try:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(memory_user)")]
+        idx = [r[1] for r in conn.execute("PRAGMA index_list(memory_user)")]
+        legacy = "workspace" not in cols
+        if legacy:
+            conn.execute("ALTER TABLE memory_user RENAME TO memory_user_legacy")
+            conn.execute(
+                "CREATE TABLE memory_user ("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                "key TEXT NOT NULL,"
+                "value TEXT NOT NULL,"
+                "workspace TEXT NOT NULL DEFAULT 'shared',"
+                "updated_at TEXT NOT NULL DEFAULT (datetime('now')),"
+                "UNIQUE (workspace, key))"
+            )
+            conn.execute(
+                "INSERT INTO memory_user (key, value, workspace, updated_at) "
+                "SELECT key, value, 'shared', updated_at FROM memory_user_legacy"
+            )
+            conn.execute("DROP TABLE memory_user_legacy")
+            conn.commit()
+    except sqlite3.OperationalError:
+        pass  # 已在迁移后状态（幂等）
     conn.commit()
 
 
@@ -685,19 +724,40 @@ def _today() -> str:
     return datetime.now().strftime("%Y-%m-%d")
 
 
-def memory_user_put(key: str, value: str) -> Dict[str, Any]:
-    """用户级规则/偏好（借鉴 auto-memory 用户级 MEMORY.md；upsert by key）。"""
+
+
+def _ws(workspace: str) -> str:
+    """workspace 归一化：None/空/shared → 'shared'；否则原样（已校验过合法性）。"""
+    w = (workspace or "").strip()
+    return w or "shared"
+
+
+def _ws_where(workspace: str, col: str = "workspace") -> str:
+    """按 workspace 过滤的 SQL 片段（shared 与旧数据一致）。"""
+    w = _ws(workspace)
+    if w == "shared":
+        # 旧数据无 workspace 列默认 shared；显式 shared 与 NULL 都命中
+        return f"({col} = 'shared' OR {col} IS NULL)"
+    return f"{col} = ?"
+
+def memory_user_put(key: str, value: str, workspace: str = "shared") -> Dict[str, Any]:
+    """用户级规则/偏好（借鉴 auto-memory 用户级 MEMORY.md；upsert by key）。
+
+    P1-1（multidevice）：workspace 隔离——非 shared 工作区按
+    (workspace, key) 唯一；shared 与旧行为完全一致。
+    """
+    w = _ws(workspace)
     conn = get_conn()
     try:
         conn.execute(
-            "INSERT INTO memory_user (key, value, updated_at) "
-            "VALUES (?, ?, datetime('now')) "
-            "ON CONFLICT(key) DO UPDATE SET value=excluded.value, "
-            "updated_at=datetime('now')",
-            (key, value),
+            "INSERT INTO memory_user (key, value, workspace, updated_at) "
+            "VALUES (?, ?, ?, datetime('now')) "
+            "ON CONFLICT(workspace, key) DO UPDATE SET value=excluded.value, "
+            "workspace=excluded.workspace, updated_at=datetime('now')",
+            (key, value, w),
         )
         conn.commit()
-        return {"key": key, "ok": True}
+        return {"key": key, "workspace": w, "ok": True}
     except Exception as exc:  # noqa: BLE001
         logger.warning("memory_user_put degraded: %s", exc)
         return {"ok": False, "degraded": True, "note": str(exc)}
@@ -705,12 +765,22 @@ def memory_user_put(key: str, value: str) -> Dict[str, Any]:
         close_conn(conn)
 
 
-def memory_user_list() -> Dict[str, Any]:
+def memory_user_list(workspace: str = "shared") -> Dict[str, Any]:
+    w = _ws(workspace)
     conn = get_conn()
     try:
-        rows = conn.execute(
-            "SELECT key, value, updated_at FROM memory_user ORDER BY updated_at DESC"
-        ).fetchall()
+        if w == "shared":
+            rows = conn.execute(
+                "SELECT key, value, updated_at FROM memory_user "
+                "WHERE (workspace = 'shared' OR workspace IS NULL) "
+                "ORDER BY updated_at DESC"
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT key, value, updated_at FROM memory_user "
+                "WHERE workspace = ? ORDER BY updated_at DESC",
+                (w,),
+            ).fetchall()
         return {"results": [dict(r) for r in rows], "degraded": False}
     except Exception as exc:  # noqa: BLE001
         logger.warning("memory_user_list degraded: %s", exc)
@@ -719,19 +789,26 @@ def memory_user_list() -> Dict[str, Any]:
         close_conn(conn)
 
 
-def memory_note_put(key: str, value: str, source: str = "deepddw") -> Dict[str, Any]:
-    """项目笔记/长期价值（借鉴 auto-memory 项目笔记 MEMORY.md；upsert by key）。"""
+def memory_note_put(
+    key: str, value: str, source: str = "deepddw", workspace: str = "shared",
+) -> Dict[str, Any]:
+    """项目笔记/长期价值（借鉴 auto-memory 项目笔记 MEMORY.md；upsert by key）。
+
+    P1-1（multidevice）：非 shared 工作区按 (workspace, key) 隔离。
+    """
+    w = _ws(workspace)
     conn = get_conn()
     try:
         conn.execute(
-            "INSERT INTO memory_notes (key, value, source, created_at, updated_at) "
-            "VALUES (?, ?, ?, datetime('now'), datetime('now')) "
+            "INSERT INTO memory_notes (key, value, source, workspace, "
+            "created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, datetime('now'), datetime('now')) "
             "ON CONFLICT DO UPDATE SET value=excluded.value, "
-            "updated_at=datetime('now')",
-            (key, value, source),
+            "workspace=excluded.workspace, updated_at=datetime('now')",
+            (key, value, source, w),
         )
         conn.commit()
-        return {"key": key, "source": source, "ok": True}
+        return {"key": key, "source": source, "workspace": w, "ok": True}
     except Exception as exc:  # noqa: BLE001
         logger.warning("memory_note_put degraded: %s", exc)
         return {"ok": False, "degraded": True, "note": str(exc)}
@@ -739,13 +816,22 @@ def memory_note_put(key: str, value: str, source: str = "deepddw") -> Dict[str, 
         close_conn(conn)
 
 
-def memory_note_list() -> Dict[str, Any]:
+def memory_note_list(workspace: str = "shared") -> Dict[str, Any]:
+    w = _ws(workspace)
     conn = get_conn()
     try:
-        rows = conn.execute(
-            "SELECT key, value, source, updated_at FROM memory_notes "
-            "ORDER BY updated_at DESC"
-        ).fetchall()
+        if w == "shared":
+            rows = conn.execute(
+                "SELECT key, value, source, updated_at FROM memory_notes "
+                "WHERE (workspace = 'shared' OR workspace IS NULL) "
+                "ORDER BY updated_at DESC"
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT key, value, source, updated_at FROM memory_notes "
+                "WHERE workspace = ? ORDER BY updated_at DESC",
+                (w,),
+            ).fetchall()
         return {"results": [dict(r) for r in rows], "degraded": False}
     except Exception as exc:  # noqa: BLE001
         logger.warning("memory_note_list degraded: %s", exc)
@@ -754,19 +840,25 @@ def memory_note_list() -> Dict[str, Any]:
         close_conn(conn)
 
 
-def memory_log_append(content: str, auto: bool = False) -> Dict[str, Any]:
-    """今日日志 append-only（借鉴 auto-memory 每日日志 YYYY-MM-DD.md）。"""
+def memory_log_append(content: str, auto: bool = False, workspace: str = "shared") -> Dict[str, Any]:
+    """今日日志 append-only（借鉴 auto-memory 每日日志 YYYY-MM-DD.md）。
+
+    P1-1：日志带 workspace 列（默认 shared 与旧行为一致）。
+    """
     content = (content or "").strip()
     if not content:
         return {"ok": False, "note": "empty content"}
+    w = _ws(workspace)
     conn = get_conn()
     try:
         cur = conn.execute(
-            "INSERT INTO memory_logs (log_date, content, auto) VALUES (?, ?, ?)",
-            (_today(), content, 1 if auto else 0),
+            "INSERT INTO memory_logs (log_date, content, auto, workspace) "
+            "VALUES (?, ?, ?, ?)",
+            (_today(), content, 1 if auto else 0, w),
         )
         conn.commit()
-        return {"id": cur.lastrowid, "log_date": _today(), "auto": auto, "ok": True}
+        return {"id": cur.lastrowid, "log_date": _today(), "auto": auto,
+                "workspace": w, "ok": True}
     except Exception as exc:  # noqa: BLE001
         logger.warning("memory_log_append degraded: %s", exc)
         return {"ok": False, "degraded": True, "note": str(exc)}
@@ -774,15 +866,31 @@ def memory_log_append(content: str, auto: bool = False) -> Dict[str, Any]:
         close_conn(conn)
 
 
-def memory_logs_recent(days: int = _MEMORY_LOG_DAYS) -> Dict[str, Any]:
-    """最近 N 天日志（按日期倒序，供注入与检索）。"""
+def memory_logs_recent(
+    days: int = _MEMORY_LOG_DAYS, workspace: str = "shared",
+) -> Dict[str, Any]:
+    """最近 N 天日志（按日期倒序，供注入与检索）。
+
+    P1-1：按 workspace 过滤（shared 含旧数据 NULL）。
+    """
+    w = _ws(workspace)
     conn = get_conn()
     try:
-        rows = conn.execute(
-            "SELECT log_date, ts, content, auto FROM memory_logs "
-            "WHERE log_date >= date('now', ?) ORDER BY log_date DESC, id DESC",
-            (f"-{int(days)} days",),
-        ).fetchall()
+        if w == "shared":
+            rows = conn.execute(
+                "SELECT log_date, ts, content, auto FROM memory_logs "
+                "WHERE log_date >= date('now', ?) "
+                "AND (workspace = 'shared' OR workspace IS NULL) "
+                "ORDER BY log_date DESC, id DESC",
+                (f"-{int(days)} days",),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT log_date, ts, content, auto FROM memory_logs "
+                "WHERE log_date >= date('now', ?) AND workspace = ? "
+                "ORDER BY log_date DESC, id DESC",
+                (f"-{int(days)} days", w),
+            ).fetchall()
         return {"results": [dict(r) for r in rows], "degraded": False}
     except Exception as exc:  # noqa: BLE001
         logger.warning("memory_logs_recent degraded: %s", exc)
@@ -791,22 +899,28 @@ def memory_logs_recent(days: int = _MEMORY_LOG_DAYS) -> Dict[str, Any]:
         close_conn(conn)
 
 
-def memory_reflect_save(content: str, style: str = "auto") -> Dict[str, Any]:
-    """每日反思（借鉴 auto-memory reflections/；同日期覆盖）。"""
+def memory_reflect_save(
+    content: str, style: str = "auto", workspace: str = "shared",
+) -> Dict[str, Any]:
+    """每日反思（借鉴 auto-memory reflections/；同日期覆盖）。
+
+    P1-1：反思带 workspace 列（非 shared 工作区各自独立）。
+    """
     content = (content or "").strip()
     if not content:
         return {"ok": False, "note": "empty content"}
+    w = _ws(workspace)
     conn = get_conn()
     try:
         conn.execute(
-            "INSERT INTO memory_reflections (ref_date, content, style, created_at) "
-            "VALUES (?, ?, ?, datetime('now')) "
+            "INSERT INTO memory_reflections (ref_date, content, style, workspace, "
+            "created_at) VALUES (?, ?, ?, ?, datetime('now')) "
             "ON CONFLICT(ref_date) DO UPDATE SET content=excluded.content, "
-            "style=excluded.style",
-            (_today(), content, style),
+            "style=excluded.style, workspace=excluded.workspace",
+            (_today(), content, style, w),
         )
         conn.commit()
-        return {"ref_date": _today(), "ok": True}
+        return {"ref_date": _today(), "workspace": w, "ok": True}
     except Exception as exc:  # noqa: BLE001
         logger.warning("memory_reflect_save degraded: %s", exc)
         return {"ok": False, "degraded": True, "note": str(exc)}
@@ -814,14 +928,24 @@ def memory_reflect_save(content: str, style: str = "auto") -> Dict[str, Any]:
         close_conn(conn)
 
 
-def memory_reflect_get(ref_date: str) -> Dict[str, Any]:
+def memory_reflect_get(
+    ref_date: str, workspace: str = "shared",
+) -> Dict[str, Any]:
+    w = _ws(workspace)
     conn = get_conn()
     try:
-        row = conn.execute(
-            "SELECT ref_date, content, style FROM memory_reflections "
-            "WHERE ref_date=?",
-            (ref_date,),
-        ).fetchone()
+        if w == "shared":
+            row = conn.execute(
+                "SELECT ref_date, content, style FROM memory_reflections "
+                "WHERE ref_date=? AND (workspace = 'shared' OR workspace IS NULL)",
+                (ref_date,),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT ref_date, content, style FROM memory_reflections "
+                "WHERE ref_date=? AND workspace=?",
+                (ref_date, w),
+            ).fetchone()
         if row is None:
             return {"found": False}
         return {"found": True, **dict(row)}
@@ -891,22 +1015,25 @@ async def memory_reflect_generate(style: str = "auto") -> Dict[str, Any]:
         return {"due": True, "ok": True, "generated": False, "degraded": True}
 
 
-def memory_context_build(budget: int = _MEMORY_CONTEXT_BUDGET) -> Dict[str, Any]:
+def memory_context_build(
+    budget: int = _MEMORY_CONTEXT_BUDGET, workspace: str = "shared",
+) -> Dict[str, Any]:
     """组装 <memory_system> 注入块（借鉴 auto-memory SECTION_ORDER 注入）。
 
     内容：用户规则 + 项目笔记 + 最近反思 + 最近 N 天日志尾部；
     预算截断（保留头部规则 + 尾部日志，中间标注省略）。
+    P1-1：按 workspace 组装（非 shared 只含该工作区记忆）。
     """
     parts: List[str] = []
-    user = memory_user_list().get("results", [])
+    user = memory_user_list(workspace).get("results", [])
     if user:
         parts.append("## 用户规则/偏好")
         parts.extend(f"- {r['key']}: {r['value']}" for r in user)
-    notes = memory_note_list().get("results", [])
+    notes = memory_note_list(workspace).get("results", [])
     if notes:
         parts.append("## 项目笔记")
         parts.extend(f"- [{r['source']}] {r['key']}: {r['value']}" for r in notes[:10])
-    logs = memory_logs_recent(_MEMORY_LOG_DAYS).get("results", [])
+    logs = memory_logs_recent(_MEMORY_LOG_DAYS, workspace=workspace).get("results", [])
     if logs:
         parts.append("## 最近日志（尾部）")
         for r in logs[:15]:
@@ -1023,28 +1150,32 @@ def memory_consolidate(
 
 
 def memory_search_v2(
-    query: str, top_k: int = 5, expand: bool = False,
+    query: str, top_k: int = 5, expand: bool = False, workspace: str = "shared",
 ) -> Dict[str, Any]:
     """分层检索（同步版；expand=True 时尝试 LLM 扩写，降级为原词）。
 
     async 调用方（API/MCP）请用 :func:`memory_search_v2_async` 获得
     真正的 LLM 扩写增强；本同步版 expand=True 在 LLM 不可达时同样
-    降级为原词分词，语义一致。
+    降级为原词分词，语义一致。P1-1：按 workspace 过滤。
     """
     if expand:
         expanded = _llm_expand_keywords_sync(query)
         if expanded:
-            return _search_v2_tokens(query, expanded, top_k, llm_expanded=expanded)
-    return _search_v2_tokens(query, None, top_k)
+            return _search_v2_tokens(
+                query, expanded, top_k, workspace=workspace, llm_expanded=expanded,
+            )
+    return _search_v2_tokens(query, None, top_k, workspace=workspace)
 
 
 def _search_v2_tokens(
     query: str,
     tokens_override: Optional[List[str]],
     top_k: int,
+    workspace: str = "shared",
     llm_expanded: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """分层检索核心：按关键词 OR 扫四层 + 来源标注（无 LLM 依赖）。"""
+    w = _ws(workspace)
     from core.security.unicode_sanitizer import sanitize_unicode
 
     query = sanitize_unicode(query or "", max_length=200)
@@ -1068,11 +1199,21 @@ def _search_v2_tokens(
                 ("memory_reflections", "reflection", "ref_date", "content"),
             ):
                 try:
-                    rows = conn.execute(
-                        f"SELECT {key_col} AS k, {val_col} AS v FROM {table} "
-                        f"WHERE {val_col} LIKE ? OR {key_col} LIKE ? LIMIT 5",
-                        (like, like),
-                    ).fetchall()
+                    if w == "shared":
+                        rows = conn.execute(
+                            f"SELECT {key_col} AS k, {val_col} AS v FROM {table} "
+                            f"WHERE ({val_col} LIKE ? OR {key_col} LIKE ?) "
+                            f"AND (workspace = 'shared' OR workspace IS NULL) "
+                            f"LIMIT 5",
+                            (like, like),
+                        ).fetchall()
+                    else:
+                        rows = conn.execute(
+                            f"SELECT {key_col} AS k, {val_col} AS v FROM {table} "
+                            f"WHERE ({val_col} LIKE ? OR {key_col} LIKE ?) "
+                            f"AND workspace = ? LIMIT 5",
+                            (like, like, w),
+                        ).fetchall()
                 except sqlite3.OperationalError:
                     continue
                 for r in rows:
@@ -1166,13 +1307,18 @@ async def _llm_expand_keywords_async(query: str) -> Optional[List[str]]:
 
 
 async def memory_search_v2_async(
-    query: str, top_k: int = 5, expand: bool = True
+    query: str, top_k: int = 5, expand: bool = True, workspace: str = "shared",
 ) -> Dict[str, Any]:
-    """分层检索（async 增强版）：LLM 扩写关键词后 OR 扫描；失败降级原词。"""
+    """分层检索（async 增强版）：LLM 扩写关键词后 OR 扫描；失败降级原词。
+
+    P1-1：按 workspace 过滤。
+    """
     llm_expanded: Optional[List[str]] = None
     if expand:
         llm_expanded = await _llm_expand_keywords_async(query)
-    return _search_v2_tokens(query, llm_expanded, top_k, llm_expanded=llm_expanded)
+    return _search_v2_tokens(
+        query, llm_expanded, top_k, workspace=workspace, llm_expanded=llm_expanded,
+    )
 
 
 async def memory_consolidate_llm(chat_text: str, user_id: int = 0) -> Dict[str, Any]:

@@ -80,16 +80,23 @@ def build_router() -> APIRouter:
         category_id: Optional[int] = Query(None, description="目录过滤"),
         doc_type: Optional[str] = Query(None, description="类型过滤"),
         visibility: Optional[str] = Query(None, description="可见性过滤"),
+        workspace: Optional[str] = Query(None, max_length=32,
+                                         description="工作区过滤（默认全部；非 shared 按 slug 前缀 ws-{workspace}- 过滤）"),
         page: int = Query(1, ge=1),
         page_size: int = Query(20, ge=1, le=100),
         user: dict = Depends(require_access_token),
     ) -> dict:
-        """文档列表（只返回当前用户可见文档）。"""
+        """文档列表（只返回当前用户可见文档）。
+
+        P1-1（multidevice）：workspace 过滤——非 shared 时仅返回
+        category 以 ``ws:{workspace}:`` 开头的文档；shared/None 与旧行为一致。
+        """
         async with session_scope() as db:
             svc = DocsPortalService(db)
             return await svc.list_docs(
                 user, category_id=category_id, doc_type=doc_type,
-                visibility=visibility, page=page, page_size=page_size,
+                visibility=visibility, workspace=workspace,
+                page=page, page_size=page_size,
             )
 
     @router.get("/docs/{doc_id}")

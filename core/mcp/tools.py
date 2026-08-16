@@ -187,6 +187,8 @@ def install_default_tools(registry: ToolRegistry) -> None:
                 "value": {"type": "string", "description": "记忆内容"},
                 "tags": {"type": "array", "items": {"type": "string"},
                        "description": "标签（可选）"},
+                "workspace": {"type": "string",
+                              "description": "工作区（默认 shared）"},
             },
             "required": ["key", "value"],
         },
@@ -217,6 +219,8 @@ def install_default_tools(registry: ToolRegistry) -> None:
         parameters={
             "properties": {
                 "budget": {"type": "integer", "description": "预算字符数"},
+                "workspace": {"type": "string",
+                              "description": "工作区（默认 shared）"},
             },
         },
         handler=memory_context_handler,
@@ -277,6 +281,8 @@ def install_default_tools(registry: ToolRegistry) -> None:
                 "key": {"type": "string", "description": "笔记键"},
                 "value": {"type": "string", "description": "笔记内容"},
                 "source": {"type": "string", "description": "来源（可选）"},
+                "workspace": {"type": "string",
+                              "description": "工作区（默认 shared）"},
             },
             "required": ["key", "value"],
         },
@@ -292,6 +298,8 @@ def install_default_tools(registry: ToolRegistry) -> None:
             "properties": {
                 "key": {"type": "string", "description": "事实/偏好键"},
                 "value": {"type": "string", "description": "内容"},
+                "workspace": {"type": "string",
+                              "description": "工作区（默认 shared）"},
             },
             "required": ["key", "value"],
         },
@@ -309,6 +317,8 @@ def install_default_tools(registry: ToolRegistry) -> None:
             "properties": {
                 "query": {"type": "string", "description": "检索词/自然语言查询"},
                 "top_k": {"type": "integer", "description": "返回条数"},
+                "workspace": {"type": "string",
+                              "description": "工作区（默认 shared）"},
             },
             "required": ["query"],
         },
@@ -347,6 +357,11 @@ def install_default_tools(registry: ToolRegistry) -> None:
         handler=session_docs_handler,
         plugin_name="core",
     ))
+
+
+def _ws_from_args(args: Dict[str, Any], ctx: Dict[str, Any]) -> str:
+    """解析 workspace：优先工具参数 workspace（模型显式传），其次 ctx，默认 shared。"""
+    return str(args.get("workspace") or ctx.get("workspace") or "shared")
 
 
 async def memory_put_handler(
@@ -412,7 +427,9 @@ async def memory_context_handler(
     from core.knowledge import memory_context_build
 
     try:
-        result = memory_context_build(budget=int(args.get("budget") or 2400))
+        result = memory_context_build(
+            budget=int(args.get("budget") or 2400), workspace=_ws_from_args(args, ctx),
+        )
         context = result.get("context", "")
         if not context:
             return {
@@ -460,7 +477,7 @@ async def memory_consolidate_handler(
                 "mode": mode,
                 "wrote": wrote,
             }
-        result = memory_log_append(content, auto=True)
+        result = memory_log_append(content, auto=True, workspace=_ws_from_args(args, ctx))
         return {
             "content": [{"type": "text", "text": "已沉淀到今日日志（auto）"}],
             "ok": bool(result.get("ok", True)),
@@ -509,7 +526,10 @@ async def memory_reflect_handler(
         content = str(args.get("content", "")).strip()
         if not content:
             return {"content": [{"type": "text", "text": "反思正文为空"}], "ok": False}
-        result = memory_reflect_save(content, style=str(args.get("style") or "auto"))
+        result = memory_reflect_save(
+            content, style=str(args.get("style") or "auto"),
+            workspace=_ws_from_args(args, ctx),
+        )
         return {
             "content": [{"type": "text", "text": "反思已保存（{}）"
                         .format(result.get("ref_date", ""))}],
@@ -561,6 +581,7 @@ async def memory_note_handler(
             key=str(args.get("key", "")),
             value=str(args.get("value", "")),
             source=str(args.get("source") or "deepddw"),
+            workspace=_ws_from_args(args, ctx),
         )
         return {
             "content": [{"type": "text", "text": (
@@ -584,6 +605,7 @@ async def memory_user_handler(args: Dict[str, Any], ctx: Dict[str, Any]) -> Dict
         result = memory_user_put(
             key=str(args.get("key", "")),
             value=str(args.get("value", "")),
+            workspace=_ws_from_args(args, ctx),
         )
         return {
             "content": [{"type": "text", "text": "用户记忆已保存"}],
@@ -607,6 +629,7 @@ async def memory_search_v2_handler(args: Dict[str, Any], ctx: Dict[str, Any]) ->
             query=str(args.get("query", "")),
             top_k=int(args.get("top_k") or 5),
             expand=True,
+            workspace=_ws_from_args(args, ctx),
         )
         items = result.get("results", [])
         if not items:

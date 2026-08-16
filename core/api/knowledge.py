@@ -139,17 +139,20 @@ async def search_memory(
 class MemoryUserReq(BaseModel):
     key: str = Field(..., min_length=1, max_length=200)
     value: str = Field(..., max_length=200_000)
+    workspace: str = Field(default="shared", max_length=32)
 
 
 class MemoryNoteReq(BaseModel):
     key: str = Field(..., min_length=1, max_length=200)
     value: str = Field(..., max_length=200_000)
     source: str = Field(default="deepddw", max_length=40)
+    workspace: str = Field(default="shared", max_length=32)
 
 
 class MemoryLogReq(BaseModel):
     content: str = Field(..., min_length=1, max_length=20_000)
     auto: bool = Field(default=False)
+    workspace: str = Field(default="shared", max_length=32)
 
 
 class MemoryReflectReq(BaseModel):
@@ -162,8 +165,11 @@ async def put_memory_user(
     payload: MemoryUserReq,
     claims: Dict[str, Any] = Depends(require_access_token),
 ) -> Dict[str, Any]:
-    """用户级长期偏好/事实（三层记忆之用户层）。"""
-    return ok(memory_user_put(payload.key, payload.value))
+    """用户级长期偏好/事实（三层记忆之用户层）。
+
+    P1-1（multidevice）：workspace 隔离——非 shared 工作区记忆互不可见。
+    """
+    return ok(memory_user_put(payload.key, payload.value, payload.workspace))
 
 
 @router.post("/memory/notes")
@@ -171,8 +177,13 @@ async def put_memory_note(
     payload: MemoryNoteReq,
     claims: Dict[str, Any] = Depends(require_access_token),
 ) -> Dict[str, Any]:
-    """项目笔记（三层记忆之笔记层；先查后插 upsert）。"""
-    return ok(memory_note_put(payload.key, payload.value, payload.source))
+    """项目笔记（三层记忆之笔记层；先查后插 upsert）。
+
+    P1-1：非 shared 工作区按 (workspace, key) 隔离。
+    """
+    return ok(memory_note_put(
+        payload.key, payload.value, payload.source, payload.workspace,
+    ))
 
 
 @router.post("/memory/logs")
@@ -180,26 +191,34 @@ async def append_memory_log(
     payload: MemoryLogReq,
     claims: Dict[str, Any] = Depends(require_access_token),
 ) -> Dict[str, Any]:
-    """每日日志（append-only；auto=true 标记为自动沉淀）。"""
-    return ok(memory_log_append(payload.content, auto=payload.auto))
+    """每日日志（append-only；auto=true 标记为自动沉淀）。
+
+    P1-1：日志带 workspace 列（默认 shared）。
+    """
+    return ok(memory_log_append(payload.content, auto=payload.auto, workspace=payload.workspace))
 
 
 @router.get("/memory/logs")
 async def recent_memory_logs(
     days: int = Query(3, ge=1, le=30),
+    workspace: str = Query("shared", max_length=32),
     claims: Dict[str, Any] = Depends(require_access_token),
 ) -> Dict[str, Any]:
-    """最近 N 天日志。"""
-    return ok(memory_logs_recent(days))
+    """最近 N 天日志。P1-1：按 workspace 过滤。"""
+    return ok(memory_logs_recent(days, workspace=workspace))
 
 
 @router.get("/memory/context")
 async def memory_context(
     budget: int = Query(2400, ge=200, le=8000),
+    workspace: str = Query("shared", max_length=32),
     claims: Dict[str, Any] = Depends(require_access_token),
 ) -> Dict[str, Any]:
-    """构建注入上下文的记忆块（chat 自动注入同源；可预览）。"""
-    return ok(memory_context_build(budget))
+    """构建注入上下文的记忆块（chat 自动注入同源；可预览）。
+
+    P1-1：按 workspace 组装。
+    """
+    return ok(memory_context_build(budget, workspace=workspace))
 
 
 @router.post("/memory/reflect")
@@ -237,15 +256,16 @@ async def search_memory_v2(
     q: str = Query(..., min_length=1, max_length=200),
     top_k: int = Query(5, ge=1, le=20),
     expand: bool = Query(True, description="LLM 扩写关键词（失败自动降级原词）"),
+    workspace: str = Query("shared", max_length=32),
     claims: Dict[str, Any] = Depends(require_access_token),
 ) -> Dict[str, Any]:
     """分层记忆检索（OR 多关键词扫四层，返回 layer/source 标注；LLM 扩写增强）。"""
     if expand:
         from core.knowledge import memory_search_v2_async
 
-        result = await memory_search_v2_async(q, top_k, expand=True)
+        result = await memory_search_v2_async(q, top_k, expand=True, workspace=workspace)
     else:
-        result = memory_search_v2(q, top_k)
+        result = memory_search_v2(q, top_k, workspace=workspace)
     return ok({
         "results": result.get("results", []),
         "layers": result.get("layers", []),

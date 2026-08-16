@@ -231,6 +231,10 @@ def create_app() -> FastAPI:
     from core.api.status import router as status_router
 
     app.include_router(status_router)
+    # P1-1（multidevice）：工作区会话绑定
+    from core.api.workspace import router as workspace_router
+
+    app.include_router(workspace_router)
 
     # 健康检查（公开）
     @app.get("/health")

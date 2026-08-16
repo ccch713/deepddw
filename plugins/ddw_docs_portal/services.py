@@ -236,10 +236,15 @@ class DocsPortalService:
         category_id: Optional[int] = None,
         doc_type: Optional[str] = None,
         visibility: Optional[str] = None,
+        workspace: Optional[str] = None,
         page: int = 1,
         page_size: int = 20,
     ) -> dict:
-        """文档列表（只返回当前用户可见文档）。"""
+        """文档列表（只返回当前用户可见文档）。
+
+        P1-1（multidevice）：workspace 过滤——非 shared 且非空时仅返回
+        category 以 ``ws:{workspace}:`` 开头的文档；shared/None 与旧行为一致。
+        """
         stmt = self._visible_docs_stmt(user)
         if category_id is not None:
             stmt = stmt.where(DocItem.category_id == category_id)
@@ -247,6 +252,9 @@ class DocsPortalService:
             stmt = stmt.where(DocItem.doc_type == doc_type)
         if visibility and visibility in VISIBILITY:
             stmt = stmt.where(DocItem.visibility == visibility)
+        if workspace and workspace != "shared":
+            prefix = f"ws-{workspace}-"
+            stmt = stmt.where(DocItem.slug.like(prefix + "%"))
 
         count = (
             await self._db.execute(select(func.count()).select_from(stmt.subquery()))

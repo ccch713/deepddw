@@ -19,11 +19,12 @@
 被客户端编码破坏导致 401，对抗验收 P2-4 提示）。
 
 🔓 局域网免密模式（体验优化 A，2026-08-16）：
-- 默认开启（``DDW_LAN_BYPASS=1`` 或 config security.lan_bypass=true）：
-  来自内网（127.0.0.1 / 10.x / 172.16-31.x / 192.168.x）的请求**免 Token 放行**，
-  覆盖 PWA 启动页、MCP、网关 API——手机在家连 WiFi 直接可用，零配置。
-- 外网/跨网访问仍要求 Token（保护公网暴露面）。
-- 关闭：``DDW_LAN_BYPASS=0`` 时恢复"一律要求 Token"（适合公网部署）。
+- **默认关闭**（P0-4 安全决策：公网误部署不因默认值暴露；需显式开启）：
+  开启方式 ``DDW_LAN_BYPASS=1`` 或 config ``security.lan_bypass: true``。
+- 开启后：来自内网（127.0.0.1 / 10.x / 172.16-31.x / 192.168.x）的请求
+  **免 Token 放行**，覆盖 PWA 启动页、MCP、网关 API——手机在家连 WiFi
+  直接可用，零配置。
+- 外网/跨网访问仍要求 Token（保护公网暴露面）；未开启时一律要求 Token。
 
 本模块同时提供 ASGI 门禁包装器（用于 streamable-http 的 Starlette Route）
 与 FastAPI 依赖（用于经典端点 /api/v1/mcp/jsonrpc|sse|info 与网关 API）。

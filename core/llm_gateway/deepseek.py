@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional
 
 import httpx
+from functools import lru_cache
 
 from core.llm_gateway.base import (
     BaseLLMProvider,
@@ -44,8 +45,9 @@ class DeepSeekProvider(BaseLLMProvider):
         self._client: Optional[httpx.AsyncClient] = None
 
     @staticmethod
+    @lru_cache(maxsize=1)
     def _deployment_yaml() -> Dict[str, Any]:
-        """Read llm.providers.deepseek from config/deployment.yaml (fallback key source)."""
+        """Read llm.providers.deepseek from config/deployment.yaml（P0-8：lru_cache，避免每次实例化重读）。"""
         import yaml as _yaml
 
         for base in (Path.cwd(), Path(__file__).resolve().parents[2]):
@@ -57,6 +59,11 @@ class DeepSeekProvider(BaseLLMProvider):
                 except Exception:  # noqa: BLE001
                     return {}
         return {}
+
+    @classmethod
+    def clear_deployment_cache(cls) -> None:
+        """配置重载后清除 deployment.yaml 缓存（reload_settings 时调用）。"""
+        cls._deployment_yaml.cache_clear()
 
     @classmethod
     def _deployment_key(cls) -> str:

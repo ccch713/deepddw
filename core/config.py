@@ -179,9 +179,15 @@ def get_settings() -> Settings:
 
 
 def reload_settings() -> Settings:
-    """重载（测试用）。"""
+    """重载（测试用）；同时清除下游配置缓存（P0-8）。"""
     global _settings
     _settings = Settings.load()
+    try:
+        from core.llm_gateway.deepseek import DeepSeekProvider
+
+        DeepSeekProvider.clear_deployment_cache()
+    except Exception:  # noqa: BLE001  # 缓存清除失败不影响重载
+        pass
     return _settings
 
 

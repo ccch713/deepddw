@@ -12,13 +12,17 @@ IM 审计等商业模型一律移除（deepDDW 0.1 无账号、无租户、无�
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     JSON,
     String,
+    Text,
     UniqueConstraint,
     func,
 )
@@ -73,4 +77,33 @@ class KnowledgeBasePermission(Base):
     )
 
 
-__all__ = ["BigInt", "TimestampMixin", "KnowledgeBase", "KnowledgeBasePermission"]
+class LLMUsageRecord(Base):
+    """LLM 用量记录（P0-5：llm_usage_records 表从未创建→从未落库修复）。"""
+
+    __tablename__ = "llm_usage_records"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, index=True)
+    tenant_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    provider: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    model: Mapped[str] = mapped_column(String(128), nullable=False)
+    tokens_in: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    tokens_out: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    cost: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    latency_ms: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    rule: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    ok: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), nullable=False, index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
+__all__ = [
+    "BigInt", "TimestampMixin", "KnowledgeBase", "KnowledgeBasePermission",
+    "LLMUsageRecord",
+]

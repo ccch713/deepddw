@@ -346,12 +346,25 @@ def create_app() -> FastAPI:
         #     到局域网（dsh 拒绝 0.0.0.0：防远程代码执行）。
         #     可用 env DEEPDDW_DSH_URL 指向其他 dsh 地址。
 
+        def _reject_cross_site_fetch(request: Request) -> None:
+            """P0-7：拒绝跨站请求代理（sec-fetch-site 校验）。"""
+            site = (request.headers.get("sec-fetch-site") or "").lower()
+            if site in ("cross-site", "same-site"):
+                raise HTTPException(
+                    status_code=403, detail="cross-site proxy request rejected"
+                )
+
         async def _proxy_to_dsh(path: str, request: Request, rewrite_html: bool, path_prefix: str = ""):
             """把请求转发到 dsh 引擎；rewrite_html 时重写 SPA 资源前缀 + 注入 polyfill。
 
             path_prefix：目标路径前缀。/dsh/{path} → 转发 {base}/{path}（页面在 dsh 根）；
             /api/{path} → 转发 {base}/api/{path}（dsh RPC 端点带 /api 前缀）。
+
+            P0-7：``sec-fetch-site`` 校验——只允许 same-origin / none（顶层导航与
+            网关同源页面），cross-site / same-site（外部站点经网关访问 dsh）一律
+            403，防止任意站点借网关获得"dsh 同源"待遇绕过 browser-trust。
             """
+            _reject_cross_site_fetch(request)
             import httpx
 
             dsh_base = os.environ.get("DEEPDDW_DSH_URL", "http://127.0.0.1:3080").rstrip("/")
@@ -425,6 +438,11 @@ def create_app() -> FastAPI:
         async def dsh_ws_proxy(websocket: WebSocket, path: str):
             import websockets
 
+            # P0-7：跨站 WebSocket 升级请求拒绝（sec-fetch-site 校验）
+            site = (websocket.headers.get("sec-fetch-site") or "").lower()
+            if site in ("cross-site", "same-site"):
+                await websocket.close(code=4403, reason="cross-site rejected")
+                return
             await websocket.accept()
             dsh_base = os.environ.get("DEEPDDW_DSH_URL", "http://127.0.0.1:3080").rstrip("/")
             ws_url = dsh_base.replace("http://", "ws://").replace("https://", "wss://")

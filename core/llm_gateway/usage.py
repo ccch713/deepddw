@@ -9,10 +9,8 @@ cloud mode the gateway can additionally mirror to Redis.
 from __future__ import annotations
 
 import logging
-import sqlite3
 import threading
 from collections import deque
-from datetime import datetime
 from typing import Any, Deque, Dict, Optional
 
 from core.config import get_deployment
@@ -32,9 +30,14 @@ class UsageTracker:
     def __init__(self, window_size: int = 1000) -> None:
         self._window: Deque[Dict[str, float]] = deque(maxlen=window_size)
         self._lock = threading.Lock()
-        self._totals: Dict[str, float] = {"tokens_in": 0.0, "tokens_out": 0.0, "cost": 0.0, "calls": 0.0}
+        self._totals: Dict[str, float] = {
+            "tokens_in": 0.0, "tokens_out": 0.0, "cost": 0.0, "calls": 0.0,
+        }
 
-    def record(self, *, provider: str, model: str, response: ChatResponse, ctx: Optional[RouteContext] = None, ok: bool = True) -> None:
+    def record(
+        self, *, provider: str, model: str, response: ChatResponse,
+        ctx: Optional[RouteContext] = None, ok: bool = True,
+    ) -> None:
         entry = {
             "provider": provider,
             "model": model,
@@ -62,54 +65,58 @@ class UsageTracker:
     def _main_db_path() -> Optional[str]:
         try:
             dep = get_deployment()
-            cfg = dep.databases.get("main", {})
-            if cfg.get("engine") != "sqlite":
+            cfg = dep.databases.get("main")
+            if cfg is None or getattr(cfg, "engine", "sqlite") != "sqlite":
                 return None
-            return cfg.get("path", "./data/ddw_main.db")
+            return getattr(cfg, "path", "./data/ddw_main.db")
         except Exception as exc:  # noqa: BLE001
             logger.debug("usage: cannot resolve main db path: %s", exc)
             return None
 
     def _persist(self, entry: Dict[str, Any], rule: Optional[str]) -> None:
-        """Best-effort insert into ``llm_usage_records`` (never blocks callers)."""
-        path = self._main_db_path()
-        if not path:
+        """Best-effort async insert into ``llm_usage_records``（P0-5）。
+
+        复用全局 AsyncEngine（core.database.session），去掉同步 sqlite3 直连与
+        MAX(id)+1 手算主键（表经 LLMUsageRecord ORM 建表，id 由 DB 自增）。
+        在运行中的事件循环里调度异步任务；无循环（同步上下文）时跳过落库
+        （窗口数据仍保留，绝不阻塞调用方）。
+        """
+        import asyncio
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            logger.debug("usage: no running event loop, skip persist")
             return
         try:
-            now = datetime.now().isoformat()
-            con = sqlite3.connect(path, timeout=5)
-            try:
-                cur = con.cursor()
-                # 历史表 id 为 BIGINT NOT NULL + PRIMARY KEY（非自增），显式取 MAX+1。
-                cur.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM llm_usage_records")
-                next_id = cur.fetchone()[0]
-                cur.execute(
-                    "INSERT INTO llm_usage_records "
-                    "(id, user_id, provider, model, tokens_in, tokens_out, cost, latency_ms, "
-                    " rule, ok, error, created_at, updated_at, tenant_id) "
-                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                    (
-                        next_id,
-                        None,
-                        entry["provider"],
-                        entry["model"],
-                        entry["tokens_in"],
-                        entry["tokens_out"],
-                        entry["cost"],
-                        entry["latency_ms"],
-                        rule,
-                        1 if entry["ok"] else 0,
-                        None,
-                        now,
-                        now,
-                        None,
-                    ),
-                )
-                con.commit()
-            finally:
-                con.close()
+            loop.create_task(_persist_async(entry, rule))
         except Exception as exc:  # noqa: BLE001
-            logger.debug("usage persist failed: %s", exc)
+            logger.debug("usage: schedule persist failed: %s", exc)
+
+async def _persist_async(entry: Dict[str, Any], rule: Optional[str]) -> None:
+    """异步落库（ORM + 全局 AsyncEngine；失败仅 debug 日志）。"""
+    try:
+        from core.database.models import LLMUsageRecord
+        from core.database.session import get_session_maker
+
+        async with get_session_maker()() as session:
+            session.add(LLMUsageRecord(
+                user_id=None,
+                tenant_id=None,
+                provider=entry.get("provider", ""),
+                model=entry.get("model", ""),
+                tokens_in=int(entry.get("tokens_in") or 0),
+                tokens_out=int(entry.get("tokens_out") or 0),
+                cost=float(entry.get("cost") or 0.0),
+                latency_ms=int(entry.get("latency_ms") or 0),
+                rule=rule,
+                ok=bool(entry.get("ok", True)),
+                error=None,
+            ))
+            await session.commit()
+    except Exception as exc:  # noqa: BLE001  # 用量落库失败不阻塞 LLM 调用
+        logger.debug("usage persist failed: %s", exc)
+
 
     def summary(self) -> Dict[str, float]:
         with self._lock:

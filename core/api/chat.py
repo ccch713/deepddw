@@ -131,18 +131,14 @@ async def post_chat(
     conv_id = payload.conversation_id or uuid.uuid4().hex
     now = datetime.utcnow()
     try:
+        # P0-6：id 留空由 DB 自增（chat_messages 建表已声明 AUTOINCREMENT），
+        # 去掉手算 max(id)+1——消除并发主键冲突；两条消息同一事务成对写入。
         async with session_scope() as session:
-            # 表 id 非自增（四库合并遗留），显式取 max+1
-            max_id = (
-                await session.execute(
-                    select(_chat_table.c.id).order_by(_chat_table.c.id.desc()).limit(1)
-                )
-            ).scalar() or 0
             for role, content in (
                 ("user", payload.message), ("assistant", response.content)
             ):
                 await session.execute(_chat_table.insert().values(
-                    id=max_id + 1, user_id=user_id, tenant_id=tenant_id,
+                    user_id=user_id, tenant_id=tenant_id,
                     conversation_id=conv_id,
                     role=role, content=content,
                     provider=response.provider, model=response.model,
@@ -150,7 +146,6 @@ async def post_chat(
                     cost=response.cost,
                     created_at=now, updated_at=now,
                 ))
-                max_id += 1
             await session.commit()
     except Exception as exc:  # noqa: BLE001  # 历史落库失败不阻塞回复
         logger.warning("chat history persist degraded: %s", exc)

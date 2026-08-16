@@ -82,6 +82,12 @@ footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--text-muted
     <div id="statusBody" class="status-body">加载中…</div>
   </div>
 
+  <!-- P1-3（multidevice）：最近会话（跨设备续问入口） -->
+  <div id="sessionCard" class="status-card" style="display:none">
+    <div class="status-title">💬 最近会话</div>
+    <div id="sessionBody" class="status-body">加载中…</div>
+  </div>
+
   <div id="pairArea" class="pair" style="display:none">
     <div class="pair-title">手机扫码自动填入（电脑端显示）</div>
     <div id="qrcode" class="qrcode"></div>
@@ -219,6 +225,38 @@ footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--text-muted
       .catch(function () { card.style.display = "none"; });
   }
 
+  // P1-3（multidevice）：最近会话——手机端"继续最近会话"入口
+  function loadSessions(base, token) {
+    var card = document.getElementById("sessionCard");
+    var body = document.getElementById("sessionBody");
+    if (!card) return;
+    var headers = token ? { "X-DDW-Token": token } : {};
+    fetch(base + "/api/v1/session-summary?limit=5&workspace=" + encodeURIComponent(currentWorkspace()),
+          { headers: headers })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !d.data || !d.data.results || !d.data.results.length) {
+          card.style.display = "none";
+          return;
+        }
+        card.style.display = "block";
+        var lines = [];
+        (d.data.results || []).forEach(function (sess) {
+          lines.push("<div class='sess'><b>" + (sess.title || sess.session_id.slice(0, 8)) +
+                     "</b><br><span class='dev'>" + sess.summary.slice(0, 60) +
+                     "…</span><br><button class='btn-sess' data-sid=\'' + sess.session_id + '\'>继续此会话</button></div>");
+        });
+        body.innerHTML = lines.join("<br>");
+        body.querySelectorAll(".btn-sess").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            try { localStorage.setItem("deepddw_continue_session", btn.getAttribute("data-sid")); } catch (e) {}
+            enterWorkbench(base, token);
+          });
+        });
+      })
+      .catch(function () { card.style.display = "none"; });
+  }
+
   function baseAddr() {
     var v = addrEl.value.trim().replace(/\/+$/, "");
     return v || window.location.origin;
@@ -261,6 +299,7 @@ footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--text-muted
       // P0-3/P0-4（multidevice）：注册本设备 + 拉取状态卡片
       registerDevice(base, token);
       loadStatus(base, token);
+      loadSessions(base, token);
       enterWorkbench(base, token);
     } catch (e) {
       msg.className = "msg err"; msg.textContent = "无法连接服务器：" + e.message;

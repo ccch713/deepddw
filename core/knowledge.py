@@ -177,6 +177,16 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         );
         CREATE INDEX IF NOT EXISTS idx_session_docs_sid
             ON session_docs(session_id);
+        CREATE TABLE IF NOT EXISTS sessions_summary (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT NOT NULL UNIQUE,
+            title TEXT NOT NULL,
+            summary TEXT NOT NULL,
+            workspace TEXT NOT NULL DEFAULT 'shared',
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_sessions_summary_ws
+            ON sessions_summary(workspace, updated_at);
         CREATE TABLE IF NOT EXISTS memory_user (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             key TEXT NOT NULL,
@@ -708,6 +718,69 @@ def session_docs_list(session_id: str, limit: int = 50) -> Dict[str, Any]:
     except Exception as exc:  # noqa: BLE001
         logger.warning("session_docs_list degraded: %s", exc)
         return {"results": [], "degraded": True, "note": str(exc)}
+
+
+def session_summary_save(
+    session_id: str, title: str, summary: str, workspace: str = "shared",
+) -> Dict[str, Any]:
+    """保存会话摘要（P1-3 会话跨设备续接；同 session 覆盖）。
+
+    摘要存 sessions_summary 表；手机端按 workspace 列出最近会话续问。
+    """
+    session_id = (session_id or "").strip()
+    title = (title or session_id)[:200]
+    summary = (summary or "").strip()[:2000]
+    w = _ws(workspace)
+    if not session_id:
+        return {"ok": False, "note": "invalid session_id"}
+    conn = get_conn()
+    try:
+        conn.execute(
+            "INSERT INTO sessions_summary (session_id, title, summary, workspace, "
+            "updated_at) VALUES (?, ?, ?, ?, datetime('now')) "
+            "ON CONFLICT(session_id) DO UPDATE SET title=excluded.title, "
+            "summary=excluded.summary, workspace=excluded.workspace, "
+            "updated_at=datetime('now')",
+            (session_id, title, summary, w),
+        )
+        conn.commit()
+        return {"ok": True, "session_id": session_id}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("session_summary_save degraded: %s", exc)
+        return {"ok": False, "degraded": True, "note": str(exc)}
+    finally:
+        close_conn(conn)
+
+
+def session_summary_list(
+    limit: int = 5, workspace: str = "shared",
+) -> Dict[str, Any]:
+    """列出最近会话摘要（P1-3；按 workspace 过滤，默认 shared 向后兼容）。"""
+    limit = max(1, min(int(limit or 5), 20))
+    w = _ws(workspace)
+    conn = get_conn()
+    try:
+        if w == "shared":
+            rows = conn.execute(
+                "SELECT session_id, title, summary, workspace, updated_at "
+                "FROM sessions_summary "
+                "WHERE (workspace = 'shared' OR workspace IS NULL) "
+                "ORDER BY updated_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT session_id, title, summary, workspace, updated_at "
+                "FROM sessions_summary WHERE workspace = ? "
+                "ORDER BY updated_at DESC LIMIT ?",
+                (w, limit),
+            ).fetchall()
+        return {"results": [dict(r) for r in rows], "degraded": False}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("session_summary_list degraded: %s", exc)
+        return {"results": [], "degraded": True, "note": str(exc)}
+    finally:
+        close_conn(conn)
 
 
 # ---------------------------------------------------------------------------
@@ -1463,5 +1536,7 @@ __all__ = [
     "reset_keyword_cache",
     "session_doc_add",
     "session_docs_list",
+    "session_summary_save",
+    "session_summary_list",
     "get_conn",
 ]

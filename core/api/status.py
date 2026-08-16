@@ -20,7 +20,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
 from core.api_response import ok
@@ -330,3 +330,40 @@ async def status(
 
 def _client_ip(claims: Dict[str, Any]) -> str:
     return str(claims.get("ip") or "")
+
+
+# ---------------------------------------------------------------------------
+# P1-3（multidevice）：会话跨设备续接——最近会话摘要
+# ---------------------------------------------------------------------------
+
+
+class SessionSummaryReq(BaseModel):
+    session_id: str = Field(..., min_length=1, max_length=128)
+    title: str = Field(default="", max_length=200)
+    summary: str = Field(..., max_length=2000)
+    workspace: str = Field(default="shared", max_length=32)
+
+
+@router.post("/session-summary")
+async def save_session_summary(
+    payload: SessionSummaryReq,
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """保存会话摘要（P1-3：换设备续问的轻量快照）。"""
+    from core.knowledge import session_summary_save
+
+    return ok(session_summary_save(
+        payload.session_id, payload.title, payload.summary, payload.workspace,
+    ))
+
+
+@router.get("/session-summary")
+async def list_session_summary(
+    limit: int = Query(5, ge=1, le=20),
+    workspace: str = Query("shared", max_length=32),
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """列出最近会话摘要（手机端"继续最近会话"入口）。"""
+    from core.knowledge import session_summary_list
+
+    return ok(session_summary_list(limit, workspace))

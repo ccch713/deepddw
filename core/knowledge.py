@@ -17,9 +17,9 @@ from __future__ import annotations
 import hashlib
 import logging
 import math
-import queue
 import re
 import sqlite3
+import threading
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -62,11 +62,9 @@ def _db_path() -> Path:
 
 # P1-15：模块级单连接 + 全局锁复用（按库路径自动重建；线程安全；
 # 单连接串行化 kb/记忆操作，天然避免 SQLITE_BUSY；测试 reset 全局可见）
-import threading as _threading
-
 _shared_conn = None
 _shared_path: Optional[str] = None
-_conn_lock = _threading.Lock()
+_conn_lock = threading.Lock()
 
 
 def get_conn() -> sqlite3.Connection:
@@ -81,7 +79,9 @@ def get_conn() -> sqlite3.Connection:
                 except sqlite3.Error:  # noqa: BLE001
                     pass
             path.parent.mkdir(parents=True, exist_ok=True)
-            conn = sqlite3.connect(str(path), timeout=10, check_same_thread=False)
+            conn = sqlite3.connect(
+        str(path), timeout=10, check_same_thread=False
+    )
             conn.row_factory = sqlite3.Row
             conn.execute("PRAGMA journal_mode=WAL")
             _ensure_schema(conn)
@@ -168,7 +168,7 @@ def _embed(text: str, dim: int = _VECTOR_DIM) -> List[float]:
 
 
 def _lance_dir() -> Path:
-    """LanceDB 目录：env ``LANCEDB_PATH`` > 知识库主库同目录（测试随 _db_path 联动）。"""
+    """LanceDB 目录：env ``LANCEDB_PATH`` > 知识库主库同目录（随 _db_path）。"""
     override = __import__("os").environ.get("LANCEDB_PATH")
     if override:
         return Path(override).resolve()

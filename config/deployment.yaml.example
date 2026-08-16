@@ -27,5 +27,11 @@ auth:
   # 静态访问 Token：强烈建议用环境变量 DDW_ACCESS_TOKEN（本模板占位符不生效）
   # access_token: ""
 
+security:
+  # P0-4：局域网免密默认关闭；需要时显式开启
+  lan_bypass: false
+  # 可信反代白名单（IP/CIDR）：仅直连 peer 在此列表才信任 X-Forwarded-For
+  trusted_proxies: []
+
 plugins:
   root_dir: ./plugins

@@ -1051,9 +1051,10 @@ async def memory_reflect_generate(style: str = "auto") -> Dict[str, Any]:
     """反思生成（LLM 增强版：auto-memory 每日反思的 AI 路径）。
 
     - 触发：昨天有日志且今/昨无反思（_reflection_due）；
-    - LLM 基于最近 3 天日志生成反思正文并保存（风格可指定）；
-    - LLM 不可用/超时 → due=True + generated=False（调用方提示"待反思"）；
-      不满足触发 → due=False。
+    - LLM 基于最近 3 天日志生成反思正文并保存（风格可指定；结构化三段：
+      进展/问题/明日注意；参考最近反思避免重复）；
+    - LLM 不可用/超时/空输出 → due=True + generated=False（调用方提示
+      "待反思"）；不满足触发 → due=False。全程不 500、不写空内容。
     """
     if not _reflection_due():
         return {"due": False, "ok": True, "generated": False}
@@ -1067,10 +1068,22 @@ async def memory_reflect_generate(style: str = "auto") -> Dict[str, Any]:
         lines = "\n".join(
             f"- {r['log_date']}: {r['content'][:120]}" for r in logs[:12]
         )
+        # 最近一条反思（避免连续两天内容雷同）
+        prev = memory_reflect_get(
+            __import__("datetime").date.today().strftime("%Y-%m-%d"),
+        )
+        prev_note = f"（昨日反思参考：{prev['content'][:100]}…）" if prev.get("found") else ""
+        style_guide = {
+            "auto": "简洁客观，突出事实与决策",
+            "专业": "条理清晰，分点陈述，面向团队复盘",
+            "生活化": "轻松自然，像写给自己的日记",
+        }.get(style, "简洁客观，突出事实与决策")
         prompt = (
-            f"请基于以下最近 3 天日志写一段每日反思（{style}风格），"
-            "总结进展/问题/明日注意，中文 80-200 字，只输出正文不要标题。\n"
-            f"日志：\n{lines}"
+            f"请基于以下最近 3 天日志写一段每日反思（{style}风格，"
+            f"{style_guide}）。\n"
+            "要求：①按『进展 / 问题 / 明日注意』三段组织；②只输出正文，"
+            "不要标题与序号前缀；③中文 80-200 字；④不与已有反思重复"
+            f"{prev_note}。\n日志：\n{lines}"
         )
         resp: ChatResponse = await _gateway_chat(
             [ChatMessage(role="user", content=prompt)], rule=None
@@ -1441,10 +1454,13 @@ async def memory_consolidate_llm(chat_text: str, user_id: int = 0) -> Dict[str, 
                         "ok": True, "mode": "llm",
                         "wrote": written, "points": points,
                     }
+                # LLM 明确判断无价值（返回 []）→ 不落日志（不触发规则降级）
+                return {"ok": True, "mode": "llm", "wrote": 0,
+                        "skipped": "no_value"}
     except Exception as exc:  # noqa: BLE001
         logger.debug("memory consolidate llm degraded: %s", exc)
 
-    # 规则降级：首句摘要
+    # 规则降级：仅 LLM 故障/超时/解析失败时——首句摘要
     first = re.split(r"[。！？\n]", text)[0].strip()
     summary = first[:80] or text[:80]
     memory_log_append(f"[规则沉淀] {summary}", auto=True)

@@ -429,3 +429,76 @@ async def test_chat_auto_consolidate_background(client, monkeypatch, tmp_path):
     assert resp2.status_code == 200
     await asyncio.sleep(0.02)
     assert called["n"] == 1
+
+
+# ---------------------------------------------------------------------------
+# v0.3.0 反思 LLM 化收尾：风格指南 / 无价值跳过 / 空日志 / 不重复
+# ---------------------------------------------------------------------------
+
+
+async def test_reflect_generate_style_guide_in_prompt(monkeypatch, tmp_path):
+    """反思 prompt 含风格指南（专业风格 → 分点陈述指令）。"""
+    monkeypatch.setattr("core.knowledge._db_path", lambda: tmp_path / "kb.db")
+    from core import knowledge as kb
+    from core.llm_gateway.base import ChatResponse
+
+    kb.memory_log_append("完成了压测", auto=True)
+    from core.knowledge import get_conn, close_conn
+
+    conn = get_conn()
+    conn.execute("UPDATE memory_logs SET log_date=date('now','-1 day')")
+    conn.commit()
+    close_conn(conn)
+
+    captured = {}
+
+    async def fake_chat(messages, **kwargs):
+        captured["prompt"] = messages[0].content
+        return ChatResponse(
+            content="进展：完成压测。\n问题：无。\n明日注意：发布。",
+            model="mock", provider="mock", finish_reason="stop",
+        )
+
+    monkeypatch.setattr("core.llm_gateway.gateway.chat", fake_chat)
+    result = await kb.memory_reflect_generate(style="专业")
+    assert result["generated"] is True
+    assert "面向团队复盘" in captured["prompt"]  # 风格指南注入
+    assert "进展 / 问题 / 明日注意" in captured["prompt"]  # 三段结构
+
+
+async def test_consolidate_llm_no_value_skips_rule(monkeypatch, tmp_path):
+    """LLM 判断无价值（[]）→ 不落日志（不触发规则降级）。"""
+    monkeypatch.setattr("core.knowledge._db_path", lambda: tmp_path / "kb.db")
+    from core import knowledge as kb
+    from core.llm_gateway.base import ChatResponse
+
+    async def fake_chat(messages, **kwargs):
+        return ChatResponse(
+            content="[]", model="mock", provider="mock", finish_reason="stop",
+        )
+
+    monkeypatch.setattr("core.llm_gateway.gateway.chat", fake_chat)
+    result = await kb.memory_consolidate_llm(
+        "今天就是随便聊了聊天气，没有什么特别值得记住的内容，纯闲聊。"
+        "天气不错，晚饭吃了面，其他就没有什么特别的进展了，一切照旧。"
+    )
+    assert result["ok"] is True and result["mode"] == "llm"
+    assert result.get("skipped") == "no_value"
+    assert result["wrote"] == 0
+    # 无任何日志落库
+    logs = kb.memory_logs_recent(days=1).get("results", [])
+    assert logs == []
+
+
+async def test_reflect_generate_empty_logs_no_write(monkeypatch, tmp_path):
+    """触发条件满足但无日志 → 不生成、不写空内容。"""
+    monkeypatch.setattr("core.knowledge._db_path", lambda: tmp_path / "kb.db")
+    from core import knowledge as kb
+
+    # 触发条件成立（mock _reflection_due=True）但日志为空 → 不生成
+    monkeypatch.setattr(kb, "_reflection_due", lambda: True)
+
+    result = await kb.memory_reflect_generate()
+    assert result["due"] is True
+    assert result["generated"] is False
+    assert result.get("note") == "no logs"

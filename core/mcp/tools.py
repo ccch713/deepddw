@@ -226,11 +226,12 @@ def install_default_tools(registry: ToolRegistry) -> None:
         name="ddw.memory.consolidate",
         description=(
             "记忆沉淀：把当前对话要点写入今日日志（自动沉淀，append-only）。"
-            "content: 沉淀内容"
+            "content: 沉淀内容；llm=true 时用 LLM 提炼要点（失败规则降级，默认 true）"
         ),
         parameters={
             "properties": {
-                "content": {"type": "string", "description": "沉淀要点"},
+                "content": {"type": "string", "description": "沉淀内容/对话文本"},
+                "llm": {"type": "boolean", "description": "是否 LLM 提炼（默认 true）"},
             },
             "required": ["content"],
         },
@@ -299,11 +300,12 @@ def install_default_tools(registry: ToolRegistry) -> None:
         name="ddw.memory.search-v2",
         description=(
             "分层记忆检索：OR 多关键词扫四层（用户/笔记/日志/反思），"
-            "返回带 layer/source 标注的结果。query；top_k（可选，默认 5）"
+            "返回带 layer/source 标注的结果；query 为自然语言时 LLM 自动"
+            "扩写关键词（失败降级原词）。query；top_k（可选，默认 5）"
         ),
         parameters={
             "properties": {
-                "query": {"type": "string", "description": "检索词"},
+                "query": {"type": "string", "description": "检索词/自然语言查询"},
                 "top_k": {"type": "integer", "description": "返回条数"},
             },
             "required": ["query"],
@@ -431,13 +433,31 @@ async def memory_context_handler(
 async def memory_consolidate_handler(
     args: Dict[str, Any], ctx: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """ddw.memory.consolidate handler（自动沉淀：写入今日日志）。"""
-    from core.knowledge import memory_log_append
+    """ddw.memory.consolidate handler（自动沉淀：LLM 提炼 → 今日日志）。
+
+    content 为对话文本时走 LLM 提炼（失败规则降级）；text 字段直接写日志。
+    """
+    from core.knowledge import memory_consolidate_llm, memory_log_append
 
     try:
         content = str(args.get("content", "")).strip()
         if not content:
             return {"content": [{"type": "text", "text": "沉淀内容为空"}], "ok": False}
+        if args.get("llm"):
+            result = await memory_consolidate_llm(content)
+            mode = result.get("mode", "rule")
+            if result.get("skipped") == "too_short":
+                return {
+                    "content": [{"type": "text", "text": "内容过短，跳过沉淀（寒暄轮）"}],
+                    "ok": True, "skipped": "too_short",
+                }
+            wrote = result.get("wrote", 0)
+            return {
+                "content": [{"type": "text", "text": f"已沉淀（{mode} 提炼 {wrote} 条）"}],
+                "ok": bool(result.get("ok", True)),
+                "mode": mode,
+                "wrote": wrote,
+            }
         result = memory_log_append(content, auto=True)
         return {
             "content": [{"type": "text", "text": "已沉淀到今日日志（auto）"}],
@@ -553,13 +573,14 @@ async def memory_user_handler(args: Dict[str, Any], ctx: Dict[str, Any]) -> Dict
 
 
 async def memory_search_v2_handler(args: Dict[str, Any], ctx: Dict[str, Any]) -> Dict[str, Any]:
-    """ddw.memory.search-v2 handler（分层检索，OR 多关键词扫四层）。"""
-    from core.knowledge import memory_search_v2
+    """ddw.memory.search-v2 handler（分层检索 + LLM 扩写增强，失败降级原词）。"""
+    from core.knowledge import memory_search_v2_async
 
     try:
-        result = memory_search_v2(
+        result = await memory_search_v2_async(
             query=str(args.get("query", "")),
             top_k=int(args.get("top_k") or 5),
+            expand=True,
         )
         items = result.get("results", [])
         if not items:
@@ -573,6 +594,7 @@ async def memory_search_v2_handler(args: Dict[str, Any], ctx: Dict[str, Any]) ->
             "content": [{"type": "text", "text": text}],
             "results": items,
             "layers": result.get("layers", []),
+            "expanded": result.get("expanded", []),
         }
     except Exception as exc:  # noqa: BLE001
         logger.warning("mcp memory.search-v2 degraded: %s", exc)

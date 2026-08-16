@@ -231,13 +231,20 @@ async def maintain_memory(
 async def search_memory_v2(
     q: str = Query(..., min_length=1, max_length=200),
     top_k: int = Query(5, ge=1, le=20),
+    expand: bool = Query(True, description="LLM 扩写关键词（失败自动降级原词）"),
     claims: Dict[str, Any] = Depends(require_access_token),
 ) -> Dict[str, Any]:
-    """分层记忆检索（OR 多关键词扫四层，返回 layer/source 标注）。"""
-    result = memory_search_v2(q, top_k)
+    """分层记忆检索（OR 多关键词扫四层，返回 layer/source 标注；LLM 扩写增强）。"""
+    if expand:
+        from core.knowledge import memory_search_v2_async
+
+        result = await memory_search_v2_async(q, top_k, expand=True)
+    else:
+        result = memory_search_v2(q, top_k)
     return ok({
         "results": result.get("results", []),
         "layers": result.get("layers", []),
+        "expanded": result.get("expanded", []),
         "degraded": result.get("degraded", False),
     })
 

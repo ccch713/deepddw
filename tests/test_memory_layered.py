@@ -210,3 +210,80 @@ async def test_mcp_memory_tools(monkeypatch, tmp_path):
 
     mt = await mcp.tools.get("ddw.memory.maintain").handler({}, {})
     assert "ok" in mt
+
+
+# ---------------------------------------------------------------------------
+# LLM 增强（auto-memory 智能检索：关键词扩写 / AI 提炼沉淀；失败降级）
+# ---------------------------------------------------------------------------
+
+
+async def test_search_v2_llm_expand_uses_keywords(monkeypatch, tmp_path):
+    """LLM 扩写命中：mock 网关返回关键词 → 用扩写词扫描并带 expanded 标注。"""
+    monkeypatch.setattr("core.knowledge._db_path", lambda: tmp_path / "kb.db")
+    from core import knowledge as kb
+    from core.llm_gateway.base import ChatResponse
+
+    kb.memory_user_put("部署", "deepDDW 用 Docker Compose 部署")
+    kb.memory_log_append("修复了 compose 网络问题")
+
+    async def fake_chat(messages, **kwargs):
+        return ChatResponse(
+            content='["部署", "compose", "容器"]',
+            model="mock", provider="mock", finish_reason="stop",
+        )
+
+    monkeypatch.setattr("core.llm_gateway.gateway.chat", fake_chat)
+    result = await kb.memory_search_v2_async("怎么部署服务", top_k=10, expand=True)
+    assert result["expanded"] == ["部署", "compose", "容器"]
+    layers = {h["layer"] for h in result["results"]}
+    assert "user" in layers and "logs" in layers
+    assert result["degraded"] is False
+
+
+async def test_search_v2_llm_failure_degrades(monkeypatch, tmp_path):
+    """LLM 故障 → 降级原词扫描，仍返回结果且不阻塞。"""
+    monkeypatch.setattr("core.knowledge._db_path", lambda: tmp_path / "kb.db")
+    from core import knowledge as kb
+
+    kb.memory_user_put("偏好", "喜欢简洁回答")
+
+    async def boom(messages, **kwargs):
+        raise RuntimeError("provider down")
+
+    monkeypatch.setattr("core.llm_gateway.gateway.chat", boom)
+    result = await kb.memory_search_v2_async("偏好 风格", top_k=5, expand=True)
+    assert result["expanded"] == []  # 降级无扩写
+    assert any("偏好" in h["content"] or h["key"] == "偏好" for h in result["results"])
+
+
+async def test_consolidate_llm_distills_points(monkeypatch, tmp_path):
+    """LLM 提炼沉淀：mock 返回要点数组 → 写入今日日志（auto=1）。"""
+    monkeypatch.setattr("core.knowledge._db_path", lambda: tmp_path / "kb.db")
+    from core import knowledge as kb
+    from core.llm_gateway.base import ChatResponse
+
+    async def fake_chat(messages, **kwargs):
+        return ChatResponse(
+            content='["决定用 Docker Compose 部署", "偏好中文回复"]',
+            model="mock", provider="mock", finish_reason="stop",
+        )
+
+    monkeypatch.setattr("core.llm_gateway.gateway.chat", fake_chat)
+    result = await kb.memory_consolidate_llm(
+        "今天我们讨论了部署方案，最终决定用 Docker Compose。"
+        "另外用户表示希望用中文回复。这是足够长的一段对话文本内容。"
+    )
+    assert result["mode"] == "llm" and result["wrote"] == 2
+    logs = kb.memory_logs_recent(days=1)["results"]
+    contents = [r["content"] for r in logs]
+    assert any("Docker Compose" in c for c in contents)
+
+
+async def test_consolidate_llm_too_short_skips(monkeypatch, tmp_path):
+    """寒暄短轮 → 跳过沉淀（不写日志）。"""
+    monkeypatch.setattr("core.knowledge._db_path", lambda: tmp_path / "kb.db")
+    from core import knowledge as kb
+
+    result = await kb.memory_consolidate_llm("你好")
+    assert result.get("skipped") == "too_short"
+    assert kb.memory_logs_recent(days=1)["results"] == []

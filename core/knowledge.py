@@ -941,14 +941,40 @@ def memory_consolidate(
         close_conn(conn)
 
 
-def memory_search_v2(query: str, top_k: int = 5) -> Dict[str, Any]:
-    """分层检索（借鉴 auto-memory 智能检索；多关键词 OR 扫四层 + 来源标注）。"""
+def memory_search_v2(
+    query: str, top_k: int = 5, expand: bool = False,
+) -> Dict[str, Any]:
+    """分层检索（同步版；expand=True 时尝试 LLM 扩写，降级为原词）。
+
+    async 调用方（API/MCP）请用 :func:`memory_search_v2_async` 获得
+    真正的 LLM 扩写增强；本同步版 expand=True 在 LLM 不可达时同样
+    降级为原词分词，语义一致。
+    """
+    if expand:
+        expanded = _llm_expand_keywords_sync(query)
+        if expanded:
+            return _search_v2_tokens(query, expanded, top_k, llm_expanded=expanded)
+    return _search_v2_tokens(query, None, top_k)
+
+
+def _search_v2_tokens(
+    query: str,
+    tokens_override: Optional[List[str]],
+    top_k: int,
+    llm_expanded: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """分层检索核心：按关键词 OR 扫四层 + 来源标注（无 LLM 依赖）。"""
     from core.security.unicode_sanitizer import sanitize_unicode
 
     query = sanitize_unicode(query or "", max_length=200)
-    tokens = [t for t in re.split(r"[\s,，、]+", query) if t][:8]
+    tokens: List[str] = tokens_override or []
     if not tokens:
-        return {"results": [], "degraded": False, "note": "empty query"}
+        tokens = [t for t in re.split(r"[\s,，、]+", query) if t][:8]
+    if not tokens:
+        return {
+            "results": [], "degraded": False, "note": "empty query",
+            "expanded": llm_expanded or [],
+        }
     conn = get_conn()
     out: List[Dict[str, Any]] = []
     try:
@@ -984,12 +1010,138 @@ def memory_search_v2(query: str, top_k: int = 5) -> Dict[str, Any]:
                 continue
             seen.add(sig)
             dedup.append(it)
-        return {"results": dedup[: max(1, min(int(top_k), 20))], "degraded": False}
+        return {
+            "results": dedup[: max(1, min(int(top_k), 20))],
+            "degraded": False,
+            "expanded": llm_expanded or [],
+        }
     except Exception as exc:  # noqa: BLE001
         logger.warning("memory_search_v2 degraded: %s", exc)
-        return {"results": [], "degraded": True}
+        return {"results": [], "degraded": True, "expanded": llm_expanded or []}
     finally:
         close_conn(conn)
+
+
+def _llm_expand_keywords_sync(query: str) -> Optional[List[str]]:
+    """同步壳：LLM 扩写（事件循环内自动跳过，返回 None → 降级原词）。"""
+    try:
+        import asyncio
+
+        asyncio.get_running_loop()  # 已在事件循环中 → 不支持同步调用
+        return None
+    except RuntimeError:
+        pass
+    try:
+        return asyncio.run(_llm_expand_keywords_async(query))
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("memory llm expand sync degraded: %s", exc)
+        return None
+
+
+async def _llm_expand_keywords_async(query: str) -> Optional[List[str]]:
+    """LLM 关键词扩写（auto-memory 智能检索：NL 查询 → 3-6 个检索关键词）。
+
+    - 调用 deepDDW LLM 网关（浅 prompt）；超时/无 provider/非 JSON
+      一律返回 None → 调用方降级为原词分词。
+    - 严格只取 JSON 数组字符串；绝不编造来源（来源标注由检索层保证）。
+    """
+    if not query or len(query) < 2:
+        return None
+    try:
+        import json as _json
+
+        from core.llm_gateway.base import ChatMessage, ChatResponse
+        from core.llm_gateway.gateway import chat as _gateway_chat
+
+        prompt = (
+            "你是记忆检索助手。把下面的用户查询扩写为 3-6 个中文检索关键词"
+            "（覆盖同义词/相关实体/潜在记忆条目），只输出 JSON 字符串数组，"
+            "不要任何解释或前后缀。\n查询："
+            f"{query[:150]}"
+        )
+        resp: ChatResponse = await _gateway_chat(
+            [ChatMessage(role="user", content=prompt)], rule=None
+        )
+        text = (resp.content or "").strip()
+        if text.startswith("```"):
+            text = re.sub(r"^```[a-zA-Z]*\n?|```$", "", text).strip()
+        m = re.search(r"\[.*?\]", text, re.S)
+        if not m:
+            return None
+        items = _json.loads(m.group(0))
+        if not isinstance(items, list):
+            return None
+        words = [str(i).strip() for i in items if str(i).strip()][:8]
+        return words or None
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("memory llm expand degraded: %s", exc)
+        return None
+
+
+async def memory_search_v2_async(
+    query: str, top_k: int = 5, expand: bool = True
+) -> Dict[str, Any]:
+    """分层检索（async 增强版）：LLM 扩写关键词后 OR 扫描；失败降级原词。"""
+    llm_expanded: Optional[List[str]] = None
+    if expand:
+        llm_expanded = await _llm_expand_keywords_async(query)
+    return _search_v2_tokens(query, llm_expanded, top_k, llm_expanded=llm_expanded)
+
+
+async def memory_consolidate_llm(chat_text: str, user_id: int = 0) -> Dict[str, Any]:
+    """LLM 提炼沉淀（auto-memory 每轮自动沉淀的 AI 路径）。
+
+    用 LLM 从对话文本提炼 1-3 条可沉淀要点写入今日日志（auto=1）；
+    LLM 不可用/超时 → 规则降级：首句摘要写一条（标注"规则沉淀"），
+    寒暄（< 60 字符）跳过，不阻塞。
+    """
+    from core.security.unicode_sanitizer import sanitize_unicode
+
+    text = sanitize_unicode(chat_text or "", max_length=20_000).strip()
+    if not text:
+        return {"ok": False, "note": "empty text", "degraded": False}
+    if len(text) < 60:  # 寒暄/短轮跳过（auto-memory autoConsolidateMinChars）
+        return {"ok": True, "skipped": "too_short", "wrote": 0}
+
+    # LLM 路径
+    try:
+        import json as _json
+
+        from core.llm_gateway.base import ChatMessage, ChatResponse
+        from core.llm_gateway.gateway import chat as _gateway_chat
+
+        prompt = (
+            "从以下对话中提炼 1-3 条值得长期记住的要点（事实/决策/偏好/"
+            "进展），每条一句话、中文、不超过 50 字；只输出 JSON 字符串数组，"
+            "不要解释。若对话无价值内容输出 []。\n对话：\n"
+            f"{text[:4000]}"
+        )
+        resp: ChatResponse = await _gateway_chat(
+            [ChatMessage(role="user", content=prompt)], rule=None
+        )
+        raw = (resp.content or "").strip()
+        m = re.search(r"\[.*?\]", raw, re.S)
+        if m:
+            items = _json.loads(m.group(0))
+            if isinstance(items, list):
+                points = [str(i).strip() for i in items if str(i).strip()][:3]
+                if points:
+                    written = 0
+                    for p in points:
+                        memory_log_append(p, auto=True)
+                        written += 1
+                    return {
+                        "ok": True, "mode": "llm",
+                        "wrote": written, "points": points,
+                    }
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("memory consolidate llm degraded: %s", exc)
+
+    # 规则降级：首句摘要
+    first = re.split(r"[。！？\n]", text)[0].strip()
+    summary = first[:80] or text[:80]
+    memory_log_append(f"[规则沉淀] {summary}", auto=True)
+    return {"ok": True, "mode": "rule", "wrote": 1, "summary": summary}
 
 
 def migrate_memory_entries() -> Dict[str, Any]:

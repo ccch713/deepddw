@@ -235,6 +235,10 @@ def create_app() -> FastAPI:
     from core.api.workspace import router as workspace_router
 
     app.include_router(workspace_router)
+    # P2-1（multidevice）：备份/恢复 API
+    from core.api.backup import router as backup_router
+
+    app.include_router(backup_router)
 
     # 健康检查（公开）
     @app.get("/health")

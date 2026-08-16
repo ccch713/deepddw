@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -41,6 +43,49 @@ try:
     APP_VERSION = _APP_VERSION_FILE.read_text(encoding="utf-8").strip()
 except OSError:
     APP_VERSION = "0.0.0-dev"
+
+# P2-3（multidevice）：最新版本探测——GitHub releases（带缓存；失败降级）
+_VERSION_CACHE: Dict[str, Any] = {"latest": None, "at": 0.0}
+_VERSION_CACHE_TTL = 3600  # 1h
+_VERSION_REPO = os.environ.get("DDW_UPDATE_REPO", "ccch713/deepddw")
+_VERSION_LOCK = threading.Lock()
+
+
+def _ver_key(v: str) -> tuple:
+    """版本号 → 可比较元组（0.1.0 → (0,1,0)；容忍 v 前缀/非数字段）。"""
+    import re
+
+    parts = re.findall(r"\d+", v or "")
+    return tuple(int(p) for p in parts[:3]) or (0, 0, 0)
+
+
+def _ver_gt(a: str, b: str) -> bool:
+    return _ver_key(a) > _ver_key(b)
+
+
+def _latest_version() -> Optional[str]:
+    """查询 GitHub releases 最新 tag；1h 缓存；网络失败返回 None（降级）。"""
+    with _VERSION_LOCK:
+        if _VERSION_CACHE["latest"] is not None and \
+                time.time() - _VERSION_CACHE["at"] < _VERSION_CACHE_TTL:
+            return _VERSION_CACHE["latest"]
+    try:
+        import json as _json
+        import urllib.request
+
+        url = f"https://api.github.com/repos/{_VERSION_REPO}/releases/latest"
+        req = urllib.request.Request(url, headers={"User-Agent": "deepddw/version-check"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = _json.loads(resp.read().decode("utf-8"))
+        tag = str(data.get("tag_name") or "").lstrip("v")
+        if not tag:
+            return None
+        with _VERSION_LOCK:
+            _VERSION_CACHE["latest"] = tag
+            _VERSION_CACHE["at"] = time.time()
+        return tag
+    except Exception:  # noqa: BLE001  # 网络/解析失败降级（不阻塞）
+        return None
 
 logger = logging.getLogger(__name__)
 
@@ -249,8 +294,12 @@ def create_app() -> FastAPI:
     @app.get("/api/v1/version")
     async def version() -> Dict[str, Any]:
         s = get_settings()
+        # P2-3（multidevice）：最新版本探测（GitHub releases；失败降级 latest=null）
+        latest = _latest_version()
         return {
             "version": APP_VERSION,
+            "latest_version": latest,
+            "update_available": bool(latest and _ver_gt(latest, APP_VERSION)),
             "mode": s.mode,
             "plugins_root": str(s.plugin_root),
             "llm_provider": s.llm.get("default_provider", "deepseek"),

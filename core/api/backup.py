@@ -77,8 +77,7 @@ def create_backup(workspace: str = "shared") -> Dict[str, Any]:
             rel = dest.name  # 仅文件名（下载端点按 bdir 解析）
             return {
                 "ok": True,
-                "file": rel,
-                "abs_path": str(dest),
+                "file": rel,  # 仅文件名（DEF-004：不暴露服务器绝对路径）
                 "size_bytes": size,
                 "created_at": ts,
             }
@@ -111,23 +110,25 @@ def restore_backup(src_path: Path) -> Dict[str, Any]:
     失败保持原库不动（先复制到 .pre-restore 再替换）。
     """
     if not src_path.exists():
-        return {"ok": False, "note": "备份文件不存在"}
+        return {"ok": False, "client_error": True, "note": "备份文件不存在"}
     # 校验 SQLite 头
     with open(src_path, "rb") as f:
         head = f.read(16)
     if head[:16] != b"SQLite format 3\x00":
-        return {"ok": False, "note": "不是有效的 SQLite 备份文件"}
+        return {"ok": False, "client_error": True,
+                "note": "不是有效的 SQLite 备份文件"}
     # integrity_check
     try:
         conn = sqlite3.connect(str(src_path))
         try:
             row = conn.execute("PRAGMA integrity_check").fetchone()
             if not row or row[0] != "ok":
-                return {"ok": False, "note": f"完整性校验失败: {row}"}
+                return {"ok": False, "client_error": True,
+                        "note": f"完整性校验失败: {row}"}
         finally:
             conn.close()
     except sqlite3.Error as exc:  # noqa: BLE001
-        return {"ok": False, "note": f"校验异常: {exc}"}
+        return {"ok": False, "client_error": True, "note": f"校验异常: {exc}"}
 
     db = _db_path()
     with _backup_lock:
@@ -209,6 +210,10 @@ async def backup_restore(
             shutil.copyfileobj(file.file, f)
         result = restore_backup(tmp)
         if not result.get("ok"):
+            # DEF-003：客户端输入错误（非 SQLite/校验失败/文件不存在）→ 4xx；
+            # 服务端故障（磁盘 IO 等）→ 500。
+            if result.get("client_error"):
+                raise HTTPException(status_code=400, detail=result.get("note", "无效的备份文件"))
             raise HTTPException(status_code=500, detail=result.get("note", "恢复失败"))
         return ok(result)
     finally:

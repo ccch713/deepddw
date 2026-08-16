@@ -213,7 +213,9 @@ async def backup_restore(
             # DEF-003：客户端输入错误（非 SQLite/校验失败/文件不存在）→ 4xx；
             # 服务端故障（磁盘 IO 等）→ 500。
             if result.get("client_error"):
-                raise HTTPException(status_code=400, detail=result.get("note", "无效的备份文件"))
+                raise HTTPException(
+                    status_code=400, detail=result.get("note", "无效的备份文件"),
+                )
             raise HTTPException(status_code=500, detail=result.get("note", "恢复失败"))
         return ok(result)
     finally:

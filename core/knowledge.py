@@ -1072,7 +1072,9 @@ async def memory_reflect_generate(style: str = "auto") -> Dict[str, Any]:
         prev = memory_reflect_get(
             __import__("datetime").date.today().strftime("%Y-%m-%d"),
         )
-        prev_note = f"（昨日反思参考：{prev['content'][:100]}…）" if prev.get("found") else ""
+        prev_note = ""
+        if prev.get("found"):
+            prev_note = f"（昨日反思参考：{prev['content'][:100]}…）"
         style_guide = {
             "auto": "简洁客观，突出事实与决策",
             "专业": "条理清晰，分点陈述，面向团队复盘",

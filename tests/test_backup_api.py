@@ -99,7 +99,9 @@ async def test_backup_api_endpoints(client, monkeypatch, tmp_path):
     # DEF-004：create 响应无 abs_path
     assert "abs_path" not in r.json()["data"]
     # DEF-003：restore 非 SQLite 文件 → 4xx（非 500）
-    bad_upload = {"file": ("bad.db", b"not a sqlite file at all", "application/octet-stream")}
+    bad_upload = {"file": (
+        "bad.db", b"not a sqlite file at all", "application/octet-stream",
+    )}
     r6 = await client.post("/api/v1/backup/restore", headers=headers, files=bad_upload)
     assert 400 <= r6.status_code < 500, f"expected 4xx, got {r6.status_code}"
     # 主库不被破坏（fixture 初始数据仍在）

@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator, Optional
@@ -30,6 +31,40 @@ _engine: Optional[AsyncEngine] = None
 _session_maker: Optional[async_sessionmaker[AsyncSession]] = None
 
 
+# P0-1（multidevice）：SQLite 并发加固——WAL + busy_timeout + synchronous=NORMAL
+# 通过 SQLAlchemy event listener 在每个连接建立时执行 PRAGMA，覆盖 async 引擎
+# 的连接池复用；配合 knowledge.py 模块级单连接锁，消除多设备并发写锁冲突。
+_SQLITE_PRAGMAS = (
+    "PRAGMA journal_mode=WAL;",
+    "PRAGMA busy_timeout=5000;",
+    "PRAGMA synchronous=NORMAL;",
+    "PRAGMA foreign_keys=ON;",
+)
+
+# 跨表写事务的全局串行化锁（asyncio）：多设备并发写记忆/知识库时，
+# 写路径先获取本锁，避免 interleaved 写事务触发 SQLITE_BUSY。
+_write_lock: Optional[asyncio.Lock] = None
+
+
+def get_write_lock() -> asyncio.Lock:
+    """进程级写串行化锁（P0-1）：跨表写事务（记忆+文档索引等）用。"""
+    global _write_lock
+    if _write_lock is None:
+        _write_lock = asyncio.Lock()
+    return _write_lock
+
+
+def _apply_sqlite_pragmas(dbapi_connection, connection_record) -> None:  # noqa: ARG001
+    """SQLAlchemy 连接事件：SQLite 连接建立后执行并发加固 PRAGMA。"""
+    try:
+        cursor = dbapi_connection.cursor()
+        for stmt in _SQLITE_PRAGMAS:
+            cursor.execute(stmt)
+        cursor.close()
+    except Exception:  # noqa: BLE001  # PRAGMA 失败不阻断建连（降级）
+        logger.warning("sqlite pragma setup degraded", exc_info=True)
+
+
 def get_engine() -> AsyncEngine:
     global _engine
     if _engine is None:
@@ -38,12 +73,23 @@ def get_engine() -> AsyncEngine:
         connect_args: dict = {}
         if url.startswith("sqlite"):
             connect_args = {"check_same_thread": False}
-        _engine = create_async_engine(
-            url,
-            echo=settings.databases.get("main", {}).get("echo", False),
-            pool_size=settings.databases.get("main", {}).get("pool_size", 5),
-            connect_args=connect_args,
-        )
+            # P0-1：把 PRAGMA 挂到 connect 事件（连接池每条连接都执行）
+            from sqlalchemy import event
+
+            _engine = create_async_engine(
+                url,
+                echo=settings.databases.get("main", {}).get("echo", False),
+                pool_size=settings.databases.get("main", {}).get("pool_size", 5),
+                connect_args=connect_args,
+            )
+            event.listen(_engine.sync_engine, "connect", _apply_sqlite_pragmas)
+        else:
+            _engine = create_async_engine(
+                url,
+                echo=settings.databases.get("main", {}).get("echo", False),
+                pool_size=settings.databases.get("main", {}).get("pool_size", 5),
+                connect_args=connect_args,
+            )
         logger.info("DDW async engine created: %s", url)
     return _engine
 

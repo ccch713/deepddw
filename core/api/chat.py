@@ -161,20 +161,24 @@ async def post_chat(
     try:
         # P0-6：id 留空由 DB 自增（chat_messages 建表已声明 AUTOINCREMENT），
         # 去掉手算 max(id)+1——消除并发主键冲突；两条消息同一事务成对写入。
-        async with session_scope() as session:
-            for role, content in (
-                ("user", payload.message), ("assistant", response.content)
-            ):
-                await session.execute(_chat_table.insert().values(
-                    user_id=user_id, tenant_id=tenant_id,
-                    conversation_id=conv_id,
-                    role=role, content=content,
-                    provider=response.provider, model=response.model,
-                    tokens_in=response.tokens_in, tokens_out=response.tokens_out,
-                    cost=response.cost,
-                    created_at=now, updated_at=now,
-                ))
-            await session.commit()
+        # P0-1（multidevice）：跨表写事务加全局写锁，避免并发写 SQLITE_BUSY。
+        from core.database.session import get_write_lock
+
+        async with get_write_lock():
+            async with session_scope() as session:
+                for role, content in (
+                    ("user", payload.message), ("assistant", response.content)
+                ):
+                    await session.execute(_chat_table.insert().values(
+                        user_id=user_id, tenant_id=tenant_id,
+                        conversation_id=conv_id,
+                        role=role, content=content,
+                        provider=response.provider, model=response.model,
+                        tokens_in=response.tokens_in, tokens_out=response.tokens_out,
+                        cost=response.cost,
+                        created_at=now, updated_at=now,
+                    ))
+                await session.commit()
     except Exception as exc:  # noqa: BLE001  # 历史落库失败不阻塞回复
         logger.warning("chat history persist degraded: %s", exc)
     # 自动沉淀（优化②）：回复后后台提炼对话要点写今日日志；不阻塞响应。

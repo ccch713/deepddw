@@ -81,7 +81,8 @@ def build_router() -> APIRouter:
         doc_type: Optional[str] = Query(None, description="类型过滤"),
         visibility: Optional[str] = Query(None, description="可见性过滤"),
         workspace: Optional[str] = Query(None, max_length=32,
-                                         description="工作区过滤（默认全部；非 shared 按 slug 前缀 ws-{workspace}- 过滤）"),
+                                         description="工作区过滤（默认全部；"
+                                                     "非 shared 按 slug 前缀 ws-{workspace}- 过滤"),
         page: int = Query(1, ge=1),
         page_size: int = Query(20, ge=1, le=100),
         user: dict = Depends(require_access_token),

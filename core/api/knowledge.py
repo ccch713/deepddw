@@ -195,7 +195,9 @@ async def append_memory_log(
 
     P1-1：日志带 workspace 列（默认 shared）。
     """
-    return ok(memory_log_append(payload.content, auto=payload.auto, workspace=payload.workspace))
+    return ok(memory_log_append(
+        payload.content, auto=payload.auto, workspace=payload.workspace,
+    ))
 
 
 @router.get("/memory/logs")
@@ -263,7 +265,9 @@ async def search_memory_v2(
     if expand:
         from core.knowledge import memory_search_v2_async
 
-        result = await memory_search_v2_async(q, top_k, expand=True, workspace=workspace)
+        result = await memory_search_v2_async(
+            q, top_k, expand=True, workspace=workspace,
+        )
     else:
         result = memory_search_v2(q, top_k, workspace=workspace)
     return ok({

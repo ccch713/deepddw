@@ -244,7 +244,6 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
     # 重建表并回填（幂等：老表存在且无 workspace 唯一约束时才做）。
     try:
         cols = [r[1] for r in conn.execute("PRAGMA table_info(memory_user)")]
-        idx = [r[1] for r in conn.execute("PRAGMA index_list(memory_user)")]
         legacy = "workspace" not in cols
         if legacy:
             conn.execute("ALTER TABLE memory_user RENAME TO memory_user_legacy")
@@ -913,7 +912,9 @@ def memory_note_list(workspace: str = "shared") -> Dict[str, Any]:
         close_conn(conn)
 
 
-def memory_log_append(content: str, auto: bool = False, workspace: str = "shared") -> Dict[str, Any]:
+def memory_log_append(
+    content: str, auto: bool = False, workspace: str = "shared",
+) -> Dict[str, Any]:
     """今日日志 append-only（借鉴 auto-memory 每日日志 YYYY-MM-DD.md）。
 
     P1-1：日志带 workspace 列（默认 shared 与旧行为一致）。

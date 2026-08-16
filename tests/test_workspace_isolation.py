@@ -71,9 +71,12 @@ def test_workspace_logs_isolation():
     memory_log_append("团队B的日志", workspace="teamB")
     memory_log_append("共享日志", workspace="shared")
 
-    a = [r["content"] for r in memory_logs_recent(days=1, workspace="teamA").get("results", [])]
-    b = [r["content"] for r in memory_logs_recent(days=1, workspace="teamB").get("results", [])]
-    s = [r["content"] for r in memory_logs_recent(days=1, workspace="shared").get("results", [])]
+    a = [r["content"] for r in memory_logs_recent(
+        days=1, workspace="teamA").get("results", [])]
+    b = [r["content"] for r in memory_logs_recent(
+        days=1, workspace="teamB").get("results", [])]
+    s = [r["content"] for r in memory_logs_recent(
+        days=1, workspace="shared").get("results", [])]
 
     assert "团队A的日志" in a and "团队B的日志" not in a
     assert "团队B的日志" in b and "团队A的日志" not in b
@@ -150,5 +153,6 @@ async def test_device_register_workspace(client, monkeypatch, tmp_path):
                                 "device_name": "团队A手机", "workspace": "teamA"})
     assert r.status_code == 200 and r.json()["data"]["ok"]
     snap = await client.get("/api/v1/status", headers=headers)
-    dev = [d for d in snap.json()["data"]["devices"] if d["device_id"] == "device-ws-0001"][0]
+    dev = [d for d in snap.json()["data"]["devices"]
+           if d["device_id"] == "device-ws-0001"][0]
     assert dev["workspace"] == "teamA"

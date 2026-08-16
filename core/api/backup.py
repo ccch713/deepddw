@@ -13,15 +13,14 @@ import logging
 import os
 import shutil
 import sqlite3
-import subprocess
 import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from core.api_response import ok
 from core.config import get_settings
@@ -142,7 +141,8 @@ def restore_backup(src_path: Path) -> Dict[str, Any]:
         try:
             db.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src_path, db)
-            return {"ok": True, "note": f"已恢复 {src_path.name}（原库备份为 .pre-restore）"}
+            return {"ok": True,
+                    "note": f"已恢复 {src_path.name}（原库备份为 .pre-restore）"}
         except OSError as exc:  # noqa: BLE001
             return {"ok": False, "note": f"恢复失败: {exc}"}
 

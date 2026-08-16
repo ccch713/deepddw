@@ -52,7 +52,7 @@ def test_create_backup_and_list(monkeypatch, tmp_path):
 
 def test_restore_valid_backup(monkeypatch, tmp_path):
     """恢复：有效备份替换主库（数据变为备份内容）。"""
-    src = _mk_backup(monkeypatch, tmp_path)
+    _mk_backup(monkeypatch, tmp_path)  # 生成 good-backup.db（返回值仅用于断言可略）
     r = backup_api.restore_backup(tmp_path / "good-backup.db")
     assert r["ok"] is True
     conn = sqlite3.connect(str(backup_api._db_path()))
@@ -88,7 +88,9 @@ async def test_backup_api_endpoints(client, monkeypatch, tmp_path):
     r3 = await client.get(f"/api/v1/backup/download/{fname}", headers=headers)
     assert r3.status_code == 200
     # 路径穿越拒绝
-    r4 = await client.get("/api/v1/backup/download/..%2F..%2Fetc%2Fpasswd", headers=headers)
+    r4 = await client.get(
+        "/api/v1/backup/download/..%2F..%2Fetc%2Fpasswd", headers=headers,
+    )
     assert r4.status_code in (400, 404)
     # 无 Token → 401
     r5 = await client.get("/api/v1/backup/list")

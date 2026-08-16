@@ -145,7 +145,8 @@ async def main() -> int:
         "rounds_data": {},
         "aggregate": {},
     }
-    header = f"{'设备数':>6} {'请求':>6} {'成功':>6} {'错误':>5} {'错误率%':>7} {'P50ms':>7} {'P95ms':>7} {'RPS':>6}"
+    header = "{:>6} {:>6} {:>6} {:>5} {:>7} {:>7} {:>7} {:>6}".format(
+        "设备数", "请求", "成功", "错误", "错误率%", "P50ms", "P95ms", "RPS")
     print(header)
     print("-" * len(header))
     for nd in device_list:
@@ -157,11 +158,16 @@ async def main() -> int:
         agg = {
             "devices": nd,
             "requests": row["requests"],
-            "success_avg": round(sum(x["success"] for x in round_rows) / len(round_rows), 1),
-            "error_rate_avg": round(sum(x["error_rate"] for x in round_rows) / len(round_rows), 2),
-            "p50_avg_ms": round(sum(x["p50_ms"] for x in round_rows) / len(round_rows), 1),
-            "p95_avg_ms": round(sum(x["p95_ms"] for x in round_rows) / len(round_rows), 1),
-            "rps_avg": round(sum(x["rps"] for x in round_rows) / len(round_rows), 1),
+            "success_avg": round(
+                sum(x["success"] for x in round_rows) / len(round_rows), 1),
+            "error_rate_avg": round(
+                sum(x["error_rate"] for x in round_rows) / len(round_rows), 2),
+            "p50_avg_ms": round(
+                sum(x["p50_ms"] for x in round_rows) / len(round_rows), 1),
+            "p95_avg_ms": round(
+                sum(x["p95_ms"] for x in round_rows) / len(round_rows), 1),
+            "rps_avg": round(
+                sum(x["rps"] for x in round_rows) / len(round_rows), 1),
         }
         all_results["rounds_data"][str(nd)] = round_rows
         all_results["aggregate"][str(nd)] = agg

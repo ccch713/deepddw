@@ -194,6 +194,7 @@ def register_device(
 
 def heartbeat_device(
     device_id: str, device_name: str = "", ip: str = "", ts: Optional[float] = None,
+    workspace: str = "shared",
 ) -> Dict[str, Any]:
     """心跳：刷新内存活跃表 + 落库（幂等；未注册设备自动注册）。"""
     return register_device(device_id, device_name, ip, ts, workspace)

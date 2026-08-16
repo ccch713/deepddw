@@ -31,7 +31,9 @@ def _isolated(monkeypatch, tmp_path):
 
 def test_summary_save_and_list():
     """保存摘要 → 列出（同 session 覆盖；limit 生效）。"""
-    session_summary_save("sess-a-0001", "部署讨论", "决定用 Docker Compose 部署", "teamA")
+    session_summary_save(
+        "sess-a-0001", "部署讨论", "决定用 Docker Compose 部署", "teamA",
+    )
     session_summary_save("sess-a-0002", "记忆重构", "完成了分层记忆", "teamA")
     session_summary_save("sess-a-0003", "第三段", "内容三", "teamA")
     # 同 session 覆盖（不新增）
@@ -41,7 +43,9 @@ def test_summary_save_and_list():
     assert len(results) == 3  # 覆盖后仍 3 条
     titles = {r["session_id"]: r["title"] for r in results}
     assert titles["sess-a-0001"] == "部署讨论v2"
-    assert "国内镜像加速" in [r["summary"] for r in results if r["session_id"] == "sess-a-0001"][0]
+    assert "国内镜像加速" in [
+        r["summary"] for r in results if r["session_id"] == "sess-a-0001"
+    ][0]
 
 
 def test_summary_workspace_isolation():
@@ -67,7 +71,8 @@ async def test_summary_api(client, monkeypatch, tmp_path):
     headers = {"X-DDW-Token": os.environ["DDW_ACCESS_TOKEN"]}
     r = await client.post("/api/v1/session-summary", headers=headers,
                           json={"session_id": "sess-http-01",
-                                "title": "手机续问", "summary": "摘要内容", "workspace": "shared"})
+                                "title": "手机续问",
+                                "summary": "摘要内容", "workspace": "shared"})
     assert r.status_code == 200 and r.json()["data"]["ok"]
     r2 = await client.get("/api/v1/session-summary", headers=headers,
                           params={"limit": 5})

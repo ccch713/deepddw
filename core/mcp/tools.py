@@ -203,6 +203,38 @@ def install_default_tools(registry: ToolRegistry) -> None:
         handler=memory_search_handler,
         plugin_name="core",
     ))
+    # 会话→文档闭环（v2.1：以官方 MCP 工具出现在 dsh，模型直接调用）
+    registry.register(Tool(
+        name="ddw.docs.save",
+        description=(
+            "把当前对话产出的文档保存到 deepDDW 知识库并关联会话。"
+            "session_id/title/content；kind（可选，默认 chat）"
+        ),
+        parameters={
+            "properties": {
+                "session_id": {"type": "string", "description": "dsh 会话 id"},
+                "title": {"type": "string", "description": "文档标题"},
+                "content": {"type": "string", "description": "文档正文（markdown）"},
+                "kind": {"type": "string", "description": "类型（默认 chat）"},
+            },
+            "required": ["session_id", "title", "content"],
+        },
+        handler=docs_save_handler,
+        plugin_name="core",
+    ))
+    registry.register(Tool(
+        name="ddw.session.docs",
+        description="列出某会话产出/关联的文档。session_id；limit（可选，默认 50）",
+        parameters={
+            "properties": {
+                "session_id": {"type": "string", "description": "dsh 会话 id"},
+                "limit": {"type": "integer", "description": "返回条数"},
+            },
+            "required": ["session_id"],
+        },
+        handler=session_docs_handler,
+        plugin_name="core",
+    ))
 
 
 async def memory_put_handler(args: Dict[str, Any], ctx: Dict[str, Any]) -> Dict[str, Any]:
@@ -252,6 +284,71 @@ async def memory_search_handler(args: Dict[str, Any], ctx: Dict[str, Any]) -> Di
         logger.warning("mcp memory.search degraded: %s", exc)
         return {
             "content": [{"type": "text", "text": f"记忆检索失败（已降级）：{exc}"}],
+            "results": [],
+            "degraded": True,
+        }
+
+
+async def docs_save_handler(
+    args: Dict[str, Any], ctx: Dict[str, Any]
+) -> Dict[str, Any]:
+    """ddw.docs.save 真实 handler（会话→文档入库+关联）。"""
+    from core.knowledge import session_doc_add
+
+    try:
+        result = session_doc_add(
+            session_id=str(args.get("session_id", "")),
+            title=str(args.get("title", "")),
+            content=str(args.get("content", "")),
+            kind=str(args.get("kind") or "chat"),
+        )
+        if not result.get("ok"):
+            return {
+                "content": [{"type": "text", "text": "文档保存失败（已降级）"}],
+                "ok": False,
+                "degraded": True,
+            }
+        return {
+            "content": [
+                {"type": "text", "text": f"文档已保存（id={result['id']}，已关联会话）"}
+            ],
+            "ok": True,
+            "id": result["id"],
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("mcp docs.save degraded: %s", exc)
+        return {
+            "content": [{"type": "text", "text": f"文档保存失败（已降级）：{exc}"}],
+            "ok": False,
+            "degraded": True,
+        }
+
+
+async def session_docs_handler(
+    args: Dict[str, Any], ctx: Dict[str, Any]
+) -> Dict[str, Any]:
+    """ddw.session.docs 真实 handler（按会话列文档）。"""
+    from core.knowledge import session_docs_list
+
+    try:
+        result = session_docs_list(
+            session_id=str(args.get("session_id", "")),
+            limit=int(args.get("limit") or 50),
+        )
+        items = result.get("results", [])
+        if not items:
+            text = "该会话暂无产出文档（degraded={})".format(
+                result.get("degraded", False)
+            )
+        else:
+            text = "会话文档列表：\n" + "\n".join(
+                f"- [{it['id']}] {it['title']}" for it in items
+            )
+        return {"content": [{"type": "text", "text": text}], "results": items}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("mcp session.docs degraded: %s", exc)
+        return {
+            "content": [{"type": "text", "text": f"会话文档查询失败（已降级）：{exc}"}],
             "results": [],
             "degraded": True,
         }

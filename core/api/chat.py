@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime
-from typing import Any, AsyncIterator, List
+from typing import Any, AsyncIterator, Dict, List
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
@@ -60,10 +60,59 @@ class ChatRequest(BaseModel):
     conversation_id: str | None = None
     rule: str | None = None
     system: str | None = None
+    rag: bool = True  # 自动 RAG：先检索知识库拼入上下文（无命中/故障自动降级）
 
 
 class StreamRequest(ChatRequest):
     pass
+
+
+_RAG_MAX_HITS = 3  # 拼入上下文的 KB 命中上限（防上下文爆炸）
+_RAG_MAX_CHARS = 600  # 每条命中截断长度
+
+
+def _build_rag_context(message: str) -> Dict[str, Any]:
+    """自动 RAG：检索知识库并把命中拼成 system 上下文。
+
+    失败/无命中返回空上下文（对话主流程不阻塞）。
+    """
+    try:
+        from core.knowledge import kb_search
+
+        result = kb_search(message, top_k=_RAG_MAX_HITS)
+        hits = result.get("results", [])
+        if not hits:
+            return {"context": "", "hits": [], "degraded": bool(result.get("degraded"))}
+        lines = ["以下为知识库检索结果，可据此回答（若无直接关系请忽略）："]
+        for i, it in enumerate(hits, 1):
+            excerpt = (it.get("excerpt") or "")[:_RAG_MAX_CHARS]
+            lines.append(f"[{i}] {it.get('title', '')}: {excerpt}")
+        return {"context": "\n".join(lines), "hits": hits, "degraded": False}
+    except Exception as exc:  # noqa: BLE001  # RAG 故障降级为普通对话
+        logger.warning("chat rag degraded: %s", exc)
+        return {"context": "", "hits": [], "degraded": True}
+
+
+def _apply_rag(
+    messages: List[LLMChatMessage],
+    payload: ChatRequest,
+) -> Dict[str, Any]:
+    """把 RAG 上下文注入 messages（payload.rag 开启时）；返回命中信息。"""
+    if not payload.rag:
+        return {"context": "", "hits": [], "degraded": False}
+    rag = _build_rag_context(payload.message)
+    if rag["context"]:
+        base_system = payload.system or ""
+        combined = (
+            f"{base_system}\n\n{rag['context']}"
+            if base_system else rag["context"]
+        )
+        # 替换/插入 system 消息（保持 system 在最前）
+        if messages and messages[0].role == "system":
+            messages[0] = LLMChatMessage(role="system", content=combined)
+        else:
+            messages.insert(0, LLMChatMessage(role="system", content=combined))
+    return rag
 
 
 @router.post("/")
@@ -76,6 +125,7 @@ async def post_chat(
     if payload.system:
         messages.append(LLMChatMessage(role="system", content=payload.system))
     messages.append(LLMChatMessage(role="user", content=payload.message))
+    rag = _apply_rag(messages, payload)  # 自动 RAG（可开关；失败降级）
     ctx = RouteContext(user_id=user_id, tenant_id=tenant_id, rule=payload.rule)
     response = await llm_chat(messages, rule=payload.rule, ctx=ctx)
     conv_id = payload.conversation_id or uuid.uuid4().hex
@@ -109,7 +159,13 @@ async def post_chat(
         "provider": response.provider,
         "tokens_in": response.tokens_in, "tokens_out": response.tokens_out,
         "cost": response.cost,
-               "conversation_id": conv_id})
+        "conversation_id": conv_id,
+        "rag": {
+            "enabled": payload.rag,
+            "hits": len(rag.get("hits", [])),
+            "degraded": bool(rag.get("degraded")),
+        },
+    })
 
 
 @router.post("/stream")
@@ -120,6 +176,7 @@ async def post_stream(
     if payload.system:
         messages.append(LLMChatMessage(role="system", content=payload.system))
     messages.append(LLMChatMessage(role="user", content=payload.message))
+    _apply_rag(messages, payload)  # 自动 RAG（流式同样生效；失败降级）
     ctx = RouteContext(user_id=0, tenant_id=0, rule=payload.rule)
 
     async def gen() -> AsyncIterator[bytes]:

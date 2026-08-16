@@ -1,8 +1,9 @@
-"""deepDDW 个人级知识库 + 轻量记忆服务（开源白名单组件，SQLite 基础实现）。
+"""deepDDW 个人级知识库 + 轻量记忆服务（开源白名单组件）。
 
-- 知识库：``kb_documents`` 表（title/content），关键词检索
-  （SQLite FTS5 优先，退化到 LIKE）；LanceDB 向量检索作为可选增强
-  （``LANCEDB_PATH`` 存在时启用，失败自动降级不阻塞）。
+- 知识库：``kb_documents`` 表（title/content），**向量 + 关键词混合检索**：
+  入库时生成 hash-trick 512 维 embedding 写 LanceDB（Apache-2.0，可选增强，
+  ``LANCEDB_PATH`` 存在时启用）；检索 = 向量 cosine 与 FTS5/LIKE 关键词
+  RRF 融合；LanceDB 不可用时自动降级纯关键词，不阻塞主流程。
 - 记忆：``memory_entries`` 表，键值/列表式长期记忆（deepDDW v0.1 内置实现；
   部署可另接 agentmemory MCP 服务作为外部记忆后端）。
 
@@ -13,7 +14,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import math
 import re
 import sqlite3
 from pathlib import Path
@@ -32,6 +35,15 @@ _FTS_CREATE = (
     "CREATE VIRTUAL TABLE IF NOT EXISTS kb_fts USING "
     "fts5(title, content, content='kb_documents', content_rowid='id')"
 )
+
+# ---- LanceDB 向量检索（可选增强；不可用自动降级） ----
+_VECTOR_DIM = 512
+_LANCE_DIR_DEFAULT = "./data/kb_vectors.lance"
+_VECTOR_TABLE = "kb_vectors"
+_RRF_K = 60  # RRF 融合常数：score = Σ 1/(k + rank)
+
+# hash-trick 词频 embedding 的运行时探测缓存
+_lance_available: Optional[bool] = None
 
 
 # ---------------------------------------------------------------------------
@@ -79,9 +91,163 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         );
         CREATE INDEX IF NOT EXISTS idx_memory_namespace
             ON memory_entries(namespace, key);
+        CREATE TABLE IF NOT EXISTS session_docs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT NOT NULL,
+            doc_id INTEGER NOT NULL,
+            kind TEXT NOT NULL DEFAULT 'chat',
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_session_docs_sid
+            ON session_docs(session_id);
         """
     )
     conn.commit()
+
+
+def _tokenize(text: str) -> List[str]:
+    """中文/英文/数字 token 化（复用 FTS 清洗规则）。"""
+    raw = re.findall(r"[0-9A-Za-z_\-]+|[\u4e00-\u9fff]", (text or "").lower())
+    return [t for t in raw if t]
+
+
+def _embed(text: str, dim: int = _VECTOR_DIM) -> List[float]:
+    """hash-trick + 词频加权（log1p）的零依赖 embedding，L2 归一化。
+
+    确定性：同一文本每次产出相同向量（同词同桶）。512 维对个人级知识库
+    足够表达词频分布；语义相似文档共享高频词桶，cosine 可排序。
+    """
+    vec = [0.0] * dim
+    counts: Dict[str, int] = {}
+    for tok in _tokenize(text):
+        counts[tok] = counts.get(tok, 0) + 1
+    for tok, count in counts.items():
+        bucket = int(hashlib.sha256(tok.encode("utf-8")).hexdigest(), 16) % dim
+        vec[bucket] += math.log1p(count)
+    norm = math.sqrt(sum(v * v for v in vec))
+    if norm > 0:
+        vec = [v / norm for v in vec]
+    return vec
+
+
+def _lance_dir() -> Path:
+    override = __import__("os").environ.get("LANCEDB_PATH")
+    if override:
+        return Path(override).resolve()
+    settings = get_settings()
+    cfg = settings.databases.get("main", {})
+    if cfg.get("engine") == "sqlite":
+        base = Path(cfg.get("path", _DB_PATH_DEFAULT)).resolve().parent
+        return base / "kb_vectors.lance"
+    return Path(_LANCE_DIR_DEFAULT).resolve()
+
+
+def _lance_available() -> bool:
+    """LanceDB 可用性探测（import 成功 + 目录可写）。"""
+    global _lance_available
+    if _lance_available is None:
+        try:
+            import lancedb  # noqa: F401
+
+            _lance_dir().mkdir(parents=True, exist_ok=True)
+            _lance_available = True
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("lancedb unavailable: %s", exc)
+            _lance_available = False
+    return _lance_available
+
+
+def _vector_add(doc_id: int, title: str, content: str) -> None:
+    """写入/更新向量（幂等 upsert by doc_id）；失败仅告警。"""
+    if not _lance_available():
+        return
+    try:
+        import lancedb
+
+        db = lancedb.connect(str(_lance_dir()))
+        table = _get_or_create_vector_table(db)
+        vector = _embed(f"{title}\n{content}")
+        existing = None
+        try:
+            existing = table.search(vector).where(
+                f"doc_id = {doc_id}", prefilter=True).limit(1).to_list()
+        except Exception:  # noqa: BLE001  # 空表/无该行
+            existing = None
+        data = [{
+            "doc_id": doc_id,
+            "title": title,
+            "content": content,
+            "vector": vector,
+        }]
+        if existing:
+            table.delete(f"doc_id = {doc_id}")
+        table.add(data)
+    except Exception as exc:  # noqa: BLE001  # 向量故障不阻塞入库
+        logger.warning("kb vector add failed (degraded): %s", exc)
+
+
+def _get_or_create_vector_table(db):
+    if _VECTOR_TABLE in db.table_names():
+        return db.open_table(_VECTOR_TABLE)
+    return db.create_table(
+        _VECTOR_TABLE,
+        data=[{
+            "doc_id": 0,
+            "title": "",
+            "content": "",
+            "vector": [0.0] * _VECTOR_DIM,
+        }],
+    )
+
+
+def _vector_search(query: str, top_k: int) -> List[Dict[str, Any]]:
+    """LanceDB cosine 检索；失败返回空列表（上层降级）。"""
+    if not _lance_available():
+        return []
+    try:
+        import lancedb
+
+        db = lancedb.connect(str(_lance_dir()))
+        if _VECTOR_TABLE not in db.table_names():
+            return []
+        table = db.open_table(_VECTOR_TABLE)
+        q = _embed(query)
+        rows = table.search(q).limit(top_k).to_list()
+        out = []
+        for r in rows:
+            if r.get("doc_id"):
+                out.append({
+                    "doc_id": r["doc_id"],
+                    "title": r.get("title", ""),
+                    "content": r.get("content", ""),
+                    "score": float(r.get("_distance", 1.0)),
+                    "_src": "vector",
+                })
+        return out
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("kb vector search failed (degraded): %s", exc)
+        return []
+
+
+def _rrf_fuse(lists: List[List[Dict[str, Any]]], top_k: int) -> List[Dict[str, Any]]:
+    """RRF 融合多个检索结果（按 doc_id 合并，score = Σ 1/(k+rank)）。"""
+    merged: Dict[int, Dict[str, Any]] = {}
+    for ranked in lists:
+        for rank, item in enumerate(ranked):
+            did = int(item.get("doc_id") or 0)
+            if not did:
+                continue
+            entry = merged.setdefault(did, {
+                "doc_id": did,
+                "title": item.get("title", ""),
+                "content": item.get("content", ""),
+                "score": 0.0,
+                "sources": [],
+            })
+            entry["score"] += 1.0 / (_RRF_K + rank + 1)
+            entry["sources"].append(item.get("_src", "keyword"))
+    ranked = sorted(merged.values(), key=lambda x: x["score"], reverse=True)
+    return ranked[:top_k]
 
 
 def _fts_supported(conn: sqlite3.Connection) -> bool:
@@ -125,6 +291,7 @@ def kb_add_document(
                 conn.commit()
             except sqlite3.OperationalError as exc:  # noqa: BLE001
                 logger.warning("kb fts index failed, fallback to LIKE: %s", exc)
+        _vector_add(doc_id, title, content)  # 向量增强（失败仅告警，不阻塞）
         return {"id": doc_id, "title": title, "category": category}
     finally:
         conn.close()
@@ -141,6 +308,7 @@ def kb_search(query: str, top_k: int = 5) -> Dict[str, Any]:
         return {"results": [], "degraded": False, "note": "empty query"}
     try:
         conn = get_conn()
+        keyword: List[Dict[str, Any]] = []
         try:
             if _fts_supported(conn):
                 try:
@@ -150,29 +318,65 @@ def kb_search(query: str, top_k: int = 5) -> Dict[str, Any]:
                         "bm25(kb_fts) AS score "
                         "FROM kb_fts JOIN kb_documents d ON d.id = kb_fts.rowid "
                         "WHERE kb_fts MATCH ? ORDER BY score LIMIT ?",
-                        (_fts_query(query), top_k),
+                        (_fts_query(query), top_k * 2),
                     ).fetchall()
-                    if rows:
-                        return {
-                            "results": [_kb_row(r) for r in rows],
-                            "degraded": False,
-                        }
+                    keyword = [_kb_row(r, src="keyword") for r in rows]
                 except sqlite3.OperationalError as exc:  # noqa: BLE001
                     logger.debug("kb fts query failed, fallback to LIKE: %s", exc)
-            # LIKE 兜底：按 title/content 命中粗排序
-            like = f"%{query}%"
-            rows = conn.execute(
-                "SELECT id, title, content, category, 0 AS score "
-                "FROM kb_documents WHERE title LIKE ? OR content LIKE ? "
-                "ORDER BY id DESC LIMIT ?",
-                (like, like, top_k),
-            ).fetchall()
-            return {"results": [_kb_row(r) for r in rows], "degraded": False}
+            if not keyword:
+                # LIKE 兜底：按 title/content 命中粗排序
+                like = f"%{query}%"
+                rows = conn.execute(
+                    "SELECT id, title, content, category, 0 AS score "
+                    "FROM kb_documents WHERE title LIKE ? OR content LIKE ? "
+                    "ORDER BY id DESC LIMIT ?",
+                    (like, like, top_k * 2),
+                ).fetchall()
+                keyword = [_kb_row(r, src="keyword") for r in rows]
         finally:
             conn.close()
+
+        # 向量检索（LanceDB 可用时）→ RRF 融合
+        vector_hits = _vector_search(query, top_k * 2)
+        if vector_hits:
+            fused = _rrf_fuse([vector_hits, keyword], top_k)
+            return {
+                "results": [_fused_row(x) for x in fused],
+                "degraded": False,
+                "mode": "hybrid",
+                "sources": _fused_sources(fused),
+            }
+        return {
+            "results": [_fused_row(x) for x in keyword[:top_k]],
+            "degraded": False,
+            "mode": "keyword",
+        }
     except Exception as exc:  # noqa: BLE001  # 存储故障不阻塞主流程
         logger.warning("kb_search degraded: %s", exc)
         return {"results": [], "degraded": True, "note": str(exc)}
+
+
+def _fused_row(item: Dict[str, Any]) -> Dict[str, Any]:
+    """融合条目 → 统一输出结构。"""
+    content = item.get("content") or ""
+    excerpt = content[:200] + ("…" if len(content) > 200 else "")
+    return {
+        "id": int(item.get("doc_id") or 0),
+        "title": item.get("title", ""),
+        "excerpt": excerpt,
+        "category": item.get("category", "public"),
+        "score": round(float(item.get("score") or 0.0), 4),
+        "sources": item.get("sources", []),
+    }
+
+
+def _fused_sources(fused: List[Dict[str, Any]]) -> List[str]:
+    seen: List[str] = []
+    for x in fused:
+        for src in x.get("sources", []):
+            if src not in seen:
+                seen.append(src)
+    return seen
 
 
 def _fts_query(query: str) -> str:
@@ -185,15 +389,17 @@ def _fts_query(query: str) -> str:
     return " AND ".join(f'"{c}"' for c in cleaned[:8])
 
 
-def _kb_row(row: sqlite3.Row) -> Dict[str, Any]:
+def _kb_row(row: sqlite3.Row, src: str = "keyword") -> Dict[str, Any]:
     content = row["content"] or ""
     excerpt = content[:200] + ("…" if len(content) > 200 else "")
     return {
         "id": row["id"],
         "title": row["title"],
+        "content": content,
         "excerpt": excerpt,
         "category": row["category"],
-        "score": row["score"] if "score" in row.keys() else 0,
+        "score": float(row["score"]) if "score" in row.keys() else 0.0,
+        "_src": src,
     }
 
 
@@ -285,11 +491,72 @@ def memory_search(namespace: str, query: str, top_k: int = 5) -> Dict[str, Any]:
         conn.close()
 
 
+def session_doc_add(
+    session_id: str, title: str, content: str, kind: str = "chat"
+) -> Dict[str, Any]:
+    """会话→文档闭环：建知识库文档并关联到会话（对话产出文档入库）。
+
+    失败返回 degraded 标记（不阻塞调用方）。
+    """
+    try:
+        doc = kb_add_document(title, content, category="session")
+        conn = get_conn()
+        try:
+            conn.execute(
+                "INSERT INTO session_docs (session_id, doc_id, kind) "
+                "VALUES (?, ?, ?)",
+                (session_id, int(doc["id"]), kind),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        return {"id": doc["id"], "title": title, "session_id": session_id, "ok": True}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("session_doc_add degraded: %s", exc)
+        return {"ok": False, "degraded": True, "note": str(exc)}
+
+
+def session_docs_list(session_id: str, limit: int = 50) -> Dict[str, Any]:
+    """按会话列出产出文档（join kb_documents）；失败返回空 + degraded。"""
+    limit = max(1, min(int(limit or 50), 200))
+    try:
+        conn = get_conn()
+        try:
+            rows = conn.execute(
+                "SELECT d.id, d.title, d.content, d.category, "
+                "sd.kind, sd.created_at "
+                "FROM session_docs sd JOIN kb_documents d ON d.id = sd.doc_id "
+                "WHERE sd.session_id = ? ORDER BY sd.id DESC LIMIT ?",
+                (session_id, limit),
+            ).fetchall()
+        finally:
+            conn.close()
+        return {
+            "results": [
+                {
+                    "id": r["id"],
+                    "title": r["title"],
+                    "kind": r["kind"],
+                    "category": r["category"],
+                    "excerpt": (r["content"] or "")[:200],
+                    "created_at": r["created_at"],
+                }
+                for r in rows
+            ],
+            "degraded": False,
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("session_docs_list degraded: %s", exc)
+        return {"results": [], "degraded": True, "note": str(exc)}
+
+
 __all__ = [
     "kb_add_document",
     "kb_search",
     "memory_put",
     "memory_get",
     "memory_search",
+    "session_doc_add",
+    "session_docs_list",
     "get_conn",
 ]

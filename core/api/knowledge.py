@@ -26,6 +26,8 @@ from core.knowledge import (
     memory_get,
     memory_put,
     memory_search,
+    session_doc_add,
+    session_docs_list,
 )
 from core.security.token_gate import require_access_token
 
@@ -45,6 +47,15 @@ class MemoryPutReq(BaseModel):
     key: str = Field(..., min_length=1, max_length=200)
     value: str = Field(..., max_length=200_000)
     tags: List[str] = Field(default_factory=list, max_length=20)
+
+
+class SessionDocReq(BaseModel):
+    """会话产出文档：入库知识库并关联到 dsh 会话（#6 会话→文档闭环）。"""
+
+    session_id: str = Field(..., min_length=1, max_length=128)
+    title: str = Field(..., min_length=1, max_length=200)
+    content: str = Field(..., max_length=1_000_000)
+    kind: str = Field(default="chat", max_length=32)
 
 
 @router.get("/knowledge/search")
@@ -110,6 +121,33 @@ async def search_memory(
 ) -> Dict[str, Any]:
     result = memory_search(namespace, q, top_k)
     return ok({"results": result.get("results", []), "degraded": result.get("degraded", False)})
+
+
+@router.post("/knowledge/session-docs", status_code=status.HTTP_201_CREATED)
+async def add_session_doc(
+    payload: SessionDocReq,
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """会话→文档：对话产出的文档入库并关联到 dsh 会话。"""
+    result = session_doc_add(payload.session_id, payload.title,
+                             payload.content, payload.kind)
+    if not result.get("ok"):
+        raise HTTPException(status_code=500, detail=result.get("note", "写入失败"))
+    return ok(result)
+
+
+@router.get("/knowledge/session-docs")
+async def list_session_docs(
+    session_id: str = Query(..., min_length=1, max_length=128),
+    limit: int = Query(50, ge=1, le=200),
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """按会话列出产出文档（文档栏按当前 dsh 会话过滤）。"""
+    result = session_docs_list(session_id, limit)
+    return ok({
+        "results": result.get("results", []),
+        "degraded": result.get("degraded", False),
+    })
 
 
 __all__ = ["router"]

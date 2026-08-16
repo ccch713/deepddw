@@ -115,6 +115,32 @@ def _apply_rag(
     return rag
 
 
+def _apply_memory(messages: List[LLMChatMessage]) -> Dict[str, Any]:
+    """记忆注入（借鉴 dsh-auto-memory 的 <memory_system> 块，置于 system 最末）。
+
+    与 RAG 叠加：RAG 上下文在前（当轮检索），记忆块在后（长期记忆）；
+    记忆读取失败降级为空，不阻塞对话。
+    """
+    try:
+        from core.knowledge import memory_context_build
+
+        mem = memory_context_build()
+        block = mem.get("context", "")
+        if not block:
+            return {"context": "", "chars": 0, "degraded": bool(mem.get("degraded"))}
+        if messages and messages[0].role == "system":
+            messages[0] = LLMChatMessage(
+                role="system",
+                content=f"{messages[0].content}\n\n{block}",
+            )
+        else:
+            messages.insert(0, LLMChatMessage(role="system", content=block))
+        return {"context": block, "chars": mem.get("chars", 0), "degraded": False}
+    except Exception as exc:  # noqa: BLE001  # 记忆故障不阻塞主流程
+        logger.warning("chat memory inject degraded: %s", exc)
+        return {"context": "", "chars": 0, "degraded": True}
+
+
 @router.post("/")
 async def post_chat(
     payload: ChatRequest, claims: dict = Depends(require_access_token),
@@ -126,6 +152,7 @@ async def post_chat(
         messages.append(LLMChatMessage(role="system", content=payload.system))
     messages.append(LLMChatMessage(role="user", content=payload.message))
     rag = _apply_rag(messages, payload)  # 自动 RAG（可开关；失败降级）
+    memory_inject = _apply_memory(messages)  # 记忆注入（长期记忆块）
     ctx = RouteContext(user_id=user_id, tenant_id=tenant_id, rule=payload.rule)
     response = await llm_chat(messages, rule=payload.rule, ctx=ctx)
     conv_id = payload.conversation_id or uuid.uuid4().hex
@@ -160,6 +187,10 @@ async def post_chat(
             "hits": len(rag.get("hits", [])),
             "degraded": bool(rag.get("degraded")),
         },
+        "memory": {
+            "injected_chars": memory_inject.get("chars", 0),
+            "degraded": bool(memory_inject.get("degraded")),
+        },
     })
 
 
@@ -172,6 +203,7 @@ async def post_stream(
         messages.append(LLMChatMessage(role="system", content=payload.system))
     messages.append(LLMChatMessage(role="user", content=payload.message))
     _apply_rag(messages, payload)  # 自动 RAG（流式同样生效；失败降级）
+    _apply_memory(messages)  # 记忆注入（流式同样生效）
     ctx = RouteContext(user_id=0, tenant_id=0, rule=payload.rule)
 
     async def gen() -> AsyncIterator[bytes]:

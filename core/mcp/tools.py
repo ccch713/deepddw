@@ -66,7 +66,10 @@ class ToolRegistry:
     def list(self) -> List[Tool]:
         return list(self._tools.values())
 
-    async def call(self, name: str, arguments: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def call(
+        self, name: str, arguments: Dict[str, Any],
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         tool = self.get(name)
         if tool is None:
             return {"error": {"code": -32002, "message": f"tool not found: {name}"}}
@@ -182,7 +185,8 @@ def install_default_tools(registry: ToolRegistry) -> None:
                 "namespace": {"type": "string", "description": "命名空间（默认 default）"},
                 "key": {"type": "string", "description": "记忆键"},
                 "value": {"type": "string", "description": "记忆内容"},
-                "tags": {"type": "array", "items": {"type": "string"}, "description": "标签（可选）"},
+                "tags": {"type": "array", "items": {"type": "string"},
+                       "description": "标签（可选）"},
             },
             "required": ["key", "value"],
         },
@@ -201,6 +205,110 @@ def install_default_tools(registry: ToolRegistry) -> None:
             "required": ["query"],
         },
         handler=memory_search_handler,
+        plugin_name="core",
+    ))
+    # 分层记忆（v2.1 记忆子系统，借鉴 dsh-auto-memory 设计）
+    registry.register(Tool(
+        name="ddw.memory.context",
+        description=(
+            "构建长期记忆注入块（用户偏好+项目笔记+最近日志+反思），"
+            "chat 自动注入同源；供外部预览/调试。budget（可选，默认 2400 字符）"
+        ),
+        parameters={
+            "properties": {
+                "budget": {"type": "integer", "description": "预算字符数"},
+            },
+        },
+        handler=memory_context_handler,
+        plugin_name="core",
+    ))
+    registry.register(Tool(
+        name="ddw.memory.consolidate",
+        description=(
+            "记忆沉淀：把当前对话要点写入今日日志（自动沉淀，append-only）。"
+            "content: 沉淀内容"
+        ),
+        parameters={
+            "properties": {
+                "content": {"type": "string", "description": "沉淀要点"},
+            },
+            "required": ["content"],
+        },
+        handler=memory_consolidate_handler,
+        plugin_name="core",
+    ))
+    registry.register(Tool(
+        name="ddw.memory.reflect",
+        description=(
+            "每日反思：昨天有日志且今天未反思时调用；LLM 生成反思存当日。"
+            "content: 反思正文（可由模型基于日志生成）；style（可选，默认 auto）"
+        ),
+        parameters={
+            "properties": {
+                "content": {"type": "string", "description": "反思正文"},
+                "style": {"type": "string", "description": "风格（默认 auto）"},
+            },
+            "required": ["content"],
+        },
+        handler=memory_reflect_handler,
+        plugin_name="core",
+    ))
+    registry.register(Tool(
+        name="ddw.memory.maintain",
+        description=(
+            "记忆维护：当日写预算超限时归档最旧笔记到 archive，释放预算；"
+            "返回归档数量与预算状态"
+        ),
+        parameters={},
+        handler=memory_maintain_handler,
+        plugin_name="core",
+    ))
+    registry.register(Tool(
+        name="ddw.memory.note",
+        description=(
+            "写一条项目笔记（分层记忆笔记层，先查后插 upsert）。"
+            "key/value；source（可选，默认 deepddw）"
+        ),
+        parameters={
+            "properties": {
+                "key": {"type": "string", "description": "笔记键"},
+                "value": {"type": "string", "description": "笔记内容"},
+                "source": {"type": "string", "description": "来源（可选）"},
+            },
+            "required": ["key", "value"],
+        },
+        handler=memory_note_handler,
+        plugin_name="core",
+    ))
+    registry.register(Tool(
+        name="ddw.memory.user",
+        description=(
+            "写一条用户级长期事实/偏好（分层记忆用户层）。key/value"
+        ),
+        parameters={
+            "properties": {
+                "key": {"type": "string", "description": "事实/偏好键"},
+                "value": {"type": "string", "description": "内容"},
+            },
+            "required": ["key", "value"],
+        },
+        handler=memory_user_handler,
+        plugin_name="core",
+    ))
+    registry.register(Tool(
+        name="ddw.memory.search-v2",
+        description=(
+            "分层记忆检索：OR 多关键词扫四层（用户/笔记/日志/反思），"
+            "返回带 layer/source 标注的结果。query；top_k（可选，默认 5）"
+        ),
+        parameters={
+            "properties": {
+                "query": {"type": "string", "description": "检索词"},
+                "top_k": {"type": "integer", "description": "返回条数"},
+            },
+            "required": ["query"],
+        },
+        handler=memory_search_v2_handler,
         plugin_name="core",
     ))
     # 会话→文档闭环（v2.1：以官方 MCP 工具出现在 dsh，模型直接调用）
@@ -237,7 +345,9 @@ def install_default_tools(registry: ToolRegistry) -> None:
     ))
 
 
-async def memory_put_handler(args: Dict[str, Any], ctx: Dict[str, Any]) -> Dict[str, Any]:
+async def memory_put_handler(
+    args: Dict[str, Any], ctx: Dict[str, Any],
+) -> Dict[str, Any]:
     """ddw.memory.put 真实 handler（SQLite 记忆存储）。"""
     from core.knowledge import memory_put
 
@@ -262,7 +372,9 @@ async def memory_put_handler(args: Dict[str, Any], ctx: Dict[str, Any]) -> Dict[
         }
 
 
-async def memory_search_handler(args: Dict[str, Any], ctx: Dict[str, Any]) -> Dict[str, Any]:
+async def memory_search_handler(
+    args: Dict[str, Any], ctx: Dict[str, Any],
+) -> Dict[str, Any]:
     """ddw.memory.search 真实 handler（SQLite 记忆检索）。"""
     from core.knowledge import memory_search
 
@@ -284,6 +396,188 @@ async def memory_search_handler(args: Dict[str, Any], ctx: Dict[str, Any]) -> Di
         logger.warning("mcp memory.search degraded: %s", exc)
         return {
             "content": [{"type": "text", "text": f"记忆检索失败（已降级）：{exc}"}],
+            "results": [],
+            "degraded": True,
+        }
+
+
+async def memory_context_handler(
+    args: Dict[str, Any], ctx: Dict[str, Any],
+) -> Dict[str, Any]:
+    """ddw.memory.context handler（记忆注入块预览）。"""
+    from core.knowledge import memory_context_build
+
+    try:
+        result = memory_context_build(budget=int(args.get("budget") or 2400))
+        context = result.get("context", "")
+        if not context:
+            return {
+                "content": [{"type": "text", "text": "当前无可用记忆（degraded={})"
+                                        .format(result.get("degraded", False))}],
+                "chars": 0,
+            }
+        return {
+            "content": [{"type": "text", "text": context}],
+            "chars": result.get("chars", 0),
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("mcp memory.context degraded: %s", exc)
+        return {
+            "content": [{"type": "text", "text": f"记忆上下文构建失败（已降级）：{exc}"}],
+            "degraded": True,
+        }
+
+
+async def memory_consolidate_handler(
+    args: Dict[str, Any], ctx: Dict[str, Any],
+) -> Dict[str, Any]:
+    """ddw.memory.consolidate handler（自动沉淀：写入今日日志）。"""
+    from core.knowledge import memory_log_append
+
+    try:
+        content = str(args.get("content", "")).strip()
+        if not content:
+            return {"content": [{"type": "text", "text": "沉淀内容为空"}], "ok": False}
+        result = memory_log_append(content, auto=True)
+        return {
+            "content": [{"type": "text", "text": "已沉淀到今日日志（auto）"}],
+            "ok": bool(result.get("ok", True)),
+            "log_id": result.get("log_id"),
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("mcp memory.consolidate degraded: %s", exc)
+        return {
+            "content": [{"type": "text", "text": f"沉淀失败（已降级）：{exc}"}],
+            "ok": False,
+            "degraded": True,
+        }
+
+
+async def memory_reflect_handler(
+    args: Dict[str, Any], ctx: Dict[str, Any],
+) -> Dict[str, Any]:
+    """ddw.memory.reflect handler（每日反思保存）。"""
+    from core.knowledge import memory_reflect_save
+
+    try:
+        content = str(args.get("content", "")).strip()
+        if not content:
+            return {"content": [{"type": "text", "text": "反思正文为空"}], "ok": False}
+        result = memory_reflect_save(content, style=str(args.get("style") or "auto"))
+        return {
+            "content": [{"type": "text", "text": "反思已保存（{}）"
+                        .format(result.get("ref_date", ""))}],
+            "ok": bool(result.get("ok", True)),
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("mcp memory.reflect degraded: %s", exc)
+        return {
+            "content": [{"type": "text", "text": f"反思保存失败（已降级）：{exc}"}],
+            "ok": False,
+            "degraded": True,
+        }
+
+
+async def memory_maintain_handler(
+    args: Dict[str, Any], ctx: Dict[str, Any],
+) -> Dict[str, Any]:
+    """ddw.memory.maintain handler（超预算归档最旧笔记）。"""
+    from core.knowledge import memory_maintain
+
+    try:
+        result = memory_maintain()
+        archived = result.get("archived", [])
+        return {
+            "content": [{"type": "text", "text": (
+                "维护完成：归档 {} 条，预算 {} 字（余 {}）".format(
+                    len(archived), result.get("total", 0),
+                    result.get("remaining", 0)))}],
+            "ok": bool(result.get("ok", True)),
+            "archived": len(archived),
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("mcp memory.maintain degraded: %s", exc)
+        return {
+            "content": [{"type": "text", "text": f"维护失败（已降级）：{exc}"}],
+            "ok": False,
+            "degraded": True,
+        }
+
+
+async def memory_note_handler(
+    args: Dict[str, Any], ctx: Dict[str, Any],
+) -> Dict[str, Any]:
+    """ddw.memory.note handler（项目笔记 upsert）。"""
+    from core.knowledge import memory_note_put
+
+    try:
+        result = memory_note_put(
+            key=str(args.get("key", "")),
+            value=str(args.get("value", "")),
+            source=str(args.get("source") or "deepddw"),
+        )
+        return {
+            "content": [{"type": "text", "text": (
+                "笔记已保存（{}）".format(result.get("note", "ok")))}],
+            "ok": bool(result.get("ok", True)),
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("mcp memory.note degraded: %s", exc)
+        return {
+            "content": [{"type": "text", "text": f"笔记保存失败（已降级）：{exc}"}],
+            "ok": False,
+            "degraded": True,
+        }
+
+
+async def memory_user_handler(args: Dict[str, Any], ctx: Dict[str, Any]) -> Dict[str, Any]:
+    """ddw.memory.user handler（用户级长期事实 upsert）。"""
+    from core.knowledge import memory_user_put
+
+    try:
+        result = memory_user_put(
+            key=str(args.get("key", "")),
+            value=str(args.get("value", "")),
+        )
+        return {
+            "content": [{"type": "text", "text": "用户记忆已保存"}],
+            "ok": bool(result.get("ok", True)),
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("mcp memory.user degraded: %s", exc)
+        return {
+            "content": [{"type": "text", "text": f"用户记忆保存失败（已降级）：{exc}"}],
+            "ok": False,
+            "degraded": True,
+        }
+
+
+async def memory_search_v2_handler(args: Dict[str, Any], ctx: Dict[str, Any]) -> Dict[str, Any]:
+    """ddw.memory.search-v2 handler（分层检索，OR 多关键词扫四层）。"""
+    from core.knowledge import memory_search_v2
+
+    try:
+        result = memory_search_v2(
+            query=str(args.get("query", "")),
+            top_k=int(args.get("top_k") or 5),
+        )
+        items = result.get("results", [])
+        if not items:
+            text = "分层记忆未命中（degraded={})".format(result.get("degraded", False))
+        else:
+            text = "分层记忆检索结果：\n" + "\n".join(
+                f"- [{it.get('layer', '?')}] {it.get('content', it.get('value', ''))}"
+                for it in items[:5]
+            )
+        return {
+            "content": [{"type": "text", "text": text}],
+            "results": items,
+            "layers": result.get("layers", []),
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("mcp memory.search-v2 degraded: %s", exc)
+        return {
+            "content": [{"type": "text", "text": f"分层记忆检索失败（已降级）：{exc}"}],
             "results": [],
             "degraded": True,
         }

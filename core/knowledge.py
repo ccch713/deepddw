@@ -19,6 +19,7 @@ import logging
 import math
 import re
 import sqlite3
+from datetime import datetime
 import threading
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -137,6 +138,43 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         );
         CREATE INDEX IF NOT EXISTS idx_session_docs_sid
             ON session_docs(session_id);
+        CREATE TABLE IF NOT EXISTS memory_user (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key TEXT NOT NULL UNIQUE,
+            value TEXT NOT NULL,
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE TABLE IF NOT EXISTS memory_notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key TEXT NOT NULL,
+            value TEXT NOT NULL,
+            source TEXT NOT NULL DEFAULT 'deepddw',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_memory_notes_key ON memory_notes(key);
+        CREATE TABLE IF NOT EXISTS memory_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            log_date TEXT NOT NULL,
+            ts TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+            content TEXT NOT NULL,
+            auto INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS idx_memory_logs_date ON memory_logs(log_date);
+        CREATE TABLE IF NOT EXISTS memory_reflections (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ref_date TEXT NOT NULL UNIQUE,
+            content TEXT NOT NULL,
+            style TEXT NOT NULL DEFAULT 'auto',
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE TABLE IF NOT EXISTS memory_archive (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            orig_table TEXT NOT NULL,
+            orig_key TEXT,
+            content TEXT NOT NULL,
+            archived_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
         """
     )
     conn.commit()
@@ -594,12 +632,446 @@ def session_docs_list(session_id: str, limit: int = 50) -> Dict[str, Any]:
         return {"results": [], "degraded": True, "note": str(exc)}
 
 
+# ---------------------------------------------------------------------------
+# 分层记忆（借鉴 dsh-auto-memory v0.1.23 的三层架构，SQLite 实现）
+# ---------------------------------------------------------------------------
+
+_MEMORY_CONTEXT_BUDGET = 2400  # 注入块预算字符（auto-memory injectBudgetChars）
+_MEMORY_LOG_DAYS = 3  # 注入的最近日志天数
+_MEMORY_USER_DAILY_BUDGET = 4000  # 用户级每日写入预算（auto-memory 4000）
+_MEMORY_NOTE_DAILY_BUDGET = 3000  # 项目笔记每日预算（auto-memory 3000）
+
+
+def _today() -> str:
+    return datetime.now().strftime("%Y-%m-%d")
+
+
+def memory_user_put(key: str, value: str) -> Dict[str, Any]:
+    """用户级规则/偏好（借鉴 auto-memory 用户级 MEMORY.md；upsert by key）。"""
+    conn = get_conn()
+    try:
+        conn.execute(
+            "INSERT INTO memory_user (key, value, updated_at) "
+            "VALUES (?, ?, datetime('now')) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value, "
+            "updated_at=datetime('now')",
+            (key, value),
+        )
+        conn.commit()
+        return {"key": key, "ok": True}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("memory_user_put degraded: %s", exc)
+        return {"ok": False, "degraded": True, "note": str(exc)}
+    finally:
+        close_conn(conn)
+
+
+def memory_user_list() -> Dict[str, Any]:
+    conn = get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT key, value, updated_at FROM memory_user ORDER BY updated_at DESC"
+        ).fetchall()
+        return {"results": [dict(r) for r in rows], "degraded": False}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("memory_user_list degraded: %s", exc)
+        return {"results": [], "degraded": True}
+    finally:
+        close_conn(conn)
+
+
+def memory_note_put(key: str, value: str, source: str = "deepddw") -> Dict[str, Any]:
+    """项目笔记/长期价值（借鉴 auto-memory 项目笔记 MEMORY.md；upsert by key）。"""
+    conn = get_conn()
+    try:
+        conn.execute(
+            "INSERT INTO memory_notes (key, value, source, created_at, updated_at) "
+            "VALUES (?, ?, ?, datetime('now'), datetime('now')) "
+            "ON CONFLICT DO UPDATE SET value=excluded.value, "
+            "updated_at=datetime('now')",
+            (key, value, source),
+        )
+        conn.commit()
+        return {"key": key, "source": source, "ok": True}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("memory_note_put degraded: %s", exc)
+        return {"ok": False, "degraded": True, "note": str(exc)}
+    finally:
+        close_conn(conn)
+
+
+def memory_note_list() -> Dict[str, Any]:
+    conn = get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT key, value, source, updated_at FROM memory_notes "
+            "ORDER BY updated_at DESC"
+        ).fetchall()
+        return {"results": [dict(r) for r in rows], "degraded": False}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("memory_note_list degraded: %s", exc)
+        return {"results": [], "degraded": True}
+    finally:
+        close_conn(conn)
+
+
+def memory_log_append(content: str, auto: bool = False) -> Dict[str, Any]:
+    """今日日志 append-only（借鉴 auto-memory 每日日志 YYYY-MM-DD.md）。"""
+    content = (content or "").strip()
+    if not content:
+        return {"ok": False, "note": "empty content"}
+    conn = get_conn()
+    try:
+        cur = conn.execute(
+            "INSERT INTO memory_logs (log_date, content, auto) VALUES (?, ?, ?)",
+            (_today(), content, 1 if auto else 0),
+        )
+        conn.commit()
+        return {"id": cur.lastrowid, "log_date": _today(), "auto": auto, "ok": True}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("memory_log_append degraded: %s", exc)
+        return {"ok": False, "degraded": True, "note": str(exc)}
+    finally:
+        close_conn(conn)
+
+
+def memory_logs_recent(days: int = _MEMORY_LOG_DAYS) -> Dict[str, Any]:
+    """最近 N 天日志（按日期倒序，供注入与检索）。"""
+    conn = get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT log_date, ts, content, auto FROM memory_logs "
+            "WHERE log_date >= date('now', ?) ORDER BY log_date DESC, id DESC",
+            (f"-{int(days)} days",),
+        ).fetchall()
+        return {"results": [dict(r) for r in rows], "degraded": False}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("memory_logs_recent degraded: %s", exc)
+        return {"results": [], "degraded": True}
+    finally:
+        close_conn(conn)
+
+
+def memory_reflect_save(content: str, style: str = "auto") -> Dict[str, Any]:
+    """每日反思（借鉴 auto-memory reflections/；同日期覆盖）。"""
+    content = (content or "").strip()
+    if not content:
+        return {"ok": False, "note": "empty content"}
+    conn = get_conn()
+    try:
+        conn.execute(
+            "INSERT INTO memory_reflections (ref_date, content, style, created_at) "
+            "VALUES (?, ?, ?, datetime('now')) "
+            "ON CONFLICT(ref_date) DO UPDATE SET content=excluded.content, "
+            "style=excluded.style",
+            (_today(), content, style),
+        )
+        conn.commit()
+        return {"ref_date": _today(), "ok": True}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("memory_reflect_save degraded: %s", exc)
+        return {"ok": False, "degraded": True, "note": str(exc)}
+    finally:
+        close_conn(conn)
+
+
+def memory_reflect_get(ref_date: str) -> Dict[str, Any]:
+    conn = get_conn()
+    try:
+        row = conn.execute(
+            "SELECT ref_date, content, style FROM memory_reflections "
+            "WHERE ref_date=?",
+            (ref_date,),
+        ).fetchone()
+        if row is None:
+            return {"found": False}
+        return {"found": True, **dict(row)}
+    finally:
+        close_conn(conn)
+
+
+def _reflection_due() -> bool:
+    """昨天有日志但今天/昨天无反思（借鉴 auto-memory 反思触发）。"""
+    conn = get_conn()
+    try:
+        yesterday = conn.execute(
+            "SELECT 1 FROM memory_logs WHERE log_date=date('now','-1 day') LIMIT 1"
+        ).fetchone()
+        if not yesterday:
+            return False
+        reflect = conn.execute(
+            "SELECT 1 FROM memory_reflections WHERE ref_date IN "
+            "(date('now'), date('now','-1 day')) LIMIT 1"
+        ).fetchone()
+        return reflect is None
+    except Exception:  # noqa: BLE001
+        return False
+    finally:
+        close_conn(conn)
+
+
+def memory_context_build(budget: int = _MEMORY_CONTEXT_BUDGET) -> Dict[str, Any]:
+    """组装 <memory_system> 注入块（借鉴 auto-memory SECTION_ORDER 注入）。
+
+    内容：用户规则 + 项目笔记 + 最近反思 + 最近 N 天日志尾部；
+    预算截断（保留头部规则 + 尾部日志，中间标注省略）。
+    """
+    parts: List[str] = []
+    user = memory_user_list().get("results", [])
+    if user:
+        parts.append("## 用户规则/偏好")
+        parts.extend(f"- {r['key']}: {r['value']}" for r in user)
+    notes = memory_note_list().get("results", [])
+    if notes:
+        parts.append("## 项目笔记")
+        parts.extend(f"- [{r['source']}] {r['key']}: {r['value']}" for r in notes[:10])
+    logs = memory_logs_recent(_MEMORY_LOG_DAYS).get("results", [])
+    if logs:
+        parts.append("## 最近日志（尾部）")
+        for r in logs[:15]:
+            tag = "自动" if r.get("auto") else "手动"
+            parts.append(f"- {r['log_date']} [{tag}] {r['content']}")
+    body = "\n".join(parts)
+    if len(body) > budget:
+        # 预算截断：保留头部（规则/笔记）与尾部（日志），中间省略
+        head = body[: budget // 2]
+        tail = body[-budget // 2:]
+        body = f"{head}\n…(记忆注入按预算截断，完整内容见检索)\n{tail}"
+    if body:
+        body = "<memory_system>\n" + body + "\n</memory_system>"
+    return {
+        "context": body,
+        "chars": len(body),
+        "budget": budget,
+        "reflection_due": _reflection_due(),
+        "degraded": False,
+    }
+
+
+def memory_budget_status() -> Dict[str, Any]:
+    """当日写入预算统计（借鉴 auto-memory 每日预算；超限需 maintain 压缩）。"""
+    conn = get_conn()
+    try:
+        user_row = conn.execute(
+            "SELECT COALESCE(SUM(LENGTH(value)), 0) FROM memory_user "
+            "WHERE updated_at >= date('now')"
+        ).fetchone()
+        user_chars = int(user_row[0]) if user_row else 0
+        note_row = conn.execute(
+            "SELECT COALESCE(SUM(LENGTH(value)), 0) FROM memory_notes "
+            "WHERE updated_at >= date('now')"
+        ).fetchone()
+        note_chars = int(note_row[0]) if note_row else 0
+        log_row = conn.execute(
+            "SELECT COALESCE(SUM(LENGTH(content)), 0) FROM memory_logs "
+            "WHERE log_date = date('now')"
+        ).fetchone()
+        log_chars = int(log_row[0]) if log_row else 0
+        return {
+            "user": {"chars": int(user_chars), "budget": _MEMORY_USER_DAILY_BUDGET},
+            "notes": {"chars": int(note_chars), "budget": _MEMORY_NOTE_DAILY_BUDGET},
+            "logs": {"chars": int(log_chars), "budget": 0},
+            "over": int(user_chars) > _MEMORY_USER_DAILY_BUDGET
+            or int(note_chars) > _MEMORY_NOTE_DAILY_BUDGET,
+            "degraded": False,
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("memory_budget_status degraded: %s", exc)
+        return {"over": False, "degraded": True, "note": str(exc)}
+    finally:
+        close_conn(conn)
+
+
+def memory_maintain() -> Dict[str, Any]:
+    """预算超限压缩：AI 不可用时归档最旧笔记/规则（不丢数据，借鉴 auto-memory）。"""
+    conn = get_conn()
+    archived = 0
+    try:
+        status = memory_budget_status()
+        if not status.get("over"):
+            return {"archived": 0, "over": False, "note": "budget ok"}
+        # 归档最旧的 notes 条目（超预算部分）
+        rows = conn.execute(
+            "SELECT id, key, value FROM memory_notes ORDER BY updated_at ASC LIMIT 5"
+        ).fetchall()
+        for r in rows:
+            conn.execute(
+                "INSERT INTO memory_archive (orig_table, orig_key, content) "
+                "VALUES ('memory_notes', ?, ?)",
+                (r["key"], r["value"]),
+            )
+            conn.execute("DELETE FROM memory_notes WHERE id=?", (r["id"],))
+            archived += 1
+        conn.commit()
+        return {"archived": archived, "over": True, "note": "archived oldest notes"}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("memory_maintain degraded: %s", exc)
+        return {"archived": 0, "over": False, "degraded": True}
+    finally:
+        close_conn(conn)
+
+
+def memory_consolidate(
+    auto_consolidate_min_chars: int = 60,
+) -> Dict[str, Any]:
+    """自动沉淀（借鉴 auto-memory 每轮沉淀）。
+
+    deepDDW 形态：供 chat 回复后调用（LLM 可用时由上层提炼；此处提供
+    规则化沉淀：今日无日志时写一条占位，寒暄轮由调用方按长度跳过）。
+    """
+    # 本函数为规则/触发基座：具体沉淀内容由调用方（chat API / MCP
+    # ddw.memory.consolidate）提供；此处只做去重与记录。
+    conn = get_conn()
+    try:
+        today = _today()
+        row = conn.execute(
+            "SELECT COUNT(*) FROM memory_logs WHERE log_date=? AND auto=1",
+            (today,),
+        ).fetchone()
+        count = int(row[0]) if row else 0
+        return {
+            "today_auto_count": int(count),
+            "auto_consolidate_min_chars": auto_consolidate_min_chars,
+            "ok": True,
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("memory_consolidate degraded: %s", exc)
+        return {"ok": False, "degraded": True}
+    finally:
+        close_conn(conn)
+
+
+def memory_search_v2(query: str, top_k: int = 5) -> Dict[str, Any]:
+    """分层检索（借鉴 auto-memory 智能检索；多关键词 OR 扫四层 + 来源标注）。"""
+    from core.security.unicode_sanitizer import sanitize_unicode
+
+    query = sanitize_unicode(query or "", max_length=200)
+    tokens = [t for t in re.split(r"[\s,，、]+", query) if t][:8]
+    if not tokens:
+        return {"results": [], "degraded": False, "note": "empty query"}
+    conn = get_conn()
+    out: List[Dict[str, Any]] = []
+    try:
+        for tok in tokens:
+            like = f"%{tok}%"
+            for table, layer, key_col, val_col in (
+                ("memory_user", "user", "key", "value"),
+                ("memory_notes", "notes", "key", "value"),
+                ("memory_logs", "logs", "log_date", "content"),
+                ("memory_reflections", "reflection", "ref_date", "content"),
+            ):
+                try:
+                    rows = conn.execute(
+                        f"SELECT {key_col} AS k, {val_col} AS v FROM {table} "
+                        f"WHERE {val_col} LIKE ? OR {key_col} LIKE ? LIMIT 5",
+                        (like, like),
+                    ).fetchall()
+                except sqlite3.OperationalError:
+                    continue
+                for r in rows:
+                    out.append({
+                        "layer": layer,
+                        "key": r["k"],
+                        "content": (r["v"] or "")[:300],
+                        "source": f"{layer}:{r['k']}",
+                    })
+        # 去重（同一 layer+key）
+        seen: set = set()
+        dedup = []
+        for it in out:
+            sig = (it["layer"], it["key"])
+            if sig in seen:
+                continue
+            seen.add(sig)
+            dedup.append(it)
+        return {"results": dedup[: max(1, min(int(top_k), 20))], "degraded": False}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("memory_search_v2 degraded: %s", exc)
+        return {"results": [], "degraded": True}
+    finally:
+        close_conn(conn)
+
+
+def migrate_memory_entries() -> Dict[str, Any]:
+    """迁移旧 memory_entries → 新分层（不丢数据；旧表保留可回滚）。
+
+    分类规则：tags 含 user/note/log/reflection 分别迁移；
+    否则按 namespace（默认 user）；日志类按内容前缀 [自动沉淀] 判 auto。
+    """
+    import json as _json
+
+    conn = get_conn()
+    migrated = {"user": 0, "notes": 0, "logs": 0, "reflection": 0, "skipped": 0}
+    try:
+        rows = conn.execute(
+            "SELECT id, namespace, key, value, tags FROM memory_entries"
+        ).fetchall()
+        for r in rows:
+            tags = []
+            try:
+                tags = _json.loads(r["tags"] or "[]")
+            except Exception:  # noqa: BLE001
+                tags = []
+            tags_l = [str(t).lower() for t in tags]
+            ns = (r["namespace"] or "default").lower()
+            value = r["value"] or ""
+            if any("reflection" in t for t in tags_l) or "reflect" in ns:
+                conn.execute(
+                    "INSERT INTO memory_reflections (ref_date, content, style) "
+                    "VALUES (date('now','-1 day'), ?, 'auto')",
+                    (value,),
+                )
+                migrated["reflection"] += 1
+            elif any("log" in t for t in tags_l) or "log" in ns:
+                conn.execute(
+                    "INSERT INTO memory_logs (log_date, content, auto) "
+                    "VALUES (date('now'), ?, 1)",
+                    (value,),
+                )
+                migrated["logs"] += 1
+            elif any("note" in t for t in tags_l) or "note" in ns:
+                conn.execute(
+                    "INSERT INTO memory_notes (key, value, source) "
+                    "VALUES (?, ?, 'migrated')",
+                    (r["key"] or "note", value),
+                )
+                migrated["notes"] += 1
+            else:
+                conn.execute(
+                    "INSERT INTO memory_user (key, value) VALUES (?, ?)",
+                    (r["key"] or f"legacy-{r['id']}", value),
+                )
+                migrated["user"] += 1
+        conn.commit()
+        migrated["total"] = len(rows)
+        return migrated
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("migrate_memory_entries degraded: %s", exc)
+        return {**migrated, "degraded": True, "note": str(exc)}
+    finally:
+        close_conn(conn)
+
+
 __all__ = [
     "kb_add_document",
     "kb_search",
     "memory_put",
     "memory_get",
     "memory_search",
+    "memory_user_put",
+    "memory_user_list",
+    "memory_note_put",
+    "memory_note_list",
+    "memory_log_append",
+    "memory_logs_recent",
+    "memory_reflect_save",
+    "memory_reflect_get",
+    "memory_context_build",
+    "memory_budget_status",
+    "memory_maintain",
+    "memory_consolidate",
+    "memory_search_v2",
+    "migrate_memory_entries",
     "session_doc_add",
     "session_docs_list",
     "get_conn",

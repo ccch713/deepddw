@@ -23,9 +23,18 @@ from core.api_response import ok
 from core.knowledge import (
     kb_add_document,
     kb_search,
+    memory_budget_status,
+    memory_context_build,
     memory_get,
+    memory_log_append,
+    memory_logs_recent,
+    memory_maintain,
+    memory_note_put,
     memory_put,
+    memory_reflect_save,
     memory_search,
+    memory_search_v2,
+    memory_user_put,
     session_doc_add,
     session_docs_list,
 )
@@ -121,6 +130,116 @@ async def search_memory(
 ) -> Dict[str, Any]:
     result = memory_search(namespace, q, top_k)
     return ok({"results": result.get("results", []), "degraded": result.get("degraded", False)})
+
+
+# ---------------------------------------------------------------------------
+# 分层记忆（借鉴 dsh-auto-memory：用户偏好 / 笔记 / 每日日志 / 每日反思）
+# ---------------------------------------------------------------------------
+
+class MemoryUserReq(BaseModel):
+    key: str = Field(..., min_length=1, max_length=200)
+    value: str = Field(..., max_length=200_000)
+
+
+class MemoryNoteReq(BaseModel):
+    key: str = Field(..., min_length=1, max_length=200)
+    value: str = Field(..., max_length=200_000)
+    source: str = Field(default="deepddw", max_length=40)
+
+
+class MemoryLogReq(BaseModel):
+    content: str = Field(..., min_length=1, max_length=20_000)
+    auto: bool = Field(default=False)
+
+
+class MemoryReflectReq(BaseModel):
+    content: str = Field(..., min_length=1, max_length=20_000)
+    style: str = Field(default="auto", max_length=20)
+
+
+@router.post("/memory/user")
+async def put_memory_user(
+    payload: MemoryUserReq,
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """用户级长期偏好/事实（三层记忆之用户层）。"""
+    return ok(memory_user_put(payload.key, payload.value))
+
+
+@router.post("/memory/notes")
+async def put_memory_note(
+    payload: MemoryNoteReq,
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """项目笔记（三层记忆之笔记层；先查后插 upsert）。"""
+    return ok(memory_note_put(payload.key, payload.value, payload.source))
+
+
+@router.post("/memory/logs")
+async def append_memory_log(
+    payload: MemoryLogReq,
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """每日日志（append-only；auto=true 标记为自动沉淀）。"""
+    return ok(memory_log_append(payload.content, auto=payload.auto))
+
+
+@router.get("/memory/logs")
+async def recent_memory_logs(
+    days: int = Query(3, ge=1, le=30),
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """最近 N 天日志。"""
+    return ok(memory_logs_recent(days))
+
+
+@router.get("/memory/context")
+async def memory_context(
+    budget: int = Query(2400, ge=200, le=8000),
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """构建注入上下文的记忆块（chat 自动注入同源；可预览）。"""
+    return ok(memory_context_build(budget))
+
+
+@router.post("/memory/reflect")
+async def reflect_memory(
+    payload: MemoryReflectReq,
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """保存当日反思（同一日期幂等更新）。"""
+    return ok(memory_reflect_save(payload.content, payload.style))
+
+
+@router.get("/memory/budget")
+async def memory_budget(
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """当日写预算状态（用户/项目字预算；超限需 AI 压缩或归档）。"""
+    return ok(memory_budget_status())
+
+
+@router.post("/memory/maintain")
+async def maintain_memory(
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """超预算归档最旧笔记到 archive（维护钩子）。"""
+    return ok(memory_maintain())
+
+
+@router.get("/memory/search-v2")
+async def search_memory_v2(
+    q: str = Query(..., min_length=1, max_length=200),
+    top_k: int = Query(5, ge=1, le=20),
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """分层记忆检索（OR 多关键词扫四层，返回 layer/source 标注）。"""
+    result = memory_search_v2(q, top_k)
+    return ok({
+        "results": result.get("results", []),
+        "layers": result.get("layers", []),
+        "degraded": result.get("degraded", False),
+    })
 
 
 @router.post("/knowledge/session-docs", status_code=status.HTTP_201_CREATED)

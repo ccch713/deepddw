@@ -159,6 +159,46 @@ async def test_rag_chat_returns_rag_meta(client, monkeypatch, tmp_path):
     assert body["rag"]["enabled"] is True
     assert "hits" in body["rag"]
     assert "degraded" in body["rag"]
+    # 记忆注入元信息（与 RAG 叠加）
+    assert "memory" in body
+    assert "injected_chars" in body["memory"]
+    assert "degraded" in body["memory"]
+
+
+# ---------------------------------------------------------------------------
+# 记忆注入（chat 自动注入 <memory_system> 块；记忆故障降级）
+# ---------------------------------------------------------------------------
+
+
+def test_apply_memory_injects_block(monkeypatch, tmp_path):
+    """有记忆 → _apply_memory 把记忆块拼入 system 最末。"""
+    monkeypatch.setattr("core.knowledge._db_path", lambda: tmp_path / "kb.db")
+    from core.knowledge import memory_user_put
+
+    memory_user_put("语言", "用户偏好使用中文回答")
+    from core.api.chat import _apply_memory
+
+    messages = [ChatMessage(role="system", content="基础指令")]
+    result = _apply_memory(messages)
+    assert result["chars"] > 0
+    assert "用户偏好使用中文回答" in messages[0].content
+    assert messages[0].content.startswith("基础指令")
+
+
+def test_apply_memory_degraded_no_block(monkeypatch, tmp_path):
+    """记忆故障 → 降级返回，不抛异常。"""
+    monkeypatch.setattr("core.knowledge._db_path", lambda: tmp_path / "kb.db")
+    import core.knowledge as kn
+
+    def boom2():
+        raise RuntimeError("memory down")
+
+    monkeypatch.setattr(kn, "memory_context_build", boom2)
+    from core.api.chat import _apply_memory
+
+    result = _apply_memory([])
+    assert result["degraded"] is True
+    assert result["context"] == ""
 
 
 # ---------------------------------------------------------------------------

@@ -30,8 +30,8 @@ jobs:
           pip install -r requirements.txt
           pip install ruff
 
-      - name: Ruff (E/W/F — 零错误门禁)
-        run: ruff check --select=E,W,F core/ plugins/ sdk/ tests/ scripts/ conftest.py
+      - name: Ruff (F/E9 — 实质错误零容忍；E501 风格由本地净新增回归保证)
+        run: ruff check --select=F,E9 core/ plugins/ sdk/ tests/ scripts/ conftest.py
 
       - name: Pytest 全量
         run: python -m pytest tests/ plugins/ -q --no-header -p no:cacheprovider

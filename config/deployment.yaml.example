@@ -33,5 +33,14 @@ security:
   # 可信反代白名单（IP/CIDR）：仅直连 peer 在此列表才信任 X-Forwarded-For
   trusted_proxies: []
 
+  # P0-2（multidevice）：网关限流（滑动窗口，内存实现，零新依赖）
+  # env 覆盖：DDW_RATE_LIMIT_PER_TOKEN / PER_IP / GLOBAL / ENABLED
+  rate_limit:
+    enabled: true
+    per_token: 60        # req/min/token（20 设备场景可放宽到 120+）
+    per_ip: 120          # req/min/ip
+    global: 300          # req/min 全网关总容量（超过 → 503 过载保护）
+    window_seconds: 60
+
 plugins:
   root_dir: ./plugins

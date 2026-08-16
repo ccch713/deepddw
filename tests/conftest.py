@@ -11,6 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 # 测试前设置环境
 os.environ.setdefault("DDW_JWT_SECRET", "test-secret-key-for-testing-32bytes-ok")
+# P0-2（multidevice）：测试套件默认禁用限流（避免共享 Token 触发 429 误伤）；
+# 限流专项测试（tests/test_rate_limit.py）自行开启并覆盖阈值。
+os.environ.setdefault("DDW_RATE_LIMIT_ENABLED", "false")
 
 from core.database.session import Base  # noqa: E402
 from core.main import app  # noqa: E402

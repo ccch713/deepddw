@@ -214,6 +214,15 @@ def create_app() -> FastAPI:
         allow_headers=["Authorization", "X-DDW-Token", "Content-Type", "Mcp-Session-Id"],
     )
 
+    # P0-2（multidevice）：网关限流与过载保护（Token/IP 双维度 + 全局 503）。
+    # 配置：deployment.yaml security.rate_limit.* / env DDW_RATE_LIMIT_*。
+    try:
+        from core.middleware.rate_limit import RateLimitMiddleware
+
+        app.add_middleware(RateLimitMiddleware)
+    except Exception as exc:  # noqa: BLE001  # 限流加载失败不阻断启动（降级）
+        logger.warning("rate limit middleware disabled: %s", exc)
+
     # API 路由（全部走网关 Token 门禁；无账号体系）
     app.include_router(chat_router)
     app.include_router(knowledge_router)

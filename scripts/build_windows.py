@@ -37,6 +37,10 @@ def main() -> int:
         # MCP SDK 动态加载
         "--hidden-import", "mcp.server.fastmcp",
         "--hidden-import", "mcp.server.streamable_http",
+        # SQLAlchemy 方言动态加载（'sqlite+aiosqlite' 是字符串引用，
+        # PyInstaller 静态分析发现不了——必须显式收集）
+        "--hidden-import", "aiosqlite",
+        "--hidden-import", "greenlet",
         # 业务包完整收集（含插件目录）
         "--collect-submodules", "core",
         "--collect-submodules", "plugins",

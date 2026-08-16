@@ -287,3 +287,145 @@ async def test_consolidate_llm_too_short_skips(monkeypatch, tmp_path):
     result = await kb.memory_consolidate_llm("你好")
     assert result.get("skipped") == "too_short"
     assert kb.memory_logs_recent(days=1)["results"] == []
+
+
+# ---------------------------------------------------------------------------
+# 优化① 反思生成接 LLM / 优化③ 扩写缓存去重 / chat 自动沉淀
+# ---------------------------------------------------------------------------
+
+
+async def test_reflect_generate_llm_saves(monkeypatch, tmp_path):
+    """反思生成：mock LLM 返回正文 → 保存当日反思（generated=True）。"""
+    monkeypatch.setattr("core.knowledge._db_path", lambda: tmp_path / "kb.db")
+    from core import knowledge as kb
+    from core.llm_gateway.base import ChatResponse
+
+    kb.memory_log_append("完成了记忆分层重构", auto=True)
+    # 造"昨天有日志且今天无反思"的触发条件：日志日期需为昨天
+    from core.knowledge import get_conn, close_conn
+
+    conn = get_conn()
+    conn.execute("UPDATE memory_logs SET log_date=date('now','-1 day')")
+    conn.commit()
+    close_conn(conn)
+
+    async def fake_chat(messages, **kwargs):
+        return ChatResponse(
+            content="今天完成了记忆分层重构，进展顺利，明天继续优化检索。",
+            model="mock", provider="mock", finish_reason="stop",
+        )
+
+    monkeypatch.setattr("core.llm_gateway.gateway.chat", fake_chat)
+    result = await kb.memory_reflect_generate(style="auto")
+    assert result["due"] is True and result["generated"] is True
+    r = kb.memory_reflect_get(__import__("datetime").date.today().strftime("%Y-%m-%d"))
+    assert r["found"] and "记忆分层" in r["content"]
+
+
+async def test_reflect_generate_no_trigger(monkeypatch, tmp_path):
+    """不满足触发（无昨日日志）→ due=False，不调 LLM。"""
+    monkeypatch.setattr("core.knowledge._db_path", lambda: tmp_path / "kb.db")
+    from core import knowledge as kb
+
+    result = await kb.memory_reflect_generate()
+    assert result["due"] is False and result["generated"] is False
+
+
+async def test_reflect_generate_llm_failure_degrades(monkeypatch, tmp_path):
+    """LLM 故障 → generated=False + degraded，不写空内容。"""
+    monkeypatch.setattr("core.knowledge._db_path", lambda: tmp_path / "kb.db")
+    from core import knowledge as kb
+
+    kb.memory_log_append("昨天有日志", auto=True)
+    from core.knowledge import get_conn, close_conn
+
+    conn = get_conn()
+    conn.execute("UPDATE memory_logs SET log_date=date('now','-1 day')")
+    conn.commit()
+    close_conn(conn)
+
+    async def boom(messages, **kwargs):
+        raise RuntimeError("provider down")
+
+    monkeypatch.setattr("core.llm_gateway.gateway.chat", boom)
+    result = await kb.memory_reflect_generate()
+    assert result["due"] is True and result["generated"] is False
+    assert result.get("degraded") is True
+
+
+async def test_keyword_expand_cache_dedupe(monkeypatch, tmp_path):
+    """扩写缓存：同查询第二次不调 LLM（命中缓存返回同结果）。"""
+    monkeypatch.setattr("core.knowledge._db_path", lambda: tmp_path / "kb.db")
+    from core import knowledge as kb
+    from core.llm_gateway.base import ChatResponse
+
+    calls = []
+
+    async def fake_chat(messages, **kwargs):
+        calls.append(1)
+        return ChatResponse(
+            content='["部署", "compose", "容器"]',
+            model="mock", provider="mock", finish_reason="stop",
+        )
+
+    monkeypatch.setattr("core.llm_gateway.gateway.chat", fake_chat)
+    kb.reset_keyword_cache()
+    r1 = await kb._llm_expand_keywords_async("怎么部署服务")
+    r2 = await kb._llm_expand_keywords_async("怎么部署服务")  # 缓存命中
+    assert r1 == ["部署", "compose", "容器"]
+    assert r2 == r1
+    assert len(calls) == 1  # 只调了一次 LLM
+    kb.reset_keyword_cache()
+
+
+async def test_chat_auto_consolidate_background(client, monkeypatch, tmp_path):
+    """chat auto_consolidate：响应后后台沉淀写日志（不阻塞响应）。"""
+    monkeypatch.setattr("core.knowledge._db_path", lambda: tmp_path / "kb.db")
+    from core.api import chat as chat_mod
+    from core.llm_gateway.base import ChatResponse
+
+    async def fake_chat(messages, **kwargs):
+        return ChatResponse(
+            content="好的，我们决定用 Docker 部署这个服务。",
+            model="deepseek-chat", provider="deepseek", finish_reason="stop",
+        )
+
+    monkeypatch.setattr(chat_mod, "llm_chat", fake_chat)
+    # 记忆注入降级为空，聚焦 auto_consolidate 路径
+    monkeypatch.setattr(
+        chat_mod, "_apply_memory", lambda m: {"chars": 0, "degraded": False}
+    )
+    # 记录 consolidate 是否被调用（后台任务）
+    called = {"n": 0}
+
+    async def fake_consolidate(text):
+        called["n"] += 1
+        return {"ok": True, "mode": "rule", "wrote": 1}
+
+    monkeypatch.setattr("core.knowledge.memory_consolidate_llm", fake_consolidate)
+
+    resp = await client.post(
+        "/api/v1/chat/",
+        headers={"X-DDW-Token": os.environ["DDW_ACCESS_TOKEN"]},
+        json={"message": "我们决定用 Docker 部署，用国内镜像加速。", "rag": False},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["data"]["content"]
+    # 后台任务异步执行：让事件循环跑一拍后再断言
+    import asyncio
+
+    for _ in range(10):
+        await asyncio.sleep(0.01)
+        if called["n"] > 0:
+            break
+    assert called["n"] == 1
+
+    # auto_consolidate=False 时不触发
+    resp2 = await client.post(
+        "/api/v1/chat/",
+        headers={"X-DDW-Token": os.environ["DDW_ACCESS_TOKEN"]},
+        json={"message": "这条不沉淀。", "rag": False, "auto_consolidate": False},
+    )
+    assert resp2.status_code == 200
+    await asyncio.sleep(0.02)
+    assert called["n"] == 1

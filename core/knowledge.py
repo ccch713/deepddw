@@ -19,8 +19,9 @@ import logging
 import math
 import re
 import sqlite3
-from datetime import datetime
 import threading
+import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -46,6 +47,44 @@ _RRF_K = 60  # RRF 融合常数：score = Σ 1/(k + rank)
 
 # hash-trick 词频 embedding 的运行时探测缓存
 _lance_available_cache: Optional[bool] = None
+
+# ---- LLM 扩写关键词缓存（优化③：同查询短 TTL 内不重复调 LLM） ----
+_KEYWORD_CACHE_TTL = 3600  # 秒：同一自然语言查询 1h 内复用扩写结果
+_keyword_cache: Dict[str, tuple] = {}  # {query: (expanded_tuple, expire_ts)}
+_keyword_cache_lock = threading.Lock()
+
+
+def _keyword_cache_get(query: str) -> Optional[List[str]]:
+    """读扩写缓存（未命中/过期返回 None）。"""
+    with _keyword_cache_lock:
+        hit = _keyword_cache.get(query)
+        if hit is None:
+            return None
+        expanded, expire = hit
+        if time.time() > expire:
+            _keyword_cache.pop(query, None)
+            return None
+        return list(expanded)
+
+
+def _keyword_cache_put(query: str, expanded: List[str]) -> None:
+    """写扩写缓存（限制容量防无限增长）。"""
+    with _keyword_cache_lock:
+        if len(_keyword_cache) >= 256:  # 简单容量上限
+            # 清理已过期项；仍超限则整体清空（低频操作，可接受）
+            now = time.time()
+            expired = [k for k, (_, e) in _keyword_cache.items() if now > e]
+            for k in expired:
+                _keyword_cache.pop(k, None)
+            if len(_keyword_cache) >= 256:
+                _keyword_cache.clear()
+        _keyword_cache[query] = (tuple(expanded), time.time() + _KEYWORD_CACHE_TTL)
+
+
+def reset_keyword_cache() -> None:
+    """测试/维护用：清空扩写缓存。"""
+    with _keyword_cache_lock:
+        _keyword_cache.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -810,6 +849,48 @@ def _reflection_due() -> bool:
         close_conn(conn)
 
 
+async def memory_reflect_generate(style: str = "auto") -> Dict[str, Any]:
+    """反思生成（LLM 增强版：auto-memory 每日反思的 AI 路径）。
+
+    - 触发：昨天有日志且今/昨无反思（_reflection_due）；
+    - LLM 基于最近 3 天日志生成反思正文并保存（风格可指定）；
+    - LLM 不可用/超时 → due=True + generated=False（调用方提示"待反思"）；
+      不满足触发 → due=False。
+    """
+    if not _reflection_due():
+        return {"due": False, "ok": True, "generated": False}
+    try:
+        from core.llm_gateway.base import ChatMessage, ChatResponse
+        from core.llm_gateway.gateway import chat as _gateway_chat
+
+        logs = memory_logs_recent(days=3).get("results", [])
+        if not logs:
+            return {"due": True, "ok": True, "generated": False, "note": "no logs"}
+        lines = "\n".join(
+            f"- {r['log_date']}: {r['content'][:120]}" for r in logs[:12]
+        )
+        prompt = (
+            f"请基于以下最近 3 天日志写一段每日反思（{style}风格），"
+            "总结进展/问题/明日注意，中文 80-200 字，只输出正文不要标题。\n"
+            f"日志：\n{lines}"
+        )
+        resp: ChatResponse = await _gateway_chat(
+            [ChatMessage(role="user", content=prompt)], rule=None
+        )
+        content = (resp.content or "").strip()
+        if not content:
+            return {"due": True, "ok": True, "generated": False, "note": "empty llm"}
+        result = memory_reflect_save(content, style=style)
+        return {
+            "due": True, "ok": bool(result.get("ok", True)),
+            "generated": True, "ref_date": result.get("ref_date"),
+            "style": style,
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("memory reflect generate degraded: %s", exc)
+        return {"due": True, "ok": True, "generated": False, "degraded": True}
+
+
 def memory_context_build(budget: int = _MEMORY_CONTEXT_BUDGET) -> Dict[str, Any]:
     """组装 <memory_system> 注入块（借鉴 auto-memory SECTION_ORDER 注入）。
 
@@ -1044,9 +1125,13 @@ async def _llm_expand_keywords_async(query: str) -> Optional[List[str]]:
     - 调用 deepDDW LLM 网关（浅 prompt）；超时/无 provider/非 JSON
       一律返回 None → 调用方降级为原词分词。
     - 严格只取 JSON 数组字符串；绝不编造来源（来源标注由检索层保证）。
+    - 优化③：同查询 1h 内命中缓存，不重复调 LLM。
     """
     if not query or len(query) < 2:
         return None
+    cached = _keyword_cache_get(query)
+    if cached is not None:
+        return cached
     try:
         import json as _json
 
@@ -1072,6 +1157,8 @@ async def _llm_expand_keywords_async(query: str) -> Optional[List[str]]:
         if not isinstance(items, list):
             return None
         words = [str(i).strip() for i in items if str(i).strip()][:8]
+        if words:
+            _keyword_cache_put(query, words)
         return words or None
     except Exception as exc:  # noqa: BLE001
         logger.debug("memory llm expand degraded: %s", exc)
@@ -1218,12 +1305,16 @@ __all__ = [
     "memory_logs_recent",
     "memory_reflect_save",
     "memory_reflect_get",
+    "memory_reflect_generate",
     "memory_context_build",
     "memory_budget_status",
     "memory_maintain",
     "memory_consolidate",
+    "memory_consolidate_llm",
     "memory_search_v2",
+    "memory_search_v2_async",
     "migrate_memory_entries",
+    "reset_keyword_cache",
     "session_doc_add",
     "session_docs_list",
     "get_conn",

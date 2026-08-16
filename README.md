@@ -133,10 +133,17 @@ See [`NOTICE`](NOTICE) for full third-party attribution.
 
 ## Roadmap
 
-- [ ] **Docker one-click deployment** (in progress, simpler install)
-- [ ] **Remote access while traveling**: securely reach your company's DSH server from mobile devices, capture and discuss ideas anytime
-- [ ] **Session → document auto-ingest**: conversation output auto-saved, searchable and traceable
-- [ ] **Vector search enhancement** (optional, requires an embedding model)
+Only items actually planned or already delivered are listed here.
+
+**Delivered:**
+- [x] **Docker one-click deployment** — `docker compose -f deepddw-compose.yml up -d --build` (verified on a real macOS arm64 host: core + SearXNG containers up, health/MCP/chat end-to-end green)
+- [x] **Session → document auto-ingest** — conversations saved to the knowledge base via `ddw.docs.save` / `ddw.session.docs` MCP tools + REST API, searchable and traceable per session
+- [x] **Vector search enhancement** — hybrid retrieval (SQLite FTS5/LIKE + LanceDB, RRF fusion; optional, degrades to keyword-only when LanceDB is absent)
+
+**Planned:**
+- [ ] **Reflection & consolidation powered by LLM** — daily reflection auto-generated from recent logs; conversation auto-consolidation into daily memory (base layer done, LLM polish ongoing)
+- [ ] **Memory search quality** — keyword-expansion caching and cross-layer ranking improvements
+- [ ] **Windows packaging** — evaluated: see `docs/windows-packaging.md` for the recommended maintainable path (evaluation stage; execution follows user decision)
 
 ---
 

@@ -241,15 +241,17 @@ def install_default_tools(registry: ToolRegistry) -> None:
     registry.register(Tool(
         name="ddw.memory.reflect",
         description=(
-            "每日反思：昨天有日志且今天未反思时调用；LLM 生成反思存当日。"
-            "content: 反思正文（可由模型基于日志生成）；style（可选，默认 auto）"
+            "每日反思：昨天有日志且今天未反思时调用。"
+            "generate=true 时 LLM 基于最近日志自动生成并保存（默认建议）；"
+            "否则 content 直接存当日。style（可选，默认 auto）"
         ),
         parameters={
             "properties": {
-                "content": {"type": "string", "description": "反思正文"},
+                "generate": {"type": "boolean", "description": "LLM 自动生成（默认 false）"},
+                "content": {"type": "string",
+                            "description": "反思正文（generate=false 时必填）"},
                 "style": {"type": "string", "description": "风格（默认 auto）"},
             },
-            "required": ["content"],
         },
         handler=memory_reflect_handler,
         plugin_name="core",
@@ -476,10 +478,34 @@ async def memory_consolidate_handler(
 async def memory_reflect_handler(
     args: Dict[str, Any], ctx: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """ddw.memory.reflect handler（每日反思保存）。"""
-    from core.knowledge import memory_reflect_save
-
+    """ddw.memory.reflect handler（每日反思：generate=true 用 LLM 自动生成）。"""
     try:
+        if args.get("generate"):
+            from core.knowledge import memory_reflect_generate
+
+            result = await memory_reflect_generate(
+                style=str(args.get("style") or "auto")
+            )
+            if not result.get("due"):
+                return {
+                    "content": [{"type": "text", "text": (
+                        "今日反思不满足触发条件（昨天无日志或已反思）")}],
+                    "ok": True, "generated": False,
+                }
+            if result.get("generated"):
+                return {
+                    "content": [{"type": "text", "text": (
+                        "LLM 反思已生成并保存（{}）".format(result.get("ref_date", "")))}],
+                    "ok": True, "generated": True,
+                }
+            return {
+                "content": [{"type": "text", "text": (
+                    "反思待生成：LLM 不可用或日志为空（due={})"
+                    .format(result.get("degraded", False)))}],
+                "ok": True, "generated": False, "due": True,
+            }
+        from core.knowledge import memory_reflect_save
+
         content = str(args.get("content", "")).strip()
         if not content:
             return {"content": [{"type": "text", "text": "反思正文为空"}], "ok": False}
@@ -716,7 +742,8 @@ def convert_mcp_result(result: dict[str, Any]) -> dict[str, Any]:
         raw = result["toolResult"]
         content.append({
             "type": "text",
-            "text": raw if isinstance(raw, str) else json.dumps(raw, default=str, ensure_ascii=False),
+            "text": raw if isinstance(raw, str)
+                    else json.dumps(raw, default=str, ensure_ascii=False),  # noqa: E501
         })
 
     if "structuredContent" in result and result["structuredContent"] is not None:
@@ -729,7 +756,8 @@ def convert_mcp_result(result: dict[str, Any]) -> dict[str, Any]:
     if not content:
         content.append({
             "type": "text",
-            "text": json.dumps(result, default=str, ensure_ascii=False) if not isinstance(result, str) else result,
+            "text": json.dumps(result, default=str, ensure_ascii=False)
+                    if not isinstance(result, str) else result,  # noqa: E501
         })
 
     if result.get("isError"):

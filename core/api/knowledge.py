@@ -205,9 +205,14 @@ async def memory_context(
 @router.post("/memory/reflect")
 async def reflect_memory(
     payload: MemoryReflectReq,
+    generate: bool = Query(False, description="LLM 自动生成反思（基于最近日志）"),
     claims: Dict[str, Any] = Depends(require_access_token),
 ) -> Dict[str, Any]:
-    """保存当日反思（同一日期幂等更新）。"""
+    """保存当日反思（同一日期幂等更新）；generate=true 时 LLM 自动生成。"""
+    if generate:
+        from core.knowledge import memory_reflect_generate
+
+        return ok(await memory_reflect_generate(payload.style))
     return ok(memory_reflect_save(payload.content, payload.style))
 
 

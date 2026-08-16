@@ -61,6 +61,7 @@ class ChatRequest(BaseModel):
     rule: str | None = None
     system: str | None = None
     rag: bool = True  # 自动 RAG：先检索知识库拼入上下文（无命中/故障自动降级）
+    auto_consolidate: bool = True  # 回复后自动沉淀：对话要点写今日日志（后台，不阻塞）
 
 
 class StreamRequest(ChatRequest):
@@ -176,6 +177,24 @@ async def post_chat(
             await session.commit()
     except Exception as exc:  # noqa: BLE001  # 历史落库失败不阻塞回复
         logger.warning("chat history persist degraded: %s", exc)
+    # 自动沉淀（优化②）：回复后后台提炼对话要点写今日日志；不阻塞响应。
+    # 寒暄/短轮由 memory_consolidate_llm 内部跳过；LLM 不可用规则降级。
+    if payload.auto_consolidate:
+        try:
+            import asyncio
+
+            async def _auto_consolidate() -> None:
+                try:
+                    from core.knowledge import memory_consolidate_llm
+
+                    text = f"{payload.message}\n[助手] {response.content}"
+                    await memory_consolidate_llm(text)
+                except Exception as exc:  # noqa: BLE001
+                    logger.debug("chat auto consolidate degraded: %s", exc)
+
+            asyncio.create_task(_auto_consolidate())
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("chat auto consolidate schedule degraded: %s", exc)
     return ok({
         "content": response.content, "model": response.model,
         "provider": response.provider,

@@ -4,6 +4,19 @@ All notable changes to deepDDW are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-08-17
+
+### Fixed
+
+- **DEF-003** — `POST /api/v1/backup/restore` now returns **400** (client error) for invalid backup files (non-SQLite / failed integrity check) instead of 500; the live DB and the `.pre-restore` safety copy are never touched.
+- **DEF-004** — `/api/v1/backup/create` no longer exposes the server's absolute path — only the filename is returned.
+- **DEF-002** — `token_gate.py` docstring now matches behavior: LAN password-free is **off by default** (explicit opt-in via `DDW_LAN_BYPASS=1`).
+
+### Changed
+
+- **Reflection & consolidation (LLM polish)** — daily reflection follows a style guide (auto / professional / casual), enforces a progress / issues / tomorrow structure and avoids repeating the previous day; consolidation skips logging when the LLM judges the conversation valueless.
+- **Memory search quality** — results are ranked by relevance score (hit-count × layer weight: user > notes > reflection > logs, plus freshness for recent logs) instead of insertion order; keyword-expansion cache expiry is tested.
+
 ## [0.2.0] - 2026-08-17
 
 ### Added — Multi-device on LAN (0.2.0)

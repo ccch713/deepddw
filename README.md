@@ -24,7 +24,7 @@ git clone https://github.com/ccch713/deepddw.git && cd deepddw
 
 > 📸 *Screenshot: phone / tablet accessing the workbench (coming soon).*
 
-**Status**: v0.2.0 · MIT · CI (pytest + ruff) ✅ · Multi-device on LAN + workspace isolation + backup/restore + TLS (opt-in) · [Listed in awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · Roadmap below
+**Status**: v0.3.0 · MIT · CI (pytest + ruff) ✅ · Multi-device on LAN + workspace isolation + backup/restore + TLS (opt-in) + LLM reflections & ranked memory search · [Listed in awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · Roadmap below
 
 ---
 
@@ -204,10 +204,8 @@ Only items actually planned or already delivered are listed here.
 - [x] **Session → document auto-ingest** — conversations saved to the knowledge base via `ddw.docs.save` / `ddw.session.docs` MCP tools + REST API, searchable and traceable per session
 - [x] **Vector search enhancement** — hybrid retrieval (SQLite FTS5/LIKE + LanceDB, RRF fusion; optional, degrades to keyword-only when LanceDB is absent)
 - [x] **Windows packaging** — PyInstaller one-dir build via the `windows-build` CI workflow, distributed as an Actions artifact, verified in release v0.1.0 (see `docs/windows-packaging.md`)
-
-**Planned:**
-- [ ] **Reflection & consolidation powered by LLM** — daily reflection auto-generated from recent logs; conversation auto-consolidation into daily memory (base layer done, LLM polish ongoing)
-- [ ] **Memory search quality** — keyword-expansion caching and cross-layer ranking improvements
+- [x] **Reflection & consolidation (LLM polish)** — daily reflection follows a style guide (auto/professional/casual), enforces a progress/issues/tomorrow structure and avoids repeating the previous day; consolidation skips logging when the LLM judges the conversation valueless
+- [x] **Memory search quality** — results ranked by relevance score (hit-count × layer weight: user > notes > reflection > logs, plus freshness) instead of insertion order; keyword-expansion cache expiry tested
 
 ---
 

@@ -1,5 +1,7 @@
 # deepDDW — Memory & Knowledge Base for DeepSeek Harness, Reachable from Any Device on Your LAN
 
+> **Not just memory — a team-ready AI workstation on your LAN.**
+>
 > **Extends DeepSeek Harness (DSH) with memory, a knowledge base, and LAN deployment — built on our production-grade DDW AI HUB platform.**
 >
 > - ✅ Breaks DSH's "local-only" limit — **usable from any device on your LAN**
@@ -9,6 +11,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > **English** · [简体中文](README.zh-CN.md)
+
+> 💡 **What makes deepDDW different from memory-only plugins**: many DSH extensions give you memory *alone*. deepDDW is a **complete workstation** — memory + knowledge base + document search + **LAN-wide multi-device access**, packaged from a production-grade AI platform. Deploy once, your whole team uses DSH from their own devices.
 
 ---
 

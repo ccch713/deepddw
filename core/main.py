@@ -186,17 +186,22 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS（本地开发域；生产由反向代理收敛）
-    cors_origins = [
-        "http://localhost:8500",
-        "http://localhost:3000",
-        "http://localhost:3080",
+    # P1-17：CORS 从配置读取（deployment.yaml cors.origins > env DDW_CORS_ORIGINS
+    # > 本地默认）；allow_headers 收窄到实际使用的头（防任意自定义头跨域携带）。
+    _DEFAULT_CORS_ORIGINS = [
+        "http://localhost:8500", "http://localhost:3000", "http://localhost:3080",
         "http://localhost:8766",
-        "http://127.0.0.1:8500",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3080",
+        "http://127.0.0.1:8500", "http://127.0.0.1:3000", "http://127.0.0.1:3080",
         "http://127.0.0.1:8766",
     ]
+    try:
+        configured = get_settings().raw.get("cors", {}).get("origins", []) or []
+    except Exception:  # noqa: BLE001
+        configured = []
+    env_origins = os.environ.get("DDW_CORS_ORIGINS", "")
+    if env_origins:
+        configured = [o.strip() for o in env_origins.split(",") if o.strip()]
+    cors_origins = configured or _DEFAULT_CORS_ORIGINS
     extra = os.environ.get("DDW_CORS_EXTRA_ORIGINS", "")
     if extra:
         cors_origins += [o.strip() for o in extra.split(",") if o.strip()]
@@ -204,8 +209,8 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=cors_origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+        allow_headers=["Authorization", "X-DDW-Token", "Content-Type", "Mcp-Session-Id"],
     )
 
     # API 路由（全部走网关 Token 门禁；无账号体系）

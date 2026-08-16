@@ -172,11 +172,9 @@ class EventBus:
         """
         start = time.monotonic()
         cbs = self.listeners(event)
-        results: List[HandlerResult] = []
-        success_count = 0
-        failure_count = 0
 
-        for cb in cbs:
+        async def _run_one(cb):
+            """单个 handler（P1-16：隔离失败，供 asyncio.gather 并发执行）。"""
             cb_name = getattr(cb, "__name__", repr(cb))
             cb_start = time.monotonic()
             try:
@@ -185,18 +183,27 @@ class EventBus:
                 else:
                     await asyncio.get_running_loop().run_in_executor(None, cb, payload)
                 duration = (time.monotonic() - cb_start) * 1000
-                results.append(HandlerResult(callback_name=cb_name, success=True, duration_ms=duration))
-                success_count += 1
-            except Exception as exc:  # noqa: BLE001
+                return HandlerResult(callback_name=cb_name, success=True, duration_ms=duration)
+            except Exception as exc:  # noqa: BLE001  # 单 handler 失败不影响其他
                 duration = (time.monotonic() - cb_start) * 1000
-                error_msg = str(exc)
-                results.append(HandlerResult(
-                    callback_name=cb_name, success=False, duration_ms=duration, error=error_msg,
-                ))
-                failure_count += 1
-                # 入 Dead Letter Queue
-                self._enqueue_dead_letter(event, payload, cb_name, error_msg)
-                logger.exception("event handler '%s' failed for '%s'", cb_name, event)
+                return HandlerResult(
+                    callback_name=cb_name, success=False,
+                    duration_ms=duration, error=str(exc),
+                )
+
+        # P1-16：同事件多 handler 并发执行（原串行；一个失败不再拖慢/阻断其余）
+        results: List[HandlerResult] = list(
+            await asyncio.gather(*[_run_one(cb) for cb in cbs])
+        )
+        success_count = sum(1 for r in results if r.success)
+        failure_count = len(results) - success_count
+        for r in results:
+            if not r.success:
+                # 入 Dead Letter Queue（并发执行后统一收尾）
+                self._enqueue_dead_letter(event, payload, r.callback_name, r.error or "")
+                logger.exception(
+                    "event handler '%s' failed for '%s'", r.callback_name, event
+                )
 
         total_duration = (time.monotonic() - start) * 1000
         publish_result = PublishResult(

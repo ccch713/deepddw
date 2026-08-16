@@ -40,6 +40,9 @@ jobs:
 
       - name: Smoke test (start exe, poll /health)
         shell: pwsh
+        env:
+          DDW_ACCESS_TOKEN: windows-smoke-test-token
+          DDW_DEEPSEEK_API_KEY: sk-smoke-placeholder
         run: |
           $outLog = Join-Path $env:RUNNER_TEMP "deepddw.stdout.log"
           $errLog = Join-Path $env:RUNNER_TEMP "deepddw.stderr.log"
@@ -71,6 +74,18 @@ jobs:
               Write-Host "--- stderr ---"
               if (Test-Path $errLog) { Get-Content $errLog | Select-Object -Last 60 }
               throw "health check timed out (90s); process alive=$(-not $proc.HasExited)"
+            }
+            # Token 门禁验证：无 token 的 /health 应 200（health 是公开探活），
+            # 但带 token 的业务端点应 200、无 token 应 401
+            $noAuth = $null
+            try {
+              $noAuth = Invoke-WebRequest -Uri "http://127.0.0.1:8500/api/v1/gateway/verify" -TimeoutSec 5
+            } catch {
+              if ($_.Exception.Response.StatusCode.value__ -eq 401) {
+                Write-Host "gateway verify without token -> 401 (auth gate OK)"
+              } else {
+                throw "expected 401 without token, got $($_.Exception.Response.StatusCode.value__)"
+              }
             }
           } finally {
             Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue

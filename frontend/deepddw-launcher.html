@@ -39,6 +39,11 @@ input:focus{border-color:var(--border-hover)}
 .qrcode svg{width:180px;height:180px;border-radius:8px;background:#fff;padding:6px}
 .qrcode a{display:inline-block;padding:10px 14px;border-radius:8px;background:#fff;border:1px solid var(--border,#888);color:var(--text,#333);font-size:12px;text-decoration:none;word-break:break-all;max-width:100%}
 footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--text-muted)}
+.status-card{margin-top:16px;padding:12px 14px;border-radius:10px;background:var(--bg-card,#fff);border:1px solid var(--border,#888);font-size:12.5px;color:var(--text,#333)}
+.status-title{font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.status-badge{font-size:11px;padding:2px 8px;border-radius:10px;background:#0a8f3c;color:#fff}
+.status-body{line-height:1.7;word-break:break-all}
+.status-body .dev{margin-left:10px;color:var(--text-muted)}
 </style>
 </head>
 <body>
@@ -57,8 +62,19 @@ footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--text-muted
   <input id="dsh" type="url" placeholder="http://127.0.0.1:3080" autocomplete="off">
   <div class="hint">dsh 引擎地址，默认本机 3080；可通过 ?dsh= 参数预填</div>
 
+  <!-- P0-3（multidevice）：设备身份——本机持久化 device_id，名称可改 -->
+  <label for="deviceName">设备名称（局域网内多设备识别）</label>
+  <input id="deviceName" type="text" placeholder="例如：我的手机 / 办公室笔记本" maxlength="60" autocomplete="off">
+  <div class="hint">仅存本机 localStorage；多台设备共用一个 Token 也能区分谁在线</div>
+
   <button class="btn" id="connect">进入工作台</button>
   <div class="msg" id="msg"></div>
+
+  <!-- P0-4（multidevice）：状态面板卡片（Token 保护，管理员可见） -->
+  <div id="statusCard" class="status-card" style="display:none">
+    <div class="status-title">🖥 设备状态 <span class="status-badge" id="statusBadge"></span></div>
+    <div id="statusBody" class="status-body">加载中…</div>
+  </div>
 
   <div id="pairArea" class="pair" style="display:none">
     <div class="pair-title">手机扫码自动填入（电脑端显示）</div>
@@ -124,6 +140,65 @@ footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--text-muted
     if (!urlDsh && localStorage.getItem("deepddw_dsh")) dshEl.value = localStorage.getItem("deepddw_dsh");
   } catch (e) { /* 隐私模式忽略 */ }
 
+  // P0-3（multidevice）：设备身份——localStorage 持久化 device_id（重启不变）；
+  // 无则生成（crypto.randomUUID，已随网关 polyfill 覆盖非安全上下文）。
+  var deviceId = null;
+  try { deviceId = localStorage.getItem("deepddw_device_id") || ""; } catch (e) {}
+  if (!deviceId) {
+    deviceId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() :
+               ("dev-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10));
+    try { localStorage.setItem("deepddw_device_id", deviceId); } catch (e) {}
+  }
+  var deviceNameEl = document.getElementById("deviceName");
+  try {
+    if (localStorage.getItem("deepddw_device_name")) deviceNameEl.value = localStorage.getItem("deepddw_device_name");
+  } catch (e) {}
+
+  function currentDeviceName() {
+    var n = (deviceNameEl.value || "").trim();
+    try { localStorage.setItem("deepddw_device_name", n); } catch (e) {}
+    return n;
+  }
+
+  // P0-3：向网关注册本设备（幂等；失败不阻塞进工作台）
+  function registerDevice(base, token) {
+    var headers = token ? { "X-DDW-Token": token } : {};
+    headers["Content-Type"] = "application/json";
+    fetch(base + "/api/v1/device/register", {
+      method: "POST", headers: headers,
+      body: JSON.stringify({ device_id: deviceId, device_name: currentDeviceName() }),
+    }).catch(function () { /* 注册失败不影响使用 */ });
+  }
+
+  // P0-4：状态面板卡片——拉 /api/v1/status 展示在线设备（Token 保护）
+  function loadStatus(base, token) {
+    var card = document.getElementById("statusCard");
+    var badge = document.getElementById("statusBadge");
+    var body = document.getElementById("statusBody");
+    if (!card) return;
+    var headers = token ? { "X-DDW-Token": token } : {};
+    fetch(base + "/api/v1/status", { headers: headers })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !d.data) { card.style.display = "none"; return; }
+        var s = d.data;
+        card.style.display = "block";
+        badge.textContent = s.online_devices + " 台在线";
+        var lines = ["<b>网关</b> v" + s.version + " · 活跃 WS " + s.active_ws +
+                     " · 请求 " + s.requests +
+                     " · DB " + (s.db_size_bytes / 1024 / 1024).toFixed(1) + " MB"];
+        (s.devices || []).slice(0, 8).forEach(function (dev) {
+          lines.push((dev.online ? "🟢" : "⚪") + " " +
+                     (dev.device_name || dev.device_id.slice(0, 8)) +
+                     " <span class='dev'>" + dev.ip + " · " +
+                     (dev.online ? "在线" : "离线") + "</span>");
+        });
+        if (s.devices.length > 8) lines.push("… 共 " + s.devices.length + " 台");
+        body.innerHTML = lines.join("<br>");
+      })
+      .catch(function () { card.style.display = "none"; });
+  }
+
   function baseAddr() {
     var v = addrEl.value.trim().replace(/\/+$/, "");
     return v || window.location.origin;
@@ -163,6 +238,9 @@ footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--text-muted
         localStorage.setItem("deepddw_addr", base);
       } catch (e) { /* ignore */ }
       msg.className = "msg ok"; msg.textContent = "连接成功 ✓";
+      // P0-3/P0-4（multidevice）：注册本设备 + 拉取状态卡片
+      registerDevice(base, token);
+      loadStatus(base, token);
       enterWorkbench(base, token);
     } catch (e) {
       msg.className = "msg err"; msg.textContent = "无法连接服务器：" + e.message;
@@ -220,6 +298,7 @@ footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--text-muted
     // （targetOrigin 精确到 dsh 源；不经过 URL / iframe src / 日志）
     iframe.onload = function () {
       try { iframe.contentWindow.postMessage({ type: "deepddw-token", token: token }, dshUrl); } catch (e) {}
+      try { iframe.contentWindow.postMessage({ type: "deepddw-device", device_id: deviceId, device_name: currentDeviceName() }, dshUrl); } catch (e) {}
     };
     setTimeout(function () {
       try { iframe.contentWindow.postMessage({ type: "deepddw-token", token: token }, dshUrl); } catch (e) {}

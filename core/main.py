@@ -227,6 +227,10 @@ def create_app() -> FastAPI:
     app.include_router(chat_router)
     app.include_router(knowledge_router)
     app.include_router(llm_router)
+    # P0-3/P0-4（multidevice）：设备注册/心跳 + 状态面板
+    from core.api.status import router as status_router
+
+    app.include_router(status_router)
 
     # 健康检查（公开）
     @app.get("/health")
@@ -493,6 +497,14 @@ def create_app() -> FastAPI:
                 await websocket.close(code=4403, reason="cross-site rejected")
                 return
             await websocket.accept()
+            # P0-3（multidevice）：设备在线跟踪——客户端 WS 带 ?device_id=xxx；
+            # 连接期间心跳在线，关闭时离开（内存活跃表，60s 窗口）。
+            device_id = (websocket.query_params.get("device_id") or "").strip()
+            if device_id:
+                from core.api import status as status_api
+
+                status_api.touch_device(device_id)
+                status_api.bump_ws_count(1)
             dsh_base = os.environ.get("DEEPDDW_DSH_URL", "http://127.0.0.1:3080").rstrip("/")
             ws_url = dsh_base.replace("http://", "ws://").replace("https://", "wss://")
             target = f"{ws_url}/api/{path}"
@@ -532,6 +544,11 @@ def create_app() -> FastAPI:
                     await websocket.close()
                 except Exception:  # noqa: BLE001
                     pass
+                if device_id:
+                    from core.api import status as status_api
+
+                    status_api.leave_device(device_id)
+                    status_api.bump_ws_count(-1)
     else:
         logger.warning("frontend directory not found: %s", frontend)
 

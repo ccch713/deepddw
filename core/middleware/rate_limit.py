@@ -2,9 +2,9 @@
 
 - 内存滑动窗口：按 Token（X-DDW-Token / Bearer）与客户端 IP 双维度；
 - 标准库实现（time + dict），零新依赖；
-- 超限返回 429 + Retry-After；服务级过载（超总窗口容量）返回 503；
-- 配置驱动：deployment.yaml ``security.rate_limit.*`` + env 覆盖，默认 fail-closed；
-- 健康检查 /health 与 OPTIONS 放行（不计数）；LLM 429 重试语义保持不变。
+- 超限 429 + Retry-After；全局过载（总容量）503；
+- 配置驱动：deployment.yaml security.rate_limit.* + env，默认 fail-closed；
+- /health 与 OPTIONS 放行（不计数）；LLM 429 重试语义不变。
 """
 
 from __future__ import annotations
@@ -67,10 +67,13 @@ def _rate_limit_config() -> Dict[str, Any]:
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """滑动窗口限流（双维度 + 全局过载保护）。"""
 
-    # 类级桶：跨实例共享（app 单例 + 测试可清）；{bucket_key: deque[timestamps]}
+    # 类级桶：跨实例共享（app 单例 + 测试可清）；
+    # {bucket_key: deque[timestamps]}
     _buckets: Dict[str, Deque[float]] = defaultdict(deque)
 
-    def __init__(self, app, config: Optional[Dict[str, Any]] = None) -> None:  # noqa: ANN001
+    def __init__(  # noqa: ANN001
+        self, app, config: Optional[Dict[str, Any]] = None,
+    ) -> None:
         super().__init__(app)
         self._cfg_override = config
 
@@ -123,12 +126,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         cfg = self._cfg
         # 1) 全局过载 → 503（先于单维度判断，优先保护网关）
         if not self._check("global", cfg["global"], now):
-            retry = max(1, int(cfg["window_seconds"] - (now - (type(self)._buckets["global"][0] if type(self)._buckets["global"] else now))))
+            global_bucket = type(self)._buckets["global"]
+            first = global_bucket[0] if global_bucket else now
+            retry = max(1, int(cfg["window_seconds"] - (now - first)))
             return JSONResponse(
                 status_code=503,
                 content={
                     "code": 503,
-                    "message": "网关繁忙（过载保护）：请稍后重试。Retry-After 秒后恢复。",
+                    "message": (
+                        "网关繁忙（过载保护）：请稍后重试。Retry-After 秒后恢复。"
+                    ),
                     "retry_after": retry,
                 },
                 headers={"Retry-After": str(retry)},

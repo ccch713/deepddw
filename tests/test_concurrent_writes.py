@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import os
-import sqlite3
 
 os.environ.setdefault("DDW_ACCESS_TOKEN", "test-concurrent-writes-token")
 
@@ -33,7 +32,6 @@ async def _concurrent_write_round(n: int = 20) -> list[str]:
     """一轮 n 路并发写：async（chat 落库路径）+ sync（记忆/知识库路径）。"""
     import asyncio
 
-    from core.api import chat as chat_mod
     from core.database.session import get_write_lock
     from core.knowledge import memory_log_append, reset_conn_pool
 

@@ -183,7 +183,9 @@ class EventBus:
                 else:
                     await asyncio.get_running_loop().run_in_executor(None, cb, payload)
                 duration = (time.monotonic() - cb_start) * 1000
-                return HandlerResult(callback_name=cb_name, success=True, duration_ms=duration)
+                return HandlerResult(
+                    callback_name=cb_name, success=True, duration_ms=duration,
+                )
             except Exception as exc:  # noqa: BLE001  # 单 handler 失败不影响其他
                 duration = (time.monotonic() - cb_start) * 1000
                 return HandlerResult(

@@ -1,25 +1,37 @@
 # deepDDW — 让 DeepSeek Harness 具备记忆与知识库，局域网内任意设备可用
 
-> **不只是记忆——是部署在局域网内的团队级 AI 工作台。**
->
-> **为 DeepSeek Harness（DSH）补齐记忆体、知识库与内网部署能力，基于我们成熟的企业级 DDW AI HUB 底座平台构建。**
->
-> - ✅ 突破 DSH 官方「仅本机使用」限制 — **局域网内任意智能设备可访问**
-> - ✅ 记忆体 + 知识库 + 文档检索 — **以 DSH 官方标准 MCP 接口接入，不改 DSH 源码**
-> - ✅ 整体封装、简便部署、低运维成本 — **20 人以下小型商业组织开箱即用**
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Listed in awesome-deepseek-harness](https://img.shields.io/badge/awesome--deepseek--harness-Listed-blue)](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge)
+[![CI](https://github.com/ccch713/deepddw/actions/workflows/ci.yml/badge.svg)](https://github.com/ccch713/deepddw/actions/workflows/ci.yml)
 
 > 🌐 **English** · 简体中文
 > 这是中文说明。英文版见 [`README.md`](README.md)。
 
-> 💡 **deepDDW 与"纯记忆插件"的区别**：很多 DSH 扩展只提供记忆。deepDDW 是**完整的工作台**——记忆 + 知识库 + 文档检索 + **局域网多设备访问**，封装自企业级 AI 底座平台。部署一次，整个团队用自己的设备使用 DSH。
+**deepDDW 给 DeepSeek Harness（DSH）补齐三块拼图：记忆、知识库、文档搜索——而且全部支持局域网内任意设备访问。不用装 App，不改 DSH 一行源码。**
+
+- 🧠 **记忆体** — 跨会话长期记忆，读写走 DSH 官方标准 MCP 接口
+- 📚 **知识库** — 文档入库与检索（行业资料、SOP、研究笔记）随时可查
+- 🌐 **局域网多设备** — 部署一次，手机/平板/笔记本同网可用，共用同一个 DSH 工作台
+
+**60 秒上手：**
+
+```bash
+npm i -g @deepseek-ai/dsh              # 1. 服务器安装官方 DSH
+git clone https://github.com/ccch713/deepddw.git && cd deepddw
+./install.sh --with-dsh                # 2. 安装 deepDDW
+./install.sh --port 8600               # 3. 启动
+# 4. 局域网任意设备打开 http://<服务器IP>:8600/（手机扫码自动配对）
+```
+
+> 📸 *截图位：手机/平板访问工作台实拍（稍后补充）。*
+
+**当前状态**：v0.1.0 · MIT · CI（pytest + ruff）✅ · 局域网多设备联机（0.2.0）已交付 · [入选 awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · 路线图见文末
 
 ---
 
-## 我们是谁：不只是开源工具，是商用解决方案
+## 为什么用 deepDDW？
 
-deepDDW 背后是 **DDW AI HUB** —— 一套经过企业级验证的 AI 底座平台。我们将成熟的底座能力封装进 DSH 生态，解决了许多开源项目尚未覆盖的三个关键场景：
+大多数 DSH 扩展只提供记忆。deepDDW 是**完整的工作台**——记忆 + 知识库 + 文档检索 + **局域网多设备访问**：
 
 | 官方 DSH 的限制 | deepDDW 的解法 |
 |----------------|----------------|
@@ -28,6 +40,8 @@ deepDDW 背后是 **DDW AI HUB** —— 一套经过企业级验证的 AI 底座
 | 📚 **无知识库** | ✅ 知识库检索/入库，行业文档、SOP、研究笔记随时调用 |
 
 **一句话**：把"个人玩具"变成"小组织能用的工具"——**整体封装、简便部署、降低运维成本，让小型商业组织部署即可使用**，基本可以支撑 20 人以下企业的日常 AI 工作流。
+
+deepDDW 由我们的 **DDW AI HUB** 平台沉淀而来——经过企业级部署验证，以开源（MIT）形式封装进 DSH 生态。
 
 ---
 
@@ -96,15 +110,10 @@ cd deepddw && ./install.sh --with-dsh
 
 deepDDW 面向**局域网内最多 20 台设备共享一个网关**的场景：
 
-- **设备身份**：每台浏览器在 localStorage 持久化 `device_id`，启动页可设置设备名称；
-  重连后身份不变（刷新/重启仍是同一台设备）。
-- **在线状态**：设备向网关注册/心跳；`/api/v1/status`（Token 保护）返回谁在线、
-  活跃 WebSocket 数、请求计数、数据库大小与版本；启动页为管理员渲染实时状态卡片。
-- **网关限流**：滑动窗口，按 Token + 按 IP 双维度（默认 60 req/min/token，
-  全网关总容量耗尽 → 503 过载保护）；可通过 `config/deployment.yaml` 的
-  `security.rate_limit.*` 或 `DDW_RATE_LIMIT_*` 环境变量覆盖。
-- **SQLite 并发加固**：所有连接统一 WAL + `busy_timeout=5000` + `synchronous=NORMAL`，
-  跨表写事务走进程级写锁（已用 20 并发写验证，无 `database is locked`）。
+- **设备身份**：每台浏览器在 localStorage 持久化 `device_id`，启动页可设置设备名称；重连后身份不变（刷新/重启仍是同一台设备）。
+- **在线状态**：设备向网关注册/心跳；`/api/v1/status`（Token 保护）返回谁在线、活跃 WebSocket 数、请求计数、数据库大小与版本；启动页为管理员渲染实时状态卡片。
+- **网关限流**：滑动窗口，按 Token + 按 IP 双维度（默认 60 req/min/token，全网关总容量耗尽 → 503 过载保护）；可通过 `config/deployment.yaml` 的 `security.rate_limit.*` 或 `DDW_RATE_LIMIT_*` 环境变量覆盖。
+- **SQLite 并发加固**：所有连接统一 WAL + `busy_timeout=5000` + `synchronous=NORMAL`，跨表写事务走进程级写锁（已用 20 并发写验证，无 `database is locked`）。
 
 ```
 POST /api/v1/device/register    # 注册/改名本设备（幂等）
@@ -160,11 +169,17 @@ GET  /api/v1/status             # 状态面板（需 Token）
 - [x] **Docker 一键部署** — `docker compose -f deepddw-compose.yml up -d --build`（已在真实 macOS arm64 主机验证：core + SearXNG 容器启动、health/MCP/chat 端到端全绿）
 - [x] **会话 → 文档沉淀** — 对话经 `ddw.docs.save` / `ddw.session.docs` MCP 工具 + REST API 保存到知识库，按会话可检索可追溯
 - [x] **知识库向量检索增强** — 混合检索（SQLite FTS5/LIKE + LanceDB，RRF 融合；可选，无 LanceDB 时自动降级纯关键词）
+- [x] **Windows 打包** — `windows-build` CI 工作流 PyInstaller one-dir 自动出包，以 Actions 产物分发，v0.1.0 发布已验证（见 `docs/windows-packaging.md`）
 
 **计划中：**
 - [ ] **反思与沉淀 LLM 化** — 基于最近日志自动生成每日反思；对话自动沉淀进每日记忆（基座已交付，LLM 打磨中）
 - [ ] **记忆检索质量** — 关键词扩写缓存与跨层排序优化
-- [ ] **Windows 打包** — 评估见 `docs/windows-packaging.md`（PyInstaller one-dir + CI 自动出包；执行阶段，待用户确认）
+- [ ] **工作区隔离（P1-1）** — 网关层按工作区隔离记忆/知识库（默认 `shared`，向后兼容）
+- [ ] **可选 TLS（P1-2）** — 局域网 HTTPS 一键自签证书 + 外网访问反代文档
+- [ ] **会话跨设备续接（P1-3）** — "最近会话"摘要，换设备可继续上次对话
+- [ ] **备份 / 恢复 UI（P2-1）** — 定时 + 一键备份数据卷
+- [ ] **压测报告（P2-2）** — 5/10/20 设备并发数据公开到 `docs/`
+- [ ] **版本 / 升级检查（P2-3）** — 网关探测最新 Release，PWA 提示升级
 
 ---
 

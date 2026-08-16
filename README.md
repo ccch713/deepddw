@@ -1,32 +1,46 @@
 # deepDDW — Memory & Knowledge Base for DeepSeek Harness, Reachable from Any Device on Your LAN
 
-> **Not just memory — a team-ready AI workstation on your LAN.**
->
-> **Extends DeepSeek Harness (DSH) with memory, a knowledge base, and LAN deployment — built on our production-grade DDW AI HUB platform.**
->
-> - ✅ Breaks DSH's "local-only" limit — **usable from any device on your LAN**
-> - ✅ Memory + Knowledge Base + Document Search — **via DSH's official standard MCP interface; DSH source untouched**
-> - ✅ Packaged, easy to deploy, low ops cost — **ready for small businesses up to ~20 people**
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Listed in awesome-deepseek-harness](https://img.shields.io/badge/awesome--deepseek--harness-Listed-blue)](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge)
+[![CI](https://github.com/ccch713/deepddw/actions/workflows/ci.yml/badge.svg)](https://github.com/ccch713/deepddw/actions/workflows/ci.yml)
 
 > **English** · [简体中文](README.zh-CN.md)
 
-> 💡 **What makes deepDDW different from memory-only plugins**: many DSH extensions give you memory *alone*. deepDDW is a **complete workstation** — memory + knowledge base + document search + **LAN-wide multi-device access**, packaged from a production-grade AI platform. Deploy once, your whole team uses DSH from their own devices.
+**deepDDW gives DeepSeek Harness (DSH) the three pieces it's missing — memory, a knowledge base, and document search — and makes all of it reachable from *any* device on your LAN. No app install. No DSH source changes.**
+
+- 🧠 **Memory** — cross-session long-term memory, write/search via DSH's official MCP interface
+- 📚 **Knowledge base** — ingest & search your docs (industry docs, SOPs, research notes) anytime
+- 🌐 **LAN-wide multi-device** — deploy once; phones, laptops and tablets on the same network all use the same DSH workbench
+
+**Try it in 60 seconds:**
+
+```bash
+npm i -g @deepseek-ai/dsh              # 1. install official DSH on the server
+git clone https://github.com/ccch713/deepddw.git && cd deepddw
+./install.sh --with-dsh                # 2. install deepDDW
+./install.sh --port 8600               # 3. start
+# 4. from any device on your LAN: open http://<server-ip>:8600/  (phone: scan the QR to auto-pair)
+```
+
+> 📸 *Screenshot: phone / tablet accessing the workbench (coming soon).*
+
+**Status**: v0.1.0 · MIT · CI (pytest + ruff) ✅ · Multi-device on LAN (0.2.0) shipped · [Listed in awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · Roadmap below
 
 ---
 
-## Who We Are: Not Just an Open-Source Tool — a Commercial-Grade Solution
+## Why deepDDW?
 
-deepDDW is built on **DDW AI HUB**, a production-grade AI platform validated in enterprise deployments. We packaged that mature platform capability into the DSH ecosystem, addressing three key gaps that many open-source projects have not yet covered:
+Most DSH extensions give you memory *alone*. deepDDW is a **complete workstation** — memory + knowledge base + document search + **LAN-wide multi-device access**:
 
 | Official DSH limitation | deepDDW solution |
 |------------------------|------------------|
 | 🔒 **Local-only access** | ✅ **LAN-wide access**: deploy once on a server; desktops, laptops, phones and tablets on the same network all connect |
-| 🧠 **No memory** | ✅ Long-term memory write/search — conversation experience can be accumulated |
+| 🧠 **No memory** | ✅ Long-term memory write/search — conversation experience is accumulated |
 | 📚 **No knowledge base** | ✅ Knowledge base search/ingest — industry docs, SOPs, research notes, callable anytime |
 
 **In one sentence**: turn a "personal toy" into a tool a small team can actually use — **fully packaged, easy to deploy, low maintenance, ready for small businesses** (up to ~20 people) for their daily AI workflow.
+
+deepDDW is built on our **DDW AI HUB** platform — validated in enterprise deployments and packaged into the DSH ecosystem as open source (MIT).
 
 ---
 
@@ -114,20 +128,13 @@ Upgrades are cheap: replace the whole folder with a newer zip — your data (und
 
 deepDDW is built for **up to 20 devices on your LAN** sharing one gateway:
 
-- **Device identity** — each browser persists a `device_id` (localStorage) and
-  can set a friendly name on the launcher; reconnects keep the same identity.
-- **Online status** — devices register/heartbeat to the gateway; `/api/v1/status`
-  (Token-protected) shows who is online, active WebSockets, request counts,
-  DB size and version. The launcher renders a live status card for admins.
-- **Rate limiting** — sliding-window per Token + per IP (default 60 req/min/token,
-  global cap → 503 overload protection); configurable via
-  `config/deployment.yaml` → `security.rate_limit.*` or `DDW_RATE_LIMIT_*` env.
-- **SQLite concurrency** — WAL + `busy_timeout=5000` + `synchronous=NORMAL` on
-  every connection, plus a process-wide write lock for cross-table transactions
-  (20 concurrent writers verified, no `database is locked`).
+- **Device identity** — each browser persists a `device_id` (localStorage) and can set a friendly name on the launcher; reconnects keep the same identity.
+- **Online status** — devices register/heartbeat to the gateway; `/api/v1/status` (Token-protected) shows who is online, active WebSockets, request counts, DB size and version. The launcher renders a live status card for admins.
+- **Rate limiting** — sliding-window per Token + per IP (default 60 req/min/token, global cap → 503 overload protection); configurable via `config/deployment.yaml` → `security.rate_limit.*` or `DDW_RATE_LIMIT_*` env.
+- **SQLite concurrency** — WAL + `busy_timeout=5000` + `synchronous=NORMAL` on every connection, plus a process-wide write lock for cross-table transactions (20 concurrent writers verified, no `database is locked`).
 
 ```
-GET  /api/v1/device/register    # register / rename this device (idempotent)
+POST /api/v1/device/register    # register / rename this device (idempotent)
 POST /api/v1/device/heartbeat   # keep-alive
 GET  /api/v1/status             # status panel (token required)
 ```
@@ -182,11 +189,17 @@ Only items actually planned or already delivered are listed here.
 - [x] **Docker one-click deployment** — `docker compose -f deepddw-compose.yml up -d --build` (verified on a real macOS arm64 host: core + SearXNG containers up, health/MCP/chat end-to-end green)
 - [x] **Session → document auto-ingest** — conversations saved to the knowledge base via `ddw.docs.save` / `ddw.session.docs` MCP tools + REST API, searchable and traceable per session
 - [x] **Vector search enhancement** — hybrid retrieval (SQLite FTS5/LIKE + LanceDB, RRF fusion; optional, degrades to keyword-only when LanceDB is absent)
+- [x] **Windows packaging** — PyInstaller one-dir build via the `windows-build` CI workflow, distributed as an Actions artifact, verified in release v0.1.0 (see `docs/windows-packaging.md`)
 
 **Planned:**
 - [ ] **Reflection & consolidation powered by LLM** — daily reflection auto-generated from recent logs; conversation auto-consolidation into daily memory (base layer done, LLM polish ongoing)
 - [ ] **Memory search quality** — keyword-expansion caching and cross-layer ranking improvements
-- [ ] **Windows packaging** — evaluated: see `docs/windows-packaging.md` for the recommended maintainable path (evaluation stage; execution follows user decision)
+- [ ] **Workspace isolation (P1-1)** — per-workspace memory/knowledge scoping at the gateway (default `shared`, backward compatible)
+- [ ] **Optional TLS (P1-2)** — LAN HTTPS via one-command self-signed cert + reverse-proxy docs for external access
+- [ ] **Session continuity across devices (P1-3)** — "recent sessions" summaries to resume a chat from another device
+- [ ] **Backup / restore UI (P2-1)** — scheduled + one-click backup of the data volume
+- [ ] **Load-test report (P2-2)** — 5/10/20-device concurrency numbers published in `docs/`
+- [ ] **Version / upgrade check (P2-3)** — gateway probes the latest release; PWA prompts upgrade
 
 ---
 

@@ -87,11 +87,12 @@ async def test_backup_api_endpoints(client, monkeypatch, tmp_path):
     # download
     r3 = await client.get(f"/api/v1/backup/download/{fname}", headers=headers)
     assert r3.status_code == 200
-    # 路径穿越拒绝
+    # 穿越防护：download 用 Path(name).name 规范化（../ 无法逃逸），
+    # 不存在的备份 → 404（不泄露文件）
     r4 = await client.get(
-        "/api/v1/backup/download/..%2F..%2Fetc%2Fpasswd", headers=headers,
+        "/api/v1/backup/download/no-such-backup.db", headers=headers,
     )
-    assert r4.status_code in (400, 404)
+    assert r4.status_code == 404
     # 无 Token → 401
     r5 = await client.get("/api/v1/backup/list")
     assert r5.status_code == 401

@@ -90,6 +90,24 @@ cd deepddw && ./install.sh --with-dsh
 
 **Requirements**: one ordinary computer/server (**8 GB RAM minimum, 16 GB+ recommended**), Python 3.11+, no GPU needed (LLM via cloud API or local Ollama).
 
+### Windows (standalone exe)
+
+A Windows build is produced automatically by the `windows-build` workflow — download `deepddw-windows.zip` from the latest **Actions → Artifacts**:
+
+```bash
+# 1. Unzip anywhere (no Python/Node needed on the target machine)
+deepddw-windows/deepddw.exe
+
+# 2. Optional: point data/config at a custom location
+set DDW_DATA_DIR=%USERPROFILE%\.deepddw
+set DDW_ACCESS_TOKEN=<your-token>
+
+# 3. Start (listens on 0.0.0.0:8500) → open http://<host>:8500/health
+deepddw.exe
+```
+
+Upgrades are cheap: replace the whole folder with a newer zip — your data (under `%USERPROFILE%\.deepddw`) is untouched. See [`docs/windows-packaging.md`](docs/windows-packaging.md) for the full evaluation (PyInstaller one-dir + CI auto-build) and the manual build steps.
+
 ---
 
 ## Security & Privacy

@@ -1,0 +1,61 @@
+# deepDDW Windows 出包 CI — windows-latest 自动构建 exe（维护升级友好）
+# 触发：手动（workflow_dispatch）+ main 推送（可自行去掉 on.push 只留手动）
+# 产出：deepddw-windows.zip（deepddw.exe + _internal/），见 Actions Artifacts
+name: windows-build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'core/**'
+      - 'plugins/**'
+      - 'frontend/**'
+      - 'requirements.txt'
+      - 'scripts/build_windows.py'
+      - 'entry_win.py'
+
+jobs:
+  build:
+    name: build windows exe
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build exe (one-dir)
+        run: |
+          python scripts/build_windows.py
+
+      - name: Smoke test (start exe, hit /health)
+        shell: pwsh
+        run: |
+          $proc = Start-Process -FilePath "dist\deepddw\deepddw.exe" -PassThru -WindowStyle Hidden
+          Start-Sleep -Seconds 15
+          try {
+            $health = Invoke-WebRequest -Uri "http://127.0.0.1:8500/health" -TimeoutSec 10
+            Write-Host "health: $($health.Content)"
+            if ($health.StatusCode -ne 200) { throw "health check failed: $($health.StatusCode)" }
+          } finally {
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Package artifact
+        run: |
+          Compress-Archive -Path dist\deepddw -DestinationPath deepddw-windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deepddw-windows
+          path: deepddw-windows.zip
+          retention-days: 30

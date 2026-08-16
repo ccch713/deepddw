@@ -43,12 +43,11 @@ def sanitize_path(path: str | os.PathLike, base_dir: str | os.PathLike) -> Path:
     if "%2e%2e" in lowered or "%2f" in lowered or "%5c" in lowered:
         raise PathSafetyError("URL 编码遍历攻击")
 
-    # 防线 3: Unicode NFKC 归一化攻击
+    # 防线 3: Unicode NFKC 归一化攻击（P2-25：单点判定——归一化后任一
+    # 段为 ".." 即拒绝，不再要求 split 与 Path.parts 双重命中）
     normalized = unicodedata.normalize("NFKC", path)
     if ".." in normalized.replace("\\", "/").split("/"):
-        # 仅当归一化后产生 .. 才拒绝
-        if ".." in Path(normalized).parts:
-            raise PathSafetyError("Unicode 归一化路径遍历攻击")
+        raise PathSafetyError("Unicode 归一化路径遍历攻击")
 
     # 防线 4: 反斜杠拒绝（仅允许正斜杠或系统默认）
     if "\\" in path:

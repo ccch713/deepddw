@@ -47,10 +47,8 @@ def sanitize_unicode(text: str, max_length: int = 1_000_000) -> str:
     if len(text) > max_length:
         raise ValueError(f"输入长度 {len(text)} 超过最大允许 {max_length}")
 
-    # 1. 显式剥离已知危险码位
-    text = "".join(ch for ch in text if ord(ch) not in _DANGEROUS_CODEPOINTS)
-
-    # 2. 迭代 NFKC 归一化（最多 10 次，防无限归一化）
+    # 1. P2-26：先 NFKC 归一化（防归一化拆出零宽/危险序列漏过滤），
+    #    迭代最多 10 次防无限归一化
     for _ in range(_MAX_ITERATIONS):
         normalized = unicodedata.normalize("NFKC", text)
         if normalized == text:
@@ -60,7 +58,7 @@ def sanitize_unicode(text: str, max_length: int = 1_000_000) -> str:
         # 达到最大迭代仍未稳定 → 拒绝
         raise ValueError("Unicode 归一化未在 10 次内稳定，可能被攻击")
 
-    # 3. 剥离剩余危险类别
+    # 2. 归一化稳定后剥离已知危险码位 + 危险类别（P2-26 顺序修正）
     text = "".join(
         ch for ch in text
         if unicodedata.category(ch) not in _DANGEROUS_CATEGORIES

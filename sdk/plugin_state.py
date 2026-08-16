@@ -17,21 +17,21 @@ from enum import Enum
 
 
 class PluginState(str, Enum):
-    """Plugin 状态（旧 5 态 + 新 5 态合并）。"""
+    """Plugin 状态（P2-22 收敛：新 5 态为唯一主态；旧 5 态为兼容别名）。"""
 
-    # ── 旧 5 态（SDK v1，兼容）──
-    LOADING = "loading"
-    ACTIVE = "active"
-    FAILED = "failed"
-    DISABLED = "disabled"
-    NEEDS_UPDATE = "needs_update"
-
-    # ── 新 5 态（SDK v2 生命周期）──
+    # ── SDK v2 生命周期（主态）──
     CREATED = "created"
     INITIALIZED = "initialized"
     RUNNING = "running"
     DEGRADED = "degraded"
     STOPPED = "stopped"
+
+    # ── SDK v1 兼容别名（映射到主态，避免 10 态混用）──
+    LOADING = "initialized"
+    ACTIVE = "running"
+    FAILED = "degraded"
+    DISABLED = "stopped"
+    NEEDS_UPDATE = "running"
 
     @classmethod
     def is_terminal(cls, state: "PluginState") -> bool:

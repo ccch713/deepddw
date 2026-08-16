@@ -21,7 +21,7 @@ class APIResponse(BaseModel, Generic[T]):
     code: int = 0
     message: str = "ok"
     data: Optional[T] = None
-    timestamp: str = Field(default_factory=lambda: dt.datetime.utcnow().isoformat() + "Z")
+    timestamp: str = Field(default_factory=lambda: dt.datetime.now(dt.timezone.utc).isoformat())
 
 
 def ok(data: Any = None, message: str = "ok") -> dict:

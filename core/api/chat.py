@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, AsyncIterator, Dict, List
 
 from fastapi import APIRouter, Depends
@@ -129,7 +129,7 @@ async def post_chat(
     ctx = RouteContext(user_id=user_id, tenant_id=tenant_id, rule=payload.rule)
     response = await llm_chat(messages, rule=payload.rule, ctx=ctx)
     conv_id = payload.conversation_id or uuid.uuid4().hex
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     try:
         # P0-6：id 留空由 DB 自增（chat_messages 建表已声明 AUTOINCREMENT），
         # 去掉手算 max(id)+1——消除并发主键冲突；两条消息同一事务成对写入。

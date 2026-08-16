@@ -84,6 +84,17 @@ class LLMRouter:
         # (see core.llm_gateway.gateway.register_provider).
 
     def register_provider(self, provider: BaseLLMProvider) -> None:
+        # P2-28：覆盖同名 provider 时关闭旧实例的 httpx client（防 fd 泄漏）
+        old = self._providers.get(provider.name)
+        if old is not None and old is not provider:
+            try:
+                import asyncio
+
+                loop = asyncio.get_running_loop()
+                loop.create_task(old.aclose())
+            except RuntimeError:
+                # 无运行中事件循环：无法 await，连接由进程退出时回收
+                pass
         self._providers[provider.name] = provider
 
     async def aclose(self) -> None:

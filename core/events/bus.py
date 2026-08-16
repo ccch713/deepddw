@@ -276,51 +276,67 @@ class EventBus:
         Returns:
             聚合的 PublishResult。
         """
-        with self._dlq_lock:
-            if event:
-                items = [dl for dl in self._dlq if dl.event == event]
-            else:
-                items = list(self._dlq)
-
         start = time.monotonic()
         results: List[HandlerResult] = []
         success_count = 0
         failure_count = 0
         retried_events: set = set()
+        attempted: set = set()
 
-        for dl in items:
-            cb_name = dl.callback_name
-            # 找到原始回调
-            cbs = self.listeners(dl.event)
-            matched_cb = None
-            for cb in cbs:
-                if getattr(cb, "__name__", repr(cb)) == cb_name:
-                    matched_cb = cb
-                    break
-            if matched_cb is None:
-                results.append(HandlerResult(
-                    callback_name=cb_name, success=False, error="callback not found (unsubscribed?)",
-                ))
-                failure_count += 1
-                continue
-
-            cb_start = time.monotonic()
-            try:
-                if inspect.iscoroutinefunction(matched_cb):
-                    await matched_cb(dl.payload)
+        # P2-27：循环内反复快照——重试期间 publish 新失败的事件也会被本次
+        # 重试覆盖（不再"快照一次就与新增脱节"）；attempted 去重防无限循环。
+        while True:
+            with self._dlq_lock:
+                if event:
+                    items = [
+                        dl for dl in self._dlq
+                        if dl.event == event
+                        and (dl.event, dl.callback_name) not in attempted
+                    ]
                 else:
-                    await asyncio.get_running_loop().run_in_executor(None, matched_cb, dl.payload)
-                duration = (time.monotonic() - cb_start) * 1000
-                results.append(HandlerResult(callback_name=cb_name, success=True, duration_ms=duration))
-                success_count += 1
-                retried_events.add((dl.event, dl.callback_name))
-            except Exception as exc:
-                duration = (time.monotonic() - cb_start) * 1000
-                results.append(HandlerResult(
-                    callback_name=cb_name, success=False, duration_ms=duration, error=str(exc),
-                ))
-                failure_count += 1
+                    items = [
+                        dl for dl in self._dlq
+                        if (dl.event, dl.callback_name) not in attempted
+                    ]
+            if not items:
+                break
 
+            for dl in items:
+                cb_name = dl.callback_name
+                # 找到原始回调
+                cbs = self.listeners(dl.event)
+                matched_cb = None
+                for cb in cbs:
+                    if getattr(cb, "__name__", repr(cb)) == cb_name:
+                        matched_cb = cb
+                        break
+                if matched_cb is None:
+                    results.append(HandlerResult(
+                        callback_name=cb_name, success=False, error="callback not found (unsubscribed?)",
+                    ))
+                    failure_count += 1
+                    attempted.add((dl.event, dl.callback_name))
+                    continue
+    
+                cb_start = time.monotonic()
+                try:
+                    if inspect.iscoroutinefunction(matched_cb):
+                        await matched_cb(dl.payload)
+                    else:
+                        await asyncio.get_running_loop().run_in_executor(None, matched_cb, dl.payload)
+                    duration = (time.monotonic() - cb_start) * 1000
+                    results.append(HandlerResult(callback_name=cb_name, success=True, duration_ms=duration))
+                    success_count += 1
+                    retried_events.add((dl.event, dl.callback_name))
+                    attempted.add((dl.event, dl.callback_name))
+                except Exception as exc:
+                    duration = (time.monotonic() - cb_start) * 1000
+                    results.append(HandlerResult(
+                        callback_name=cb_name, success=False, duration_ms=duration, error=str(exc),
+                    ))
+                    failure_count += 1
+                    attempted.add((dl.event, dl.callback_name))
+    
         # 成功重试的条目从 DLQ 移除
         if retried_events:
             with self._dlq_lock:

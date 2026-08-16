@@ -14,6 +14,15 @@
   --brand:#00e5ff;--accent-green:#00ff9d;--accent-orange:#ffab40;--accent-purple:#b388ff;
   --border:#233052;--danger:#ff5c5c;
 }
+/* P2-30：跟随系统亮/暗模式 */
+@media (prefers-color-scheme: light) {
+  :root{
+    --bg-base:#f5f7fa;--bg-page:#ffffff;--bg-card:#f0f3f8;--bg-input:#fafbfd;
+    --text-primary:#1f2937;--text-secondary:#4b5563;--text-muted:#9ca3af;
+    --brand:#0284c7;--accent-green:#059669;--accent-orange:#d97706;--accent-purple:#7c3aed;
+    --border:#e5e7eb;--danger:#dc2626;
+  }
+}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{background:var(--bg-page);color:var(--text-primary);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;display:flex;flex-direction:column}
@@ -56,7 +65,7 @@ nav button.active{color:var(--brand)}
     <div class="card">
       <h2>💬 对话</h2>
       <textarea id="chat-input" placeholder="输入消息，Enter 发送"></textarea>
-      <div class="row"><button class="btn" id="chat-send">发送</button></div>
+      <div class="row"><button class="btn" id="chat-send">发送</button><button class="btn ghost" id="chat-clear" type="button">清空</button></div>
       <div class="out" id="chat-out">（LLM 网关未配置 Key 时会降级提示，不影响使用）</div>
     </div>
   </section>
@@ -123,8 +132,18 @@ nav button.active{color:var(--brand)}
   var token = null;
   try { token = sessionStorage.getItem("deepddw_token"); } catch (e) {}
   // 启动器 iframe postMessage 通道（跨域场景，不经 URL）
+  // P2-23：校验 ev.origin——仅接受启动器所在源（同源或 deepDDW 网关源），
+  // 防任意嵌入 iframe 注入 token
+  var ALLOWED_ORIGINS = (function () {
+    try {
+      var launcher = localStorage.getItem("deepddw_addr");
+      if (launcher) return [launcher, window.location.origin];
+    } catch (e) {}
+    return [window.location.origin];
+  })();
   window.addEventListener("message", function (ev) {
     if (ev.data && ev.data.type === "deepddw-token" && ev.data.token) {
+      if (ALLOWED_ORIGINS.indexOf(ev.origin) === -1) return;  // 拒绝陌生来源
       token = ev.data.token;
       setStatus("已连接");
       try { sessionStorage.setItem("deepddw_token", token); } catch (e) {}
@@ -195,10 +214,19 @@ nav button.active{color:var(--brand)}
     }).then(function (d) {
       if (!d) return;
       var data = d.data || d;
-      out("chat-out", (data.content || JSON.stringify(d)).replace(/\[deepDDW\][^\n]*/g, "").trim() || "（空回复）");
+      var content = (data.content || JSON.stringify(d)) || "";
+      // P2-24：只剥 "[deepDDW] " 提示前缀本身，保留其后正文（不再整行吞掉）
+      content = content.replace(/^\[deepDDW\]\s*/gm, "");
+      content = content.replace(/^\[llm-router\]\s*/gm, "");
+      out("chat-out", content.trim() || "（空回复）");
     }).catch(function (e) { out("chat-out", "请求失败：" + e.message); });
   }
   document.getElementById("chat-send").addEventListener("click", sendChat);
+  // P3-10/P2-30：清空当前对话（仅前端 state，DB 历史保留）
+  document.getElementById("chat-clear").addEventListener("click", function () {
+    out("chat-out", "");
+    chatInput.value = "";
+  });
   chatInput.addEventListener("keydown", function (e) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); }
   });

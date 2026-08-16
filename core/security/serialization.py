@@ -26,43 +26,6 @@ def mask_api_key(value: Optional[str], show_prefix: int = 4, show_suffix: int = 
     return f"{prefix}***{suffix}"
 
 
-class SafeChannelResponse(BaseModel):
-    """Safe channel response model — hides API keys in JSON serialization.
-
-    Use this model for any API endpoint that returns channel/provider data
-    containing sensitive key fields.
-    """
-
-    id: int
-    name: str
-    type: int
-    status: int
-    base_url: str
-    models: str
-    key: Optional[str] = None
-
-    @field_serializer("key")
-    def mask_key(self, value: Optional[str]) -> str:
-        """API Key masking: sk-abc...xyz → sk-a***xyz"""
-        return mask_api_key(value)
-
-
-class SafeLLMProviderResponse(BaseModel):
-    """Safe LLM provider response — masks api_key_ref field."""
-
-    id: int
-    name: str
-    api_base: Optional[str] = None
-    api_key_ref: Optional[str] = None
-    default_model: Optional[str] = None
-    enabled: bool = True
-
-    @field_serializer("api_key_ref")
-    def mask_api_key_ref(self, value: Optional[str]) -> str:
-        """Mask the API key reference."""
-        return mask_api_key(value)
-
-
 class SafeUserResponse(BaseModel):
     """Safe user response — never exposes password_hash or pin_hash."""
 

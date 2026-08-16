@@ -67,7 +67,11 @@ class DeepSeekProvider(BaseLLMProvider):
 
     @classmethod
     def _deployment_key(cls) -> str:
-        return str(cls._deployment_yaml().get("api_key") or "")
+        raw = str(cls._deployment_yaml().get("api_key") or "")
+        # P1-9：yaml 中为 Fernet 密文时解密；旧明文配置兼容原样返回
+        from core.security.key_store import decrypt_secret
+
+        return decrypt_secret(raw)
 
     @classmethod
     def _deployment_api_base(cls) -> str:
@@ -185,6 +189,12 @@ class DeepSeekProvider(BaseLLMProvider):
         except Exception as exc:  # noqa: BLE001
             logger.warning("DeepSeek stream_chat failed: %s", exc)
             yield f"[deepseek-error] {exc}"
+
+    async def aclose(self) -> None:
+        """P1-14：关闭内部 httpx client（防 fd 泄漏）。"""
+        client, self._client = self._client, None
+        if client is not None:
+            await client.aclose()
 
     async def health(self) -> Dict[str, Any]:
         if not self.api_key:

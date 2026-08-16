@@ -119,10 +119,30 @@ class OllamaProvider(BaseLLMProvider):
         data = r.json()
         return list(data.get("embedding", []))
 
+    async def aclose(self) -> None:
+        """P1-14：关闭内部 httpx client（防 fd 泄漏）。"""
+        client, self._client = self._client, None
+        if client is not None:
+            await client.aclose()
+
     async def health(self) -> Dict[str, Any]:
+        # P1-11：Ollama 仅允许本机回环地址（防 api_base 指向任意主机 → SSRF 跳板）
+        if not self._is_loopback_base():
+            return {
+                "provider": self.name, "ok": False,
+                "error": "ollama base_url must be loopback (127.0.0.1/localhost/[::1])",
+                "model": self.default_model, "mode": "blocked",
+            }
         try:
             client = await self._client_lazy()
             r = await client.get("/api/tags", timeout=httpx.Timeout(3.0))
             return {"provider": self.name, "ok": r.status_code == 200, "model": self.default_model}
         except Exception as exc:  # noqa: BLE001
             return {"provider": self.name, "ok": False, "error": str(exc), "model": self.default_model, "mode": "echo"}
+
+    def _is_loopback_base(self) -> bool:
+        """base_url 主机名是否为回环（127.0.0.1 / localhost / [::1]）。"""
+        import urllib.parse
+
+        host = (urllib.parse.urlparse(self.api_base or "").hostname or "").lower()
+        return host in ("127.0.0.1", "localhost", "::1")

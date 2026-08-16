@@ -129,6 +129,15 @@ class BaseLLMProvider(abc.ABC):
 
         return {"provider": self.name, "ok": True, "model": self.default_model}
 
+    async def aclose(self) -> None:
+        """P1-14：关闭 provider 持有的 httpx client（子类覆写；默认无操作）。"""
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc: Any) -> None:
+        await self.aclose()
+
     # ------------------------------------------------------------------ #
     # Helpers
     # ------------------------------------------------------------------ #

@@ -117,6 +117,19 @@ async def lifespan(app: FastAPI):
         else:
             yield
     finally:
+        # P1-14：关闭 LLM 网关底层 httpx client（防 fd 泄漏）
+        try:
+            from core.llm_gateway.gateway import aclose_all
+
+            await aclose_all()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("llm gateway aclose failed: %s", exc)
+        proxy_client = getattr(app.state, "ddw_proxy_client", None)
+        if proxy_client is not None:
+            try:
+                await proxy_client.aclose()
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("ddw proxy client aclose failed: %s", exc)
         await dispose_db()
         logger.info("deepDDW stopped")
 
@@ -219,7 +232,9 @@ def create_app() -> FastAPI:
 
     # P0-1 第 4 条：PWA 启动页 Token 校验端点（Bearer / X-DDW-Token，无效 → 401）
     @app.get("/api/v1/gateway/verify")
-    async def gateway_verify(claims: Dict[str, Any] = Depends(require_access_token)) -> Dict[str, Any]:
+    async def gateway_verify(
+        claims: Dict[str, Any] = Depends(require_access_token),
+    ) -> Dict[str, Any]:
         return {
             "ok": True,
             "service": "deepddw",
@@ -287,11 +302,16 @@ def create_app() -> FastAPI:
 
     # ---- MCP（经典端点 + streamable-http，全部过 Token 门禁）----
     @app.get("/api/v1/mcp/info")
-    async def mcp_info(claims: Dict[str, Any] = Depends(require_access_token)) -> Dict[str, Any]:
+    async def mcp_info(
+        claims: Dict[str, Any] = Depends(require_access_token),
+    ) -> Dict[str, Any]:
         return {"serverInfo": SERVER_INFO, "capabilities": SERVER_CAPABILITIES}
 
     @app.post("/api/v1/mcp/jsonrpc")
-    async def mcp_jsonrpc(payload: Dict[str, Any], claims: Dict[str, Any] = Depends(require_access_token)) -> Dict[str, Any]:
+    async def mcp_jsonrpc(
+        payload: Dict[str, Any],
+        claims: Dict[str, Any] = Depends(require_access_token),
+    ) -> Dict[str, Any]:
         mcp = get_mcp_server()
         result = await mcp.handle_request(payload, context={"request": "http"})
         # 通知（无 id）返回 204
@@ -308,7 +328,12 @@ def create_app() -> FastAPI:
             # 简化：连接时推送 server info，断开时停止
             import asyncio
             import json
-            yield f"data: {json.dumps({'event': 'hello', 'server': SERVER_INFO['name']}, ensure_ascii=False)}\n\n"
+            yield (
+                "data: " + json.dumps(
+                    {"event": "hello", "server": SERVER_INFO["name"]},
+                    ensure_ascii=False,
+                ) + "\n\n"
+            )
             while True:
                 await asyncio.sleep(15)
                 yield ": keep-alive\n\n"
@@ -327,7 +352,9 @@ def create_app() -> FastAPI:
     # 静态前端（deepddw-launcher / welcome / docs）
     frontend = Path(__file__).resolve().parent.parent / "frontend"
     if frontend.exists():
-        app.mount("/ui", StaticFiles(directory=str(frontend), html=True), name="frontend")
+        app.mount(
+            "/ui", StaticFiles(directory=str(frontend), html=True), name="frontend"
+        )
 
         @app.get("/", include_in_schema=False)
         async def root(request: Request):
@@ -354,6 +381,16 @@ def create_app() -> FastAPI:
                     status_code=403, detail="cross-site proxy request rejected"
                 )
 
+        async def _proxy_client() -> httpx.AsyncClient:
+            """P1-14：复用应用级 httpx client（lifespan 创建/关闭，避免每请求新建）。"""
+            client = getattr(app.state, "ddw_proxy_client", None)
+            if client is None:
+                import httpx
+
+                client = httpx.AsyncClient(timeout=120.0)
+                app.state.ddw_proxy_client = client
+            return client
+
         async def _proxy_to_dsh(path: str, request: Request, rewrite_html: bool, path_prefix: str = ""):
             """把请求转发到 dsh 引擎；rewrite_html 时重写 SPA 资源前缀 + 注入 polyfill。
 
@@ -377,11 +414,11 @@ def create_app() -> FastAPI:
             headers = {k: v for k, v in request.headers.items() if k.lower() not in ("host", "content-length", "origin")}
             headers["Origin"] = dsh_base
             body = await request.body() if request.method in ("POST", "PUT", "DELETE") else None
-            async with httpx.AsyncClient(timeout=60) as client:
-                resp = await client.request(
-                    request.method, target, headers=headers, content=body,
-                    follow_redirects=False,
-                )
+            client = await _proxy_client()
+            resp = await client.request(
+                request.method, target, headers=headers, content=body,
+                follow_redirects=False,
+            )
             from fastapi.responses import Response
 
             content = resp.content

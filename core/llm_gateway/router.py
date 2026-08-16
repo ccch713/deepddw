@@ -86,6 +86,15 @@ class LLMRouter:
     def register_provider(self, provider: BaseLLMProvider) -> None:
         self._providers[provider.name] = provider
 
+    async def aclose(self) -> None:
+        """P1-14：关闭全部 provider 的 httpx client（lifespan finally 调用）。"""
+        for provider in list(self._providers.values()):
+            try:
+                await provider.aclose()
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("provider %s aclose failed: %s", provider.name, exc)
+        self._providers.clear()
+
     def get(self, name: str) -> BaseLLMProvider:
         if name not in self._providers:
             raise KeyError(f"Unknown provider: {name}")

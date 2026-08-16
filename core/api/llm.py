@@ -103,10 +103,9 @@ def _build_provider(
         raise HTTPException(
             status_code=400, detail=f"不支持的 provider 类型：{provider_type}"
         )
-    try:
-        return cls(api_key=api_key, api_base=base_url, model=model)
-    except TypeError:
-        return cls(api_key=api_key, base_url=base_url, model=model)
+    # P1-13：所有 provider 统一 api_base 参数名（BaseLLMProvider 契约），
+    # 删除死分支 try/except（base_url 传参静默失效问题）
+    return cls(api_key=api_key, api_base=base_url, model=model)
 
 
 @router.get("/providers", response_model=Dict[str, Any])
@@ -302,7 +301,10 @@ async def save_llm_config(
     providers = data.setdefault("llm_gateway", {}).setdefault("providers", {})
     entry = providers.setdefault(provider, {})
     if payload.api_key:
-        entry["api_key"] = payload.api_key
+        # P1-9：key 加密后落盘（Fernet，yaml 只存密文）；日志/响应仍不出现明文
+        from core.security.key_store import encrypt_secret
+
+        entry["api_key"] = encrypt_secret(payload.api_key)
     if payload.base_url:
         entry["base_url"] = payload.base_url
     if payload.model:

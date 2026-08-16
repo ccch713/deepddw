@@ -10,9 +10,20 @@ import os
 
 os.environ.setdefault("DDW_ACCESS_TOKEN", "test-rag-session-token")
 
+import pytest  # noqa: E402
 
 from core.api.chat import _build_rag_context, _apply_rag  # noqa: E402
 from core.llm_gateway.base import ChatMessage  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _reset_kb_pool():
+    """每个测试前清空知识库连接池（P1-15：池按库路径分池，防止跨测试污染）。"""
+    from core.knowledge import reset_conn_pool
+
+    reset_conn_pool()
+    yield
+    reset_conn_pool()
 
 
 # ---------------------------------------------------------------------------

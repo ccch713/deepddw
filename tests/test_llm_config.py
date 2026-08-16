@@ -106,12 +106,13 @@ async def test_config_post_saves_key_600(client, tmp_path, monkeypatch):
     assert data["key_saved"] is True
     assert "sk-" not in json.dumps(data)  # 响应不回显 key
 
-    # 文件已写、权限 600、key 落盘（供重启后加载）
+    # 文件已写、权限 600、key 以 Fernet 密文落盘（P1-9：yaml 不存明文）
     assert target.exists()
     mode = stat.S_IMODE(target.stat().st_mode)
     assert mode == 0o600, hex(mode)
     content = target.read_text(encoding="utf-8")
-    assert "sk-llm-config-test-123456" in content
+    assert "sk-llm-config-test-123456" not in content  # 明文绝不落盘
+    assert "gAAAA" in content  # Fernet 密文前缀
     assert "deepseek" in content
 
 

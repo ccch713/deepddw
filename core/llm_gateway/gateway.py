@@ -83,6 +83,15 @@ def register_provider(provider: BaseLLMProvider) -> None:
     get_router().register_provider(provider)
 
 
+async def aclose_all() -> None:
+    """P1-14：关闭 LLM 网关全部底层 client（lifespan finally 调用）。"""
+    try:
+        await get_router().aclose()
+        get_router.cache_clear()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("llm aclose_all failed: %s", exc)
+
+
 __all__ = [
     "BaseLLMProvider",
     "ChatMessage",

@@ -17,6 +17,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import math
+import queue
 import re
 import sqlite3
 from pathlib import Path
@@ -43,7 +44,7 @@ _VECTOR_TABLE = "kb_vectors"
 _RRF_K = 60  # RRF 融合常数：score = Σ 1/(k + rank)
 
 # hash-trick 词频 embedding 的运行时探测缓存
-_lance_available: Optional[bool] = None
+_lance_available_cache: Optional[bool] = None
 
 
 # ---------------------------------------------------------------------------
@@ -59,15 +60,51 @@ def _db_path() -> Path:
     return Path(_DB_PATH_DEFAULT).resolve()
 
 
+# P1-15：模块级单连接 + 全局锁复用（按库路径自动重建；线程安全；
+# 单连接串行化 kb/记忆操作，天然避免 SQLITE_BUSY；测试 reset 全局可见）
+import threading as _threading
+
+_shared_conn = None
+_shared_path: Optional[str] = None
+_conn_lock = _threading.Lock()
+
+
 def get_conn() -> sqlite3.Connection:
-    """同步 SQLite 连接（知识库/记忆为轻量本地操作，避免 async driver 依赖）。"""
+    """同步 SQLite 连接（模块级单连接复用 + 锁；避免每次建连的 fd 与 IO 开销）。"""
+    global _shared_conn, _shared_path
     path = _db_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(path), timeout=10)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    _ensure_schema(conn)
-    return conn
+    with _conn_lock:
+        if _shared_conn is None or _shared_path != str(path):
+            if _shared_conn is not None:
+                try:
+                    _shared_conn.close()
+                except sqlite3.Error:  # noqa: BLE001
+                    pass
+            path.parent.mkdir(parents=True, exist_ok=True)
+            conn = sqlite3.connect(str(path), timeout=10, check_same_thread=False)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA journal_mode=WAL")
+            _ensure_schema(conn)
+            _shared_conn = conn
+            _shared_path = str(path)
+        return _shared_conn
+
+
+def close_conn(conn: sqlite3.Connection) -> None:
+    """归还连接（单连接复用——no-op，连接由模块持有/路径切换时重建）。"""
+
+
+def reset_conn_pool() -> None:
+    """关闭并清空共享连接（测试隔离 / 关闭时调用；全局可见）。"""
+    global _shared_conn, _shared_path
+    with _conn_lock:
+        if _shared_conn is not None:
+            try:
+                _shared_conn.close()
+            except sqlite3.Error:  # noqa: BLE001
+                pass
+        _shared_conn = None
+        _shared_path = None
 
 
 def _ensure_schema(conn: sqlite3.Connection) -> None:
@@ -131,30 +168,26 @@ def _embed(text: str, dim: int = _VECTOR_DIM) -> List[float]:
 
 
 def _lance_dir() -> Path:
+    """LanceDB 目录：env ``LANCEDB_PATH`` > 知识库主库同目录（测试随 _db_path 联动）。"""
     override = __import__("os").environ.get("LANCEDB_PATH")
     if override:
         return Path(override).resolve()
-    settings = get_settings()
-    cfg = settings.databases.get("main", {})
-    if cfg.get("engine") == "sqlite":
-        base = Path(cfg.get("path", _DB_PATH_DEFAULT)).resolve().parent
-        return base / "kb_vectors.lance"
-    return Path(_LANCE_DIR_DEFAULT).resolve()
+    return _db_path().resolve().parent / "kb_vectors.lance"
 
 
 def _lance_available() -> bool:
     """LanceDB 可用性探测（import 成功 + 目录可写）。"""
-    global _lance_available
-    if _lance_available is None:
+    global _lance_available_cache
+    if _lance_available_cache is None:
         try:
             import lancedb  # noqa: F401
 
             _lance_dir().mkdir(parents=True, exist_ok=True)
-            _lance_available = True
+            _lance_available_cache = True
         except Exception as exc:  # noqa: BLE001
             logger.debug("lancedb unavailable: %s", exc)
-            _lance_available = False
-    return _lance_available
+            _lance_available_cache = False
+    return _lance_available_cache
 
 
 def _vector_add(doc_id: int, title: str, content: str) -> None:
@@ -294,7 +327,7 @@ def kb_add_document(
         _vector_add(doc_id, title, content)  # 向量增强（失败仅告警，不阻塞）
         return {"id": doc_id, "title": title, "category": category}
     finally:
-        conn.close()
+        close_conn(conn)
 
 
 def kb_search(query: str, top_k: int = 5) -> Dict[str, Any]:
@@ -334,7 +367,7 @@ def kb_search(query: str, top_k: int = 5) -> Dict[str, Any]:
                 ).fetchall()
                 keyword = [_kb_row(r, src="keyword") for r in rows]
         finally:
-            conn.close()
+            close_conn(conn)
 
         # 向量检索（LanceDB 可用时）→ RRF 融合
         vector_hits = _vector_search(query, top_k * 2)
@@ -379,13 +412,24 @@ def _fused_sources(fused: List[Dict[str, Any]]) -> List[str]:
     return seen
 
 
+# P1-12：FTS5 MATCH 输入严格清洗——只允许字母/数字/中文/下划线，
+# 首尾 strip 掉 `-_`（防构造 FTS 操作符），并做 NFKC 归一化（防变体/零宽注入）
+_FTS_SAFE_RE = re.compile(r"[^0-9A-Za-z\u4e00-\u9fff_]")
+
+
 def _fts_query(query: str) -> str:
-    """把用户查询转成 FTS5 安全 MATCH 表达式（去除特殊字符，按词 AND）。"""
-    tokens = [t for t in re.split(r"\s+", query) if t]
-    cleaned = [re.sub(r"[^0-9A-Za-z\u4e00-\u9fff_-]", "", t) for t in tokens]
-    cleaned = [c for c in cleaned if c]
+    """把用户查询转成 FTS5 安全 MATCH 表达式（NFKC 归一 + 严格清洗，按词 AND）。"""
+    import unicodedata
+
+    norm = unicodedata.normalize("NFKC", query or "")
+    tokens = [t for t in re.split(r"\s+", norm) if t]
+    cleaned = []
+    for t in tokens:
+        c = _FTS_SAFE_RE.sub("", t).strip("-_")
+        if c:
+            cleaned.append(c)
     if not cleaned:
-        return '"{}"'.format(query.replace('"', '""'))
+        return '""'  # 空查询：不匹配任何内容（比裸拼原文安全）
     return " AND ".join(f'"{c}"' for c in cleaned[:8])
 
 
@@ -437,7 +481,7 @@ def memory_put(
         conn.commit()
         return {"id": mem_id, "namespace": ns, "key": key, "ok": True}
     finally:
-        conn.close()
+        close_conn(conn)
 
 
 def memory_get(namespace: str, key: str) -> Dict[str, Any]:
@@ -456,7 +500,7 @@ def memory_get(namespace: str, key: str) -> Dict[str, Any]:
             "tags": __import__("json").loads(row["tags"] or "[]"),
         }
     finally:
-        conn.close()
+        close_conn(conn)
 
 
 def memory_search(namespace: str, query: str, top_k: int = 5) -> Dict[str, Any]:
@@ -488,7 +532,7 @@ def memory_search(namespace: str, query: str, top_k: int = 5) -> Dict[str, Any]:
         logger.warning("memory_search degraded: %s", exc)
         return {"results": [], "degraded": True, "note": str(exc)}
     finally:
-        conn.close()
+        close_conn(conn)
 
 
 def session_doc_add(
@@ -509,7 +553,7 @@ def session_doc_add(
             )
             conn.commit()
         finally:
-            conn.close()
+            close_conn(conn)
         return {"id": doc["id"], "title": title, "session_id": session_id, "ok": True}
     except Exception as exc:  # noqa: BLE001
         logger.warning("session_doc_add degraded: %s", exc)
@@ -530,7 +574,7 @@ def session_docs_list(session_id: str, limit: int = 50) -> Dict[str, Any]:
                 (session_id, limit),
             ).fetchall()
         finally:
-            conn.close()
+            close_conn(conn)
         return {
             "results": [
                 {

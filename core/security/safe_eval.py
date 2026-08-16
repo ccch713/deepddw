@@ -116,13 +116,22 @@ def safe_import_module(module_path: str, attribute: str = "") -> Any:
     Raises:
         ImportError: If the module is not in the whitelist.
     """
-    # Whitelist of allowed module prefixes
-    ALLOWED_PREFIXES = ("core.", "plugins.", "sdk.", "cli.")
+    # P1-10：白名单对齐 mcp/server.py 的 WHITELIST_PLUGIN_NAMES——
+    # core./sdk./cli. 放行；plugins. 仅放行白名单插件（commercial 插件绝不 import）
+    PLUGIN_WHITELIST = ("ddw_docs_portal", "ddw_searxng")
 
-    if not any(module_path.startswith(p) for p in ALLOWED_PREFIXES):
+    def _allowed(path: str) -> bool:
+        if path.startswith(("core.", "sdk.", "cli.")):
+            return True
+        if path.startswith("plugins."):
+            top = path.split(".", 2)
+            return len(top) >= 2 and top[1] in PLUGIN_WHITELIST
+        return False
+
+    if not _allowed(module_path):
         raise ImportError(
             f"Module '{module_path}' is not in the allowed import whitelist. "
-            f"Allowed prefixes: {ALLOWED_PREFIXES}"
+            f"Allowed: core./sdk./cli. + plugins.{PLUGIN_WHITELIST}"
         )
 
     import importlib

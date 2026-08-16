@@ -58,16 +58,21 @@ jobs:
           ]
           brands = ["渡笃微", "9cio", "wenquedu", "锐果"]
           root = pathlib.Path(".")
-          skip = {".git", "__pycache__", ".venv", "node_modules", ".pytest_cache", ".ruff_cache"}
+          skip = {".git", ".github", "__pycache__", ".venv", "node_modules", ".pytest_cache", ".ruff_cache"}
           ext = {".py", ".md", ".html", ".yaml", ".yml", ".json", ".sh", ".txt", ".css", ".js"}
           hits = []
+          # 词边界精确匹配：ddw_memory_put（MCP 工具名）不算命中，
+          # 独立插件名（plugins/ddw_memory、import plugins.ddw_memory）才算。
+          pattern = re.compile(r"(?<![A-Za-z0-9_])(" + "|".join(re.escape(k) for k in banned) + r")(?![A-Za-z0-9_])")
+          brand_pat = re.compile("|".join(re.escape(b) for b in brands))
           for p in root.rglob("*"):
               if p.is_dir() or p.suffix not in ext or any(s in p.parts for s in skip):
                   continue
               text = p.read_text(encoding="utf-8", errors="ignore")
-              for kw in banned + brands:
-                  if kw in text:
-                      hits.append(f"{p}: {kw}")
+              for m in pattern.finditer(text):
+                  hits.append(f"{p}: {m.group(1)}")
+              for m in brand_pat.finditer(text):
+                  hits.append(f"{p}: {m.group(0)}")
           if hits:
               print("\n".join(hits[:30]))
               sys.exit(1)

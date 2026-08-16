@@ -1,0 +1,74 @@
+# deepDDW CI — 质量门禁（loop 自循环质量保障的自动化形态）
+# 触发：push / PR 到 main
+# 门禁：pytest 全量 + ruff E/W/F 零新增（相对 HEAD 基线由人工回归保证；此处做绝对零错误）
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: pytest + ruff
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Ruff (E/W/F — 零错误门禁)
+        run: ruff check --select=E,W,F core/ plugins/ sdk/ tests/ scripts/ conftest.py
+
+      - name: Pytest 全量
+        run: python -m pytest tests/ plugins/ -q --no-header -p no:cacheprovider
+
+      - name: 泄露扫描（商业插件名/公司名/密钥——红线门禁）
+        run: |
+          python - <<'PYEOF'
+          import pathlib, re, sys
+          banned = [
+            "ddw_aggregated_pay","ddw_ai_readiness","ddw_bid_writer","ddw_business_metrics",
+            "ddw_capa_workflow","ddw_chem_safety","ddw_clarify","ddw_clinic_cs","ddw_clinical_asr",
+            "ddw_commission","ddw_cost_knowledge","ddw_dental_emr","ddw_dental_emr_template_kit",
+            "ddw_dental_imaging","ddw_dental_sterilization","ddw_doc_assistant","ddw_doctor_schedule",
+            "ddw_ent_knowledge","ddw_esg_assessment","ddw_esg_chatbot","ddw_esg_knowledge",
+            "ddw_esg_payment","ddw_esg_question_bank","ddw_esg_report","ddw_finance_dashboard",
+            "ddw_informed_consent","ddw_invoice","ddw_knowledge_hierarchy","ddw_kpi","ddw_kpi_dashboard",
+            "ddw_lead_claim","ddw_llm_gateway","ddw_marketing","ddw_member_vip","ddw_offline_pos",
+            "ddw_online_cs","ddw_opc_departments","ddw_opportunity","ddw_order","ddw_patient_crm",
+            "ddw_payment","ddw_personnel_qual","ddw_position_designer","ddw_quality_assistant",
+            "ddw_quality_knowledge","ddw_receivable","ddw_reconciliation","ddw_regulatory_evidence",
+            "ddw_renewal","ddw_saas_billing","ddw_sales_copilot","ddw_sales_dashboard","ddw_sales_note",
+            "ddw_spc_basic","ddw_support_ticket","ddw_talk_a1_asr","ddw_training","ddw_transcript_ai",
+            "ddw_voice_capture","ddw_wallet","ddw_wenqu_tutor","ddw_memory","ddw_memory_knowledge_bridge",
+          ]
+          brands = ["渡笃微", "9cio", "wenquedu", "锐果"]
+          root = pathlib.Path(".")
+          skip = {".git", "__pycache__", ".venv", "node_modules", ".pytest_cache", ".ruff_cache"}
+          ext = {".py", ".md", ".html", ".yaml", ".yml", ".json", ".sh", ".txt", ".css", ".js"}
+          hits = []
+          for p in root.rglob("*"):
+              if p.is_dir() or p.suffix not in ext or any(s in p.parts for s in skip):
+                  continue
+              text = p.read_text(encoding="utf-8", errors="ignore")
+              for kw in banned + brands:
+                  if kw in text:
+                      hits.append(f"{p}: {kw}")
+          if hits:
+              print("\n".join(hits[:30]))
+              sys.exit(1)
+          print("leak scan: clean")
+          PYEOF

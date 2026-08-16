@@ -21,6 +21,11 @@ httpx>=0.24.0
 # --- 配置 / YAML ---
 pyyaml>=6.0
 
+# --- 向量检索（#1 LanceDB 可选增强；不可用自动降级纯关键词） ---
+# 0.37.x 为实测兼容版本（arm64 macOS / x86_64 Linux CI 均有 wheel）；
+# CI 必须安装才能跑 hybrid 断言（tests/test_kb_vector.py）。
+lancedb>=0.37.1,<0.38.0
+
 # --- MCP（双协议：streamable-http 2025-03-26 + 经典 2024-11-05） ---
 # 注意：mcp 2.x 已移除 mcp.server.fastmcp（FastMCP），deepDDW 固定使用 1.x 系列；
 # 1.29.0 为实测兼容版本（1.12.x 在 3.14 上 FastMCP issubclass 字符串注解会崩）。

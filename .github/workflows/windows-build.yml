@@ -41,12 +41,19 @@ jobs:
       - name: Smoke test (start exe, poll /health)
         shell: pwsh
         run: |
-          $proc = Start-Process -FilePath "dist\deepddw\deepddw.exe" -PassThru -WindowStyle Hidden
+          $outLog = Join-Path $env:RUNNER_TEMP "deepddw.stdout.log"
+          $errLog = Join-Path $env:RUNNER_TEMP "deepddw.stderr.log"
+          $proc = Start-Process -FilePath "dist\deepddw\deepddw.exe" -PassThru -WindowStyle Hidden `
+            -RedirectStandardOutput $outLog -RedirectStandardError $errLog
           $ok = $false
           try {
             for ($i = 0; $i -lt 30; $i++) {
               Start-Sleep -Seconds 3
               if ($proc.HasExited) {
+                Write-Host "--- stdout ---"
+                if (Test-Path $outLog) { Get-Content $outLog | Select-Object -Last 40 }
+                Write-Host "--- stderr ---"
+                if (Test-Path $errLog) { Get-Content $errLog | Select-Object -Last 60 }
                 throw "deepddw.exe exited early with code $($proc.ExitCode)"
               }
               try {
@@ -58,7 +65,13 @@ jobs:
                 }
               } catch { }
             }
-            if (-not $ok) { throw "health check timed out (90s); process alive=$(-not $proc.HasExited)" }
+            if (-not $ok) {
+              Write-Host "--- stdout ---"
+              if (Test-Path $outLog) { Get-Content $outLog | Select-Object -Last 40 }
+              Write-Host "--- stderr ---"
+              if (Test-Path $errLog) { Get-Content $errLog | Select-Object -Last 60 }
+              throw "health check timed out (90s); process alive=$(-not $proc.HasExited)"
+            }
           } finally {
             Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
           }

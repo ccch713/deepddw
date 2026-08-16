@@ -20,6 +20,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -390,8 +391,6 @@ def create_app() -> FastAPI:
             """P1-14：复用应用级 httpx client（lifespan 创建/关闭，避免每请求新建）。"""
             client = getattr(app.state, "ddw_proxy_client", None)
             if client is None:
-                import httpx
-
                 client = httpx.AsyncClient(timeout=120.0)
                 app.state.ddw_proxy_client = client
             return client
@@ -407,7 +406,6 @@ def create_app() -> FastAPI:
             403，防止任意站点借网关获得"dsh 同源"待遇绕过 browser-trust。
             """
             _reject_cross_site_fetch(request)
-            import httpx
 
             dsh_base = os.environ.get("DEEPDDW_DSH_URL", "http://127.0.0.1:3080").rstrip("/")
             target = f"{dsh_base}{path_prefix}/{path}" if path else f"{dsh_base}{path_prefix}/"

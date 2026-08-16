@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel
 
 
 def mask_api_key(value: Optional[str], show_prefix: int = 4, show_suffix: int = 3) -> str:

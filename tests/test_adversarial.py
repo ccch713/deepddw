@@ -7,15 +7,9 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import os
-import sqlite3
-
-import pytest
 
 os.environ.setdefault("DDW_ACCESS_TOKEN", "adversarial-test-token")
-
-from core.main import app  # noqa: E402
 
 _TOKEN = {"X-DDW-Token": os.environ["DDW_ACCESS_TOKEN"]}
 _EXTERNAL = {"X-Forwarded-For": "8.8.8.8"}

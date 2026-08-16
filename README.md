@@ -24,7 +24,7 @@ git clone https://github.com/ccch713/deepddw.git && cd deepddw
 
 > 📸 *Screenshot: phone / tablet accessing the workbench (coming soon).*
 
-**Status**: v0.1.0 · MIT · CI (pytest + ruff) ✅ · Multi-device on LAN (0.2.0) shipped · [Listed in awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · Roadmap below
+**Status**: v0.2.0 · MIT · CI (pytest + ruff) ✅ · Multi-device on LAN + workspace isolation + backup/restore + TLS (opt-in) · [Listed in awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · Roadmap below
 
 ---
 
@@ -139,6 +139,14 @@ POST /api/v1/device/heartbeat   # keep-alive
 GET  /api/v1/status             # status panel (token required)
 ```
 
+**Also in 0.2.0:**
+
+- **Workspace isolation** — devices pick a workspace (default `shared`); memory/logs and MCP memory tools are scoped per workspace, docs filtered by slug prefix. Legacy clients are unaffected.
+- **Session resume across devices** — recent session summaries (up to 5) with a "continue" button: pick up a conversation on your phone where you left off on desktop.
+- **One-click backup / restore** — backup via API (downloadable); restore validates the SQLite file (header + integrity check) and keeps a `.pre-restore` safety copy before replacing the main DB.
+- **Optional TLS** — one-command self-signed cert (`scripts/gen_self_signed_cert.sh`, 1-year), enabled via `security.tls.*`; HTTP unchanged when off. For external access prefer a Caddy/Nginx reverse proxy (see `docs/tls.md`).
+- **Version / upgrade check** — `/api/v1/version` reports `latest_version` / `update_available` (GitHub releases, 1h cache, offline-degraded); the launcher shows an upgrade banner.
+
 ---
 
 ## Security & Privacy
@@ -146,7 +154,7 @@ GET  /api/v1/status             # status panel (token required)
 | Capability | Description |
 |-----------|-------------|
 | 🔐 Local-only data | Knowledge base & memory stay on your server, never leave the LAN |
-| 🏠 LAN password-free | Out-of-the-box access on your LAN (password-free mode by default) |
+| 🏠 LAN password-free | Optional (opt-in): LAN requests skip the token — **OFF by default** (set `DDW_LAN_BYPASS=1` to enable; trusted LANs only) |
 | 🌐 External access | Optional Token gate (short-code supported); unauthorized → 401 |
 | 🛡️ DSH secure binding | DSH stays on localhost; gateway exposes it — official security design preserved |
 
@@ -186,6 +194,12 @@ Only items actually planned or already delivered are listed here.
 
 **Delivered:**
 - [x] **Multi-device on LAN (0.2.0)** — device identity/online registry, status panel, rate limiting, SQLite WAL concurrency (up to 20 devices)
+- [x] **Workspace isolation (P1-1)** — per-workspace memory/knowledge scoping at the gateway (default `shared`, backward compatible)
+- [x] **Session resume across devices (P1-3)** — "recent sessions" summaries (up to 5) with a continue button
+- [x] **Optional TLS (P1-2)** — one-command self-signed cert; external access via Caddy/Nginx reverse proxy (see `docs/tls.md`)
+- [x] **Backup / restore API (P2-1)** — one-click backup, downloadable; validated restore with `.pre-restore` safety copy
+- [x] **Load-test report (P2-2)** — 5/10/20 devices: 0% errors, P95 ≤ 126 ms, no `database is locked` (see `docs/load-report.md`)
+- [x] **Version / upgrade check (P2-3)** — `/api/v1/version` probes the latest release (1h cache); launcher shows upgrade banner
 - [x] **Docker one-click deployment** — `docker compose -f deepddw-compose.yml up -d --build` (verified on a real macOS arm64 host: core + SearXNG containers up, health/MCP/chat end-to-end green)
 - [x] **Session → document auto-ingest** — conversations saved to the knowledge base via `ddw.docs.save` / `ddw.session.docs` MCP tools + REST API, searchable and traceable per session
 - [x] **Vector search enhancement** — hybrid retrieval (SQLite FTS5/LIKE + LanceDB, RRF fusion; optional, degrades to keyword-only when LanceDB is absent)
@@ -194,12 +208,6 @@ Only items actually planned or already delivered are listed here.
 **Planned:**
 - [ ] **Reflection & consolidation powered by LLM** — daily reflection auto-generated from recent logs; conversation auto-consolidation into daily memory (base layer done, LLM polish ongoing)
 - [ ] **Memory search quality** — keyword-expansion caching and cross-layer ranking improvements
-- [ ] **Workspace isolation (P1-1)** — per-workspace memory/knowledge scoping at the gateway (default `shared`, backward compatible)
-- [ ] **Optional TLS (P1-2)** — LAN HTTPS via one-command self-signed cert + reverse-proxy docs for external access
-- [ ] **Session continuity across devices (P1-3)** — "recent sessions" summaries to resume a chat from another device
-- [ ] **Backup / restore UI (P2-1)** — scheduled + one-click backup of the data volume
-- [ ] **Load-test report (P2-2)** — 5/10/20-device concurrency numbers published in `docs/`
-- [ ] **Version / upgrade check (P2-3)** — gateway probes the latest release; PWA prompts upgrade
 
 ---
 

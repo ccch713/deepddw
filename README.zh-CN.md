@@ -25,7 +25,7 @@ git clone https://github.com/ccch713/deepddw.git && cd deepddw
 
 > 📸 *截图位：手机/平板访问工作台实拍（稍后补充）。*
 
-**当前状态**：v0.1.0 · MIT · CI（pytest + ruff）✅ · 局域网多设备联机（0.2.0）已交付 · [入选 awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · 路线图见文末
+**当前状态**：v0.2.0 · MIT · CI（pytest + ruff）✅ · 多设备联机 + 工作区隔离 + 备份恢复 + 可选 TLS · [入选 awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · 路线图见文末
 
 ---
 
@@ -121,6 +121,14 @@ POST /api/v1/device/heartbeat   # 心跳保活
 GET  /api/v1/status             # 状态面板（需 Token）
 ```
 
+**0.2.0 还包含：**
+
+- **工作区隔离** — 设备可选工作区（默认 `shared`）；记忆/日志与 MCP 记忆工具按工作区隔离，文档按 slug 前缀过滤；旧客户端零影响。
+- **会话跨设备续接** — 最近会话摘要（最多 5 条）+ "继续此会话"按钮：手机接着电脑端会话继续聊。
+- **一键备份 / 恢复** — API 一键备份可下载；恢复前校验 SQLite 文件（文件头 + 完整性检查），替换主库前自动备份现状为 `.pre-restore`。
+- **可选 TLS** — 一键自签证书（`scripts/gen_self_signed_cert.sh`，1 年有效），`security.tls.*` 启用即可 HTTPS 访问；默认关闭不影响 HTTP。外网访问推荐 Caddy/Nginx 反代（见 `docs/tls.md`）。
+- **版本 / 升级检查** — `/api/v1/version` 返回最新版与升级标记（GitHub 探测，1h 缓存，离线降级）；启动页显示升级横幅。
+
 ---
 
 ## 安全与隐私
@@ -128,7 +136,7 @@ GET  /api/v1/status             # 状态面板（需 Token）
 | 能力 | 说明 |
 |------|------|
 | 🔐 数据全本地 | 知识库/记忆存自己的服务器，不出内网 |
-| 🏠 局域网免密 | 内网访问开箱即用（默认免密模式）|
+| 🏠 局域网免密 | 可选项，默认关闭：内网请求免 Token（开启需 `DDW_LAN_BYPASS=1`，仅建议可信内网）|
 | 🌐 外网访问 | 可配 Token 门禁（支持短码），未授权一律 401 |
 | 🛡️ DSH 安全绑定 | DSH 只监听本机，网关统一对外，不破坏官方安全设计 |
 
@@ -166,6 +174,12 @@ GET  /api/v1/status             # 状态面板（需 Token）
 
 **已交付：**
 - [x] **局域网多设备联机（0.2.0）** — 设备身份/在线注册表、状态面板、网关限流、SQLite WAL 并发（最多 20 台设备）
+- [x] **工作区隔离（P1-1）** — 网关层按工作区隔离记忆/知识库（默认 `shared`，向后兼容）
+- [x] **会话跨设备续接（P1-3）** — "最近会话"摘要（最多 5 条）+ 继续按钮
+- [x] **可选 TLS（P1-2）** — 一键自签证书；外网访问 Caddy/Nginx 反代（见 `docs/tls.md`）
+- [x] **备份 / 恢复 API（P2-1）** — 一键备份可下载；恢复先校验，替换前自动备份现状 `.pre-restore`
+- [x] **压测报告（P2-2）** — 5/10/20 设备：0 错误，P95 ≤ 126ms，无 `database is locked`（见 `docs/load-report.md`）
+- [x] **版本 / 升级检查（P2-3）** — `/api/v1/version` 探测最新 Release（1h 缓存）；启动页升级横幅
 - [x] **Docker 一键部署** — `docker compose -f deepddw-compose.yml up -d --build`（已在真实 macOS arm64 主机验证：core + SearXNG 容器启动、health/MCP/chat 端到端全绿）
 - [x] **会话 → 文档沉淀** — 对话经 `ddw.docs.save` / `ddw.session.docs` MCP 工具 + REST API 保存到知识库，按会话可检索可追溯
 - [x] **知识库向量检索增强** — 混合检索（SQLite FTS5/LIKE + LanceDB，RRF 融合；可选，无 LanceDB 时自动降级纯关键词）
@@ -174,12 +188,6 @@ GET  /api/v1/status             # 状态面板（需 Token）
 **计划中：**
 - [ ] **反思与沉淀 LLM 化** — 基于最近日志自动生成每日反思；对话自动沉淀进每日记忆（基座已交付，LLM 打磨中）
 - [ ] **记忆检索质量** — 关键词扩写缓存与跨层排序优化
-- [ ] **工作区隔离（P1-1）** — 网关层按工作区隔离记忆/知识库（默认 `shared`，向后兼容）
-- [ ] **可选 TLS（P1-2）** — 局域网 HTTPS 一键自签证书 + 外网访问反代文档
-- [ ] **会话跨设备续接（P1-3）** — "最近会话"摘要，换设备可继续上次对话
-- [ ] **备份 / 恢复 UI（P2-1）** — 定时 + 一键备份数据卷
-- [ ] **压测报告（P2-2）** — 5/10/20 设备并发数据公开到 `docs/`
-- [ ] **版本 / 升级检查（P2-3）** — 网关探测最新 Release，PWA 提示升级
 
 ---
 

@@ -502,3 +502,69 @@ async def test_reflect_generate_empty_logs_no_write(monkeypatch, tmp_path):
     assert result["due"] is True
     assert result["generated"] is False
     assert result.get("note") == "no logs"
+
+
+# ---------------------------------------------------------------------------
+# v0.3.0 记忆检索质量优化：跨层排序 + 扩写缓存失效
+# ---------------------------------------------------------------------------
+
+
+def test_search_v2_ranking_user_before_logs(monkeypatch, tmp_path):
+    """排序优化：同命中数下 user 层优先于 logs 层（层权重 4 > 1）。"""
+    monkeypatch.setattr("core.knowledge._db_path", lambda: tmp_path / "kb.db")
+    from core import knowledge as kb
+
+    # 同一关键词同时命中 user 与 logs
+    kb.memory_user_put("部署", "deepDDW 用 Docker 部署")
+    kb.memory_log_append("今天研究了 Docker 部署")
+
+    hits = kb.memory_search_v2("Docker 部署", top_k=5)["results"]
+    layers = [h["layer"] for h in hits]
+    # 两个来源都命中；user 层排在最前（权重高）
+    assert "user" in layers and "logs" in layers
+    assert layers.index("user") < layers.index("logs")
+
+
+def test_search_v2_ranking_hit_count(monkeypatch, tmp_path):
+    """排序优化：命中关键词更多的条目排前（同层内）。"""
+    monkeypatch.setattr("core.knowledge._db_path", lambda: tmp_path / "kb.db")
+    from core import knowledge as kb
+
+    kb.memory_note_put("A", "Docker Compose 部署方案")
+    kb.memory_note_put("B", "只有 Docker")
+
+    hits = kb.memory_search_v2("Docker Compose", top_k=5)["results"]
+    keys = [h["key"] for h in hits]
+    assert keys.index("A") < keys.index("B")  # A 命中 2 词，B 命中 1 词
+
+
+async def test_keyword_cache_expiry_reinvokes_llm(monkeypatch, tmp_path):
+    """扩写缓存过期后重新调 LLM（TTL 控制，避免无限缓存）。"""
+    monkeypatch.setattr("core.knowledge._db_path", lambda: tmp_path / "kb.db")
+    from core import knowledge as kb
+    from core.llm_gateway.base import ChatResponse
+
+    calls = {"n": 0}
+
+    async def fake_chat(messages, **kwargs):
+        calls["n"] += 1
+        return ChatResponse(
+            content='["缓存", "测试"]',
+            model="mock", provider="mock", finish_reason="stop",
+        )
+
+    monkeypatch.setattr("core.llm_gateway.gateway.chat", fake_chat)
+    kb.reset_keyword_cache()
+    # 第一次：调 LLM 并缓存
+    r1 = await kb._llm_expand_keywords_async("缓存测试")
+    assert r1 == ["缓存", "测试"] and calls["n"] == 1
+    # 缓存命中：不调 LLM
+    r2 = await kb._llm_expand_keywords_async("缓存测试")
+    assert r2 == r1 and calls["n"] == 1
+    # 强制过期：直接改缓存时间戳 → 重新调 LLM
+    with kb._keyword_cache_lock:
+        _, expire = kb._keyword_cache["缓存测试"]
+        kb._keyword_cache["缓存测试"] = (("缓存", "测试"), expire - 7200)
+    r3 = await kb._llm_expand_keywords_async("缓存测试")
+    assert r3 == ["缓存", "测试"] and calls["n"] == 2
+    kb.reset_keyword_cache()

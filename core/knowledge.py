@@ -1254,6 +1254,33 @@ def memory_search_v2(
     return _search_v2_tokens(query, None, top_k, workspace=workspace)
 
 
+# 跨层排序权重（v0.3.0 记忆检索优化）：用户规则 > 项目笔记 > 反思 > 日志
+_LAYER_WEIGHT = {"user": 4, "notes": 3, "reflection": 2, "logs": 1}
+
+
+def _score_item(it: Dict[str, Any], tokens: List[str], now_ts: float) -> float:
+    """轻量相关性评分：命中关键词数 × 层权重 + 新鲜度小量加分。
+
+    命中数取 content+key 中出现的 token 数（含 LLM 扩写词）；
+    新鲜度仅对 logs 层按日期近 3 天 +0.5（供排序微调，非硬约束）。
+    """
+    text = (str(it.get("content", "")) + " " + str(it.get("key", ""))).lower()
+    hits = sum(1 for t in tokens if t and t.lower() in text)
+    weight = _LAYER_WEIGHT.get(it.get("layer"), 1)
+    freshness = 0.0
+    if it.get("layer") == "logs" and it.get("date"):
+        try:
+            from datetime import datetime as _dt
+
+            d = _dt.strptime(str(it["date"])[:10], "%Y-%m-%d")
+            age_days = (now_ts - d.timestamp()) / 86400
+            if age_days <= 3:
+                freshness = 0.5
+        except (ValueError, OSError):  # noqa: BLE001
+            pass
+    return float(hits) * weight + freshness
+
+
 def _search_v2_tokens(
     query: str,
     tokens_override: Optional[List[str]],
@@ -1261,7 +1288,11 @@ def _search_v2_tokens(
     workspace: str = "shared",
     llm_expanded: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
-    """分层检索核心：按关键词 OR 扫四层 + 来源标注（无 LLM 依赖）。"""
+    """分层检索核心：按关键词 OR 扫四层 + 来源标注（无 LLM 依赖）。
+
+    v0.3.0 排序优化：按命中关键词数×层权重评分降序（user>notes>reflection>
+    logs），同分按插入序稳定；logs 近 3 天小量加分。
+    """
     w = _ws(workspace)
     from core.security.unicode_sanitizer import sanitize_unicode
 
@@ -1309,6 +1340,8 @@ def _search_v2_tokens(
                         "key": r["k"],
                         "content": (r["v"] or "")[:300],
                         "source": f"{layer}:{r['k']}",
+                        # logs 层带日期供新鲜度评分；其余层 None
+                        "date": r["k"] if layer == "logs" else None,
                     })
         # 去重（同一 layer+key）
         seen: set = set()
@@ -1319,6 +1352,9 @@ def _search_v2_tokens(
                 continue
             seen.add(sig)
             dedup.append(it)
+        # v0.3.0：跨层排序——评分降序（命中数×层权重 + 新鲜度），稳定排序
+        now_ts = time.time()
+        dedup.sort(key=lambda it: _score_item(it, tokens, now_ts), reverse=True)
         return {
             "results": dedup[: max(1, min(int(top_k), 20))],
             "degraded": False,

@@ -288,6 +288,10 @@ def create_app() -> FastAPI:
     from core.api.teams import router as teams_router
 
     app.include_router(teams_router)
+    # R4-3/R4-4（DSH for Teams）：记忆+KB 蒸馏
+    from core.api.distill import router as distill_router
+
+    app.include_router(distill_router)
 
     # 健康检查（公开）
     @app.get("/health")

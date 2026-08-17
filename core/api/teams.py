@@ -459,7 +459,7 @@ async def admin_stats(
     if mode == "solo":
         return ok({"ok": False, "note": "管理面板仅在 family/team 模式可用"})
     members = list_members().get("results", [])
-    from core.knowledge import memory_user_list, memory_logs_recent
+    from core.knowledge import memory_logs_recent
 
     user_ws = "family:default" if mode == "family" else "team:default"
     stats = {
@@ -478,7 +478,7 @@ async def admin_stats(
 
 @router.post("/admin/distill")
 async def admin_distill(
-    payload: "DistillReq" = None,  # 延迟解析（避免顶部循环导入）
+    payload: Any = None,  # DistillReq（延迟导入避免循环；None → 默认）
     claims: Dict[str, Any] = Depends(require_access_token),
 ) -> Dict[str, Any]:
     """管理员手动触发蒸馏（solo 不可用）。"""

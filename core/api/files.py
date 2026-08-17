@@ -11,15 +11,12 @@ from __future__ import annotations
 import logging
 import os
 import re
-import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from pydantic import BaseModel
-
 from core.api_response import ok
-from core.config import get_deployment_mode, get_files_config
+from core.config import get_files_config
 from core.security.token_gate import require_access_token
 
 logger = logging.getLogger(__name__)

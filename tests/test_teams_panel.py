@@ -9,8 +9,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest  # noqa: E402
-
 PLUGIN_DIR = Path("plugins/dsh-teams-panel")
 
 

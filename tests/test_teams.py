@@ -57,7 +57,7 @@ def test_default_mode_solo(monkeypatch):
 
 def test_mode_enum():
     """DEPLOYMENT_MODES 枚举正确（solo/family/team）。"""
-    from core.config import DEPLOYMENT_MODES, get_deployment_mode
+    from core.config import DEPLOYMENT_MODES
     assert "solo" in DEPLOYMENT_MODES and "family" in DEPLOYMENT_MODES and "team" in DEPLOYMENT_MODES
     assert "hacker" not in DEPLOYMENT_MODES
 

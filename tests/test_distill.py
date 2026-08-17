@@ -71,8 +71,6 @@ def test_distillation_target_registry():
 
 async def test_family_distill_dedup(monkeypatch, tmp_path):
     """family 简化版：成员记忆 → 去重合并 → family:default。"""
-    import asyncio
-
     monkeypatch.setattr("core.config.get_deployment_mode", lambda: "family")
     ws1, ws2 = _add_members(monkeypatch)
     result = await distill_api.distill_memory_family(recent_days=1)

@@ -292,6 +292,10 @@ def create_app() -> FastAPI:
     from core.api.distill import router as distill_router
 
     app.include_router(distill_router)
+    # R4-6（DSH for Teams）：文件库（类 NAS）
+    from core.api.files import router as files_router
+
+    app.include_router(files_router)
 
     # 健康检查（公开）
     @app.get("/health")

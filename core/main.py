@@ -302,6 +302,13 @@ def create_app() -> FastAPI:
     async def health() -> Dict[str, Any]:
         return {"status": "ok", "service": "deepddw", "version": APP_VERSION}
 
+    # R4-7（DSH for Teams）：品牌配置（公开；launcher 首屏加载）
+    @app.get("/api/v1/branding")
+    async def branding() -> Dict[str, Any]:
+        from core.config import get_branding
+
+        return get_branding()
+
     # 网关信息（公开；PWA 启动页据此探测地址可达性）
     @app.get("/api/v1/version")
     async def version() -> Dict[str, Any]:

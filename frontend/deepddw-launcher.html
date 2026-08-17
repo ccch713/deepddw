@@ -15,6 +15,13 @@
   --text-primary:#e8ecf8;--text-secondary:#a8b3d0;--text-muted:#6b7899;
   --brand:#00e5ff;--brand-hover:#33ecff;--accent-green:#00ff9d;
   --border:#233052;--border-hover:#00e5ff;--danger:#ff5c5c;
+  /* R4-7（DSH for Teams）：品牌可定制 CSS 变量——默认跟随 DSH 风格，
+     branding 配置（config/deployment.yaml branding.*）非空时由 JS 覆盖 */
+  --ddw-primary-color:#00e5ff;
+  --ddw-bg-color:#0a0f24;
+  --ddw-text-color:#e8ecf8;
+  --ddw-font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  --ddw-border-color:#233052;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg-page);color:var(--text-primary);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -106,6 +113,32 @@ footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--text-muted
   var addrEl = document.getElementById("addr");
   var tokenEl = document.getElementById("token");
   var dshEl = document.getElementById("dsh");
+
+  // R4-7（DSH for Teams）：品牌定制——拉取 /api/v1/branding 覆盖 CSS 变量
+  // （空值保持 DSH 默认；logo_url 非空时替换 logo img）
+  (function applyBranding() {
+    fetch(window.location.origin + "/api/v1/branding")
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (b) {
+        if (!b) return;
+        var root = document.documentElement.style;
+        if (b.primary_color) {
+          root.setProperty("--ddw-primary-color", b.primary_color);
+          root.setProperty("--brand", b.primary_color);
+        }
+        if (b.logo_url) {
+          var logo = document.querySelector(".logo img");
+          if (logo) logo.src = b.logo_url;
+        }
+        if (b.welcome_text) {
+          var title = document.querySelector("h1");
+          if (title) title.textContent = b.welcome_text;
+        }
+        var sub = document.querySelector(".sub");
+        if (b.boot_animation && sub) sub.textContent = b.boot_animation;
+      })
+      .catch(function () { /* 离线/早期加载失败保持默认 */ });
+  })();
 
   // URL 参数预填（手机分享链接场景）：?token=xxx / ?server=xxx / ?dsh=xxx / ?pair_code=xxx
   // 优先级高于 localStorage/sessionStorage（新链接优先，避免旧值覆盖）

@@ -1,0 +1,38 @@
+{
+  "name": "@deepddw/dsh-teams-panel",
+  "version": "0.4.0",
+  "description": "deepDDW 团队版设置面板——记忆体/知识库/网络/用户/设备/文件库（DSH for Teams）",
+  "main": "lib/index.js",
+  "files": [
+    "lib",
+    "cordis.patch.yml"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.client.json"
+  },
+  "dependencies": {
+    "@koishijs/client": "^5.0.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh": "*"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepddw",
+    "teams",
+    "settings"
+  ],
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime"
+      ]
+    }
+  }
+}

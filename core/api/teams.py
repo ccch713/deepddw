@@ -277,6 +277,41 @@ def member_for_device(device_id: str) -> Optional[Dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
+# R4-2（DSH for Teams）：用户级隔离——namespace 命名规则
+# ---------------------------------------------------------------------------
+
+# 隔离层级枚举（IsolationLevel 接口，商业版可扩展）
+ISOLATION_LEVELS: Dict[str, Dict[str, Any]] = {
+    "solo":   {"shared_prefix": "", "member_prefix": "", "has_distill": False},
+    "family": {"shared_prefix": "family:default", "member_prefix": "member:",
+               "has_distill": True},
+    "team":   {"shared_prefix": "team:default", "member_prefix": "member:",
+               "has_distill": True},
+}
+
+
+def resolve_namespace(
+    mode: str = "solo", member_id: str = "", is_shared: bool = False,
+) -> str:
+    """R4-2：按 mode/member_id 解析实际 workspace 参数（传给 memory 函数）。
+
+    - solo → 'shared'（全部 v0.3.0 行为）
+    - family/team 共享空间 → 'family:default' / 'team:default'
+    - family/team 个人空间 → 'member:<id>'
+    - 无 member_id 回退 shared（旧客户端兼容）
+    """
+    lvl = ISOLATION_LEVELS.get(mode, ISOLATION_LEVELS["solo"])
+    if not lvl["shared_prefix"]:  # solo
+        return "shared"
+    if is_shared:
+        return lvl["shared_prefix"]
+    if member_id and _MEMBER_ID_RE.match(member_id):
+        return f"{lvl['member_prefix']}{member_id}"
+    return "shared"  # 无 member_id 回退 shared（向后兼容）
+
+
+
+# ---------------------------------------------------------------------------
 # HTTP 端点（Token 门禁；成员层叠加在 Token 之上，不改 TokenGateASGI）
 # ---------------------------------------------------------------------------
 

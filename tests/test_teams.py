@@ -154,3 +154,35 @@ async def test_teams_api_endpoints(client, monkeypatch, tmp_path):
     # 无 Token → 401
     r3 = await client.get("/api/v1/deployment/mode")
     assert r3.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# R4-2 用户级隔离：namespace 命名规则
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_namespace_solo():
+    """solo → 'shared'（无论 member_id 如何）。"""
+    assert teams_api.resolve_namespace("solo") == "shared"
+    assert teams_api.resolve_namespace("solo", "m-ABC") == "shared"
+    assert teams_api.resolve_namespace("solo", is_shared=True) == "shared"
+
+
+def test_resolve_namespace_family():
+    """family → 'family:default'（共享）/ 'member:<id>'（个人）/ 无 id→shared。"""
+    assert teams_api.resolve_namespace("family", is_shared=True) == "family:default"
+    assert teams_api.resolve_namespace("family", "m-XYZ12345") == "member:m-XYZ12345"
+    assert teams_api.resolve_namespace("family", "") == "shared"  # 无 member_id
+
+
+def test_resolve_namespace_team():
+    """team → 'team:default'（共享）/ 'member:<id>'（个人）。"""
+    assert teams_api.resolve_namespace("team", is_shared=True) == "team:default"
+    assert teams_api.resolve_namespace("team", "m-TEST0001") == "member:m-TEST0001"
+    assert teams_api.resolve_namespace("team") == "shared"
+
+
+def test_resolve_namespace_invalid_member_id():
+    """非法 member_id → 回退 shared（防注入）。"""
+    assert teams_api.resolve_namespace("team", "bad id!") == "shared"
+    assert teams_api.resolve_namespace("team", "x" * 65) == "shared"

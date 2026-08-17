@@ -25,7 +25,7 @@ git clone https://github.com/ccch713/deepddw.git && cd deepddw
 
 > 📸 *截图位：手机/平板访问工作台实拍（稍后补充）。*
 
-**当前状态**：v0.2.0 · MIT · CI（pytest + ruff）✅ · 多设备联机 + 工作区隔离 + 备份恢复 + 可选 TLS · [入选 awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · 路线图见文末
+**当前状态**：v0.3.0 · MIT · CI（pytest + ruff）✅ · 多设备联机 + 工作区隔离 + 备份恢复 + 可选 TLS + 反思 LLM 化与记忆检索优化 · [入选 awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · 路线图见文末
 
 ---
 
@@ -184,10 +184,8 @@ GET  /api/v1/status             # 状态面板（需 Token）
 - [x] **会话 → 文档沉淀** — 对话经 `ddw.docs.save` / `ddw.session.docs` MCP 工具 + REST API 保存到知识库，按会话可检索可追溯
 - [x] **知识库向量检索增强** — 混合检索（SQLite FTS5/LIKE + LanceDB，RRF 融合；可选，无 LanceDB 时自动降级纯关键词）
 - [x] **Windows 打包** — `windows-build` CI 工作流 PyInstaller one-dir 自动出包，以 Actions 产物分发，v0.1.0 发布已验证（见 `docs/windows-packaging.md`）
-
-**计划中：**
-- [ ] **反思与沉淀 LLM 化** — 基于最近日志自动生成每日反思；对话自动沉淀进每日记忆（基座已交付，LLM 打磨中）
-- [ ] **记忆检索质量** — 关键词扩写缓存与跨层排序优化
+- [x] **反思与沉淀（LLM 化收尾）** — 每日反思按风格指南（自动/专业/随意）生成、强制"进展/问题/明日注意"结构并避免与昨日重复；LLM 判定对话无价值时不再落日志
+- [x] **记忆检索质量** — 结果按相关性评分排序（命中数×层权重：用户规则优先于旧日志，近期日志加权），取代原插入序；扩写缓存过期行为已测试
 
 ---
 

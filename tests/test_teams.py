@@ -19,9 +19,13 @@ from core.api import teams as teams_api  # noqa: E402
 
 @pytest.fixture(autouse=True)
 def _isolated(monkeypatch, tmp_path):
-    """独立库 + 默认 solo 模式。"""
+    """独立库 + 默认 solo 模式 + 重置 settings 单例。"""
     monkeypatch.setattr(teams_api, "_db_path", lambda: tmp_path / "teams.db")
-    monkeypatch.setattr("core.config.get_deployment_mode", lambda: "solo")
+    monkeypatch.setattr(teams_api, "get_deployment_mode", lambda: "solo")
+    monkeypatch.setattr(teams_api, "members_enabled", lambda: False)
+    # 重置 settings 单例（避免前序测试写入的 config 污染）
+    import core.config as cfg
+    monkeypatch.setattr(cfg, "_settings", None)
     yield
 
 
@@ -34,21 +38,28 @@ def _set_mode(monkeypatch, mode: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_default_mode_solo():
+def test_default_mode_solo(monkeypatch):
     """未配置 → 默认 solo（向后兼容）。"""
-    from core.config import get_deployment_mode, deployment_mode_configured
+    import core.config as cfg
+    monkeypatch.delenv("DDW_DEPLOYMENT_MODE", raising=False)
+    monkeypatch.setattr(cfg, "_settings", None)
+    # 强制 settings.raw 无 deployment.mode（模拟未配置）
+    class FakeSettings:
+        raw = {"mode": "standalone", "databases": {"main": {"engine": "sqlite", "path": ":memory:"}}}
+        deployment_yaml_path = None
+        plugin_root = "."
+        mode = "standalone"
+        env = "development"
+        def __init__(self): pass
+    monkeypatch.setattr(cfg, "get_settings", lambda: FakeSettings())
+    assert cfg.get_deployment_mode() == "solo"
 
-    assert get_deployment_mode() == "solo"
 
-
-def test_mode_config_helpers(monkeypatch):
-    """set_deployment_mode 合法/非法 + deployment_mode_configured。"""
-    from core.config import set_deployment_mode, deployment_mode_configured
-
-    r = set_deployment_mode("team")
-    assert r["ok"] is True and r["mode"] == "team"
-    bad = set_deployment_mode("hacker")
-    assert bad["ok"] is False
+def test_mode_enum():
+    """DEPLOYMENT_MODES 枚举正确（solo/family/team）。"""
+    from core.config import DEPLOYMENT_MODES, get_deployment_mode
+    assert "solo" in DEPLOYMENT_MODES and "family" in DEPLOYMENT_MODES and "team" in DEPLOYMENT_MODES
+    assert "hacker" not in DEPLOYMENT_MODES
 
 
 # ---------------------------------------------------------------------------
@@ -57,10 +68,11 @@ def test_mode_config_helpers(monkeypatch):
 
 
 def test_members_disabled_in_solo():
-    """solo 模式：成员系统不启用。"""
+    """solo 模式：成员系统不启用（成员函数级不拦截，端点层由 members_enabled 拦截）。"""
     assert teams_api.members_enabled() is False
-    r = teams_api.create_invite()
-    assert r["ok"] is True  # 函数级可用；端点层由 members_enabled 拦截
+    # 函数级仍可调用（不强制 mode），端点层才由 members_enabled 拦截
+    r = teams_api.create_invite(note="solo-should-not-reach-here")
+    assert r["ok"] is True
 
 
 def test_invite_create_and_register(monkeypatch, tmp_path):

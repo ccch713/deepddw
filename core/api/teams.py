@@ -46,7 +46,8 @@ def _db_path() -> Path:
     return Path("./data/ddw_main.db").resolve()
 
 
-def _get_conn():
+def _get_conn() -> sqlite3.Connection:
+    """连接（测试可通过 monkeypatch _db_path 覆盖数据库路径）。"""
     path = _db_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(path), timeout=10, check_same_thread=False)
@@ -257,7 +258,7 @@ def member_for_device(device_id: str) -> Optional[Dict[str, Any]]:
     conn = _get_conn()
     try:
         rows = conn.execute(
-            "SELECT member_id, display_name, role, revoked FROM members"
+            "SELECT member_id, display_name, role, device_ids, revoked FROM members"
         ).fetchall()
         for r in rows:
             import json as _json

@@ -440,3 +440,57 @@ async def device_member(
     """按设备查绑定成员（重连识别）。"""
     m = member_for_device(device_id)
     return ok({"member": m} if m else {"member": None})
+
+
+# ---------------------------------------------------------------------------
+# R4-5（DSH for Teams）：管理员面板 API（solo 不显示；family 简化；team 完整）
+# ---------------------------------------------------------------------------
+
+
+@router.get("/admin/stats")
+async def admin_stats(
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """管理员统计（solo 不可用；family 简化；team 完整）。
+
+    返回：mode、成员总数/在线/吊销、记忆 KB 统计、蒸馏状态。
+    """
+    mode = get_deployment_mode()
+    if mode == "solo":
+        return ok({"ok": False, "note": "管理面板仅在 family/team 模式可用"})
+    members = list_members().get("results", [])
+    from core.knowledge import memory_user_list, memory_logs_recent
+
+    user_ws = "family:default" if mode == "family" else "team:default"
+    stats = {
+        "mode": mode,
+        "members": {
+            "total": len(members),
+            "active": sum(1 for m in members if not m.get("revoked")),
+            "revoked": sum(1 for m in members if m.get("revoked")),
+        },
+        "shared_memory": {
+            "logs_3d": len(memory_logs_recent(3, workspace=user_ws).get("results", [])),
+        },
+    }
+    return ok(stats)
+
+
+@router.post("/admin/distill")
+async def admin_distill(
+    payload: "DistillReq" = None,  # 延迟解析（避免顶部循环导入）
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """管理员手动触发蒸馏（solo 不可用）。"""
+    from core.api.distill import DistillReq, get_distillation_targets
+
+    payload = payload if isinstance(payload, DistillReq) else DistillReq()
+    mode = get_deployment_mode()
+    if mode == "solo":
+        return ok({"ok": False, "note": "蒸馏功能仅在 family/team 模式可用"})
+
+    targets = get_distillation_targets(mode)
+    if not targets:
+        return ok({"ok": False, "note": f"无蒸馏目标（mode={mode}）"})
+    result = await targets[0].distill_fn(recent_days=payload.recent_days)
+    return ok(result)

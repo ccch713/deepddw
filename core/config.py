@@ -235,6 +235,114 @@ def get_tls_config() -> Dict[str, Any]:
     return cfg
 
 
+# R4-0（DSH for Teams）：部署模式——solo/family/team
+DEPLOYMENT_MODES = ("solo", "family", "team")
+
+
+def get_deployment_mode() -> str:
+    """部署模式（deployment.mode > env DDW_DEPLOYMENT_MODE > 默认 solo）。
+
+    向后兼容：未配置 → solo → 行为与 v0.3.0 完全一致。
+    """
+    mode = os.environ.get("DDW_DEPLOYMENT_MODE", "")
+    if not mode:
+        try:
+            mode = str(get_settings().raw.get("deployment", {}).get("mode", ""))
+        except Exception:  # noqa: BLE001
+            mode = ""
+    mode = (mode or "").strip().lower()
+    if mode not in DEPLOYMENT_MODES:
+        return "solo"
+    return mode
+
+
+def deployment_mode_configured() -> bool:
+    """是否已显式配置模式（首次运行未配置 → False，launcher 显示选择器）。"""
+    if os.environ.get("DDW_DEPLOYMENT_MODE"):
+        return True
+    try:
+        raw = get_settings().raw.get("deployment", {}).get("mode", "")
+        return bool(raw)
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def set_deployment_mode(mode: str) -> Dict[str, Any]:
+    """写入 deployment.mode（launcher 首次运行选择后调用）。
+
+    写 config/deployment.yaml（无则创建）；mode 非法拒绝。
+    返回 ok/mode；运行时重启生效（不支持热切换）。
+    """
+    mode = (mode or "").strip().lower()
+    if mode not in DEPLOYMENT_MODES:
+        return {"ok": False, "note": f"invalid mode: {mode}（可选 solo/family/team）"}
+    from pathlib import Path
+
+    cfg_path = Path(__file__).resolve().parent.parent / "config" / "deployment.yaml"
+    import yaml
+
+    data: Dict[str, Any] = {}
+    if cfg_path.exists():
+        try:
+            data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+        except Exception:  # noqa: BLE001
+            data = {}
+    if not isinstance(data, dict):
+        data = {}
+    data.setdefault("deployment", {})["mode"] = mode
+    cfg_path.parent.mkdir(parents=True, exist_ok=True)
+    cfg_path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False),
+                        encoding="utf-8")
+    return {"ok": True, "mode": mode, "config_file": str(cfg_path)}
+
+
+def get_branding() -> Dict[str, str]:
+    """R4-7：品牌可定制配置（branding.* + env 覆盖；空=DSH 默认风格）。
+
+    返回: {logo_url, primary_color, welcome_text, boot_animation}
+    """
+    cfg: Dict[str, str] = {
+        "logo_url": "", "primary_color": "", "welcome_text": "", "boot_animation": "",
+    }
+    try:
+        raw = get_settings().raw.get("branding", {}) or {}
+        for k in cfg:
+            v = raw.get(k)
+            if v:
+                cfg[k] = str(v)
+    except Exception:  # noqa: BLE001
+        pass
+    env_map = {
+        "DDW_BRANDING_LOGO": "logo_url",
+        "DDW_BRANDING_PRIMARY_COLOR": "primary_color",
+        "DDW_BRANDING_WELCOME_TEXT": "welcome_text",
+    }
+    for env_key, cfg_key in env_map.items():
+        val = os.environ.get(env_key)
+        if val:
+            cfg[cfg_key] = val
+    return cfg
+
+
+def get_files_config() -> Dict[str, Any]:
+    """R4-6：文件库配置（files.max_size_mb，默认 50MB；env DDW_FILES_MAX_MB）。"""
+    max_mb = 50
+    try:
+        raw = get_settings().raw.get("files", {}) or {}
+        v = raw.get("max_size_mb")
+        if v:
+            max_mb = int(v)
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        env_v = os.environ.get("DDW_FILES_MAX_MB")
+        if env_v:
+            max_mb = int(env_v)
+    except ValueError:
+        pass
+    return {"max_size_mb": max(1, max_mb)}
+
+
 @dataclass
 class DatabaseInstanceConfig:
     """数据库实例配置（typed；消除 core/database/factory.py ImportError）。

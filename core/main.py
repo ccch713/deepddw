@@ -284,6 +284,10 @@ def create_app() -> FastAPI:
     from core.api.backup import router as backup_router
 
     app.include_router(backup_router)
+    # R4-0/R4-1（DSH for Teams）：部署模式 + 成员系统
+    from core.api.teams import router as teams_router
+
+    app.include_router(teams_router)
 
     # 健康检查（公开）
     @app.get("/health")

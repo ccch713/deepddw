@@ -326,7 +326,13 @@ exports.default = SettingsPanel;
 exports.inject = inject;
 
 
-	return module.exports;
+	// 直接返回 apply 函数——DSH 接受"函数"或"含 apply 的对象"两种格式
+if (typeof module.exports.apply === function) {
+  var fn = module.exports.apply;
+  fn.inject = module.exports.inject;
+  return fn;
+}
+return module.exports;
 	}
 });
 //# sourceMappingURL=client.js.map

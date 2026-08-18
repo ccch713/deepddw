@@ -3,28 +3,37 @@ window.__ModuleLoader__.load({
   factory: function(require) {
     var module = { exports: {} };
     var exports = module.exports;
+    var BASE = window.location.origin;
+
     exports.inject = ["slots"];
     exports.apply = function(ctx) {
       try {
         ctx.slots.inject("settings.section", function() {
           return ctx.slots.register({
             name: "settings.section",
-            id: "ddw-test-v1",
+            id: "ddw-multiuser-settings",
             order: 100,
             label: function() { return "多用户设置"; }
           }, function() {
             var root = document.createElement("div");
             root.style.padding = "16px";
             root.innerHTML = "<h2 style='font-size:18px;font-weight:700;margin-bottom:8px'>多用户设置</h2>" +
-              "<p style='color:#888;margin-bottom:16px'>deepDDW v0.5.0 · team 模式已启用</p>" +
-              "<div id='ddw-settings-content'>加载中...</div>";
-            fetch("/api/v1/admin/stats").then(function(r){return r.json();}).then(function(d){
+              "<p style='color:#888;margin-bottom:16px'>deepDDW v0.5.0 · 管理多台设备、多名成员的共享与隔离</p>" +
+              "<div id='ddw-settings-content' style='padding:12px;border-radius:8px;background:rgba(0,0,0,.05)'>加载中...</div>";
+            fetch(BASE + "/api/v1/admin/stats").then(function(r){return r.json();}).then(function(d){
               var el = root.querySelector("#ddw-settings-content");
               if(!el) return;
               var s = d.data || {};
-              el.innerHTML = "<div style='padding:8px 12px;border-radius:6px;background:#f5f5f5;margin-bottom:8px'>" +
-                "模式：" + (s.mode||"solo") + " | 成员：" + ((s.members||{}).total||0) + " 人在线：" + ((s.members||{}).active||0) + " | 共享记忆：" + ((s.shared_memory||{}).logs_3d||0) + " 条</div>";
-            }).catch(function(){});
+              var m = s.members || {};
+              el.innerHTML = "<div style='line-height:1.8;font-size:13px'>" +
+                "<b>部署模式：</b>" + (s.mode||"solo") + "<br>" +
+                "<b>成员：</b>共 " + (m.total||0) + " 人，在线 " + (m.active||0) + " 人<br>" +
+                "<b>共享记忆：</b>" + ((s.shared_memory||{}).logs_3d||0) + " 条" +
+                "</div>";
+            }).catch(function(e){
+              var el = root.querySelector("#ddw-settings-content");
+              if(el) el.innerHTML = "<p style='color:red'>API 请求失败：" + e.message + "</p>";
+            });
             return root;
           });
         });

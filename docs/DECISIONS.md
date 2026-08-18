@@ -10,3 +10,6 @@
 | 2026-08-17 | 新插件包 ddw-teams-panel 替代 dsh-teams-panel | 新名称体现"deepDDW 多用户"（非 DSH 官方）；删除旧包 | 保留旧包名 |
 | 2026-08-18 | 客户端构建改用手写 lib/client.js 而非 tsdown | tsdown 在当前环境安装失败（npm 依赖冲突）；手写 __ModuleLoader__ 格式已验证可用（dshmarket 参考） | tsdown 正式构建（依赖 resolve 后可切回） |
 | 2026-08-18 | 源码 Vue h() → React h() | DSH 运行时模块表提供 react/require()，Vue 不在模块表中 → 用 React + 无 JSX（DSH 不转译） | Vue CDN 注入 |
+| 2026-08-19 | v0.5.0-patch2：CSS 变量从 --k-color-* 改为 --dsw-alias-*（官方 DSH 主题命名空间） | DSH 官方 ui-theme 只定义 --dsw-alias-* 与 --dsw-static-*；--k-color-* 不存在→浏览器默认色；遵循 SKILL.md "Web 样式" 章节 "Use --dsw-alias-* semantic tokens" 硬性要求 | 改用别名映射 + 移除十六进制 fallback（bundle-purity gate 拒绝主题分支硬编码） |
+| 2026-08-19 | settings.section 注册 children 参数可后续补充 | 当前 SKILL.md 表明 children 是可选（描述子 slot 结构）；不传 children 顶层分区仍生效，但失去子 slot 入口；后续按需补 children 配置 | 后续迭代 |
+| 2026-08-19 | 严格使用 ctx.get('slots')（除非声明 inject） | 当前 inject: ['slots','locale','http'] 已声明，ctx.slots 合法；后续若移除 slots 依赖须改用 ctx.get('slots') | 已遵循 SKILL.md "Do not rewrite it as ctx.slots unless inject: ['slots'] is declared" |

@@ -95,30 +95,30 @@ function OnboardingModalView({ ctx, ref, confirm }) {
     style: "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5)",
   },
     h("div", {
-      style: "background:var(--k-color-bg,#1a1a2e);border-radius:12px;padding:32px;max-width:420px;width:90%;color:var(--k-color-text,#e8ecf8)",
+      style: "background:var(--dsw-alias-bg-base);border-radius:12px;padding:32px;max-width:420px;width:90%;color:var(--dsw-alias-label-primary)",
     },
       h("h2", { style: "margin:0 0 8px;font-size:18px;font-weight:700" }, "选择使用模式"),
-      h("p", { style: "margin:0 0 20px;font-size:13px;color:var(--k-color-text-3,#888)" }, "可随时在「设置 → 多用户设置」中切换"),
+      h("p", { style: "margin:0 0 20px;font-size:13px;color:var(--dsw-alias-text-disabled)" }, "可随时在「设置 → 多用户设置」中切换"),
       MODES.map(function(m) {
         var sel = ref.selected === m.value;
         return h("label", {
           key: m.value,
           onClick: function() { ref.selected = m.value; ref.el.forceUpdate(); },
           style: "display:flex;align-items:center;gap:10px;padding:12px 14px;margin-bottom:8px;border-radius:8px;cursor:pointer;border:2px solid " +
-            (sel ? "var(--k-color-primary,#00e5ff)" : "transparent") +
-            ";background:" + (sel ? "var(--k-color-primary-bg,#00e5ff10)" : "transparent"),
+            (sel ? "var(--dsw-alias-brand-primary)" : "transparent") +
+            ";background:" + (sel ? "var(--dsw-alias-bg-layer-1)" : "transparent"),
         },
-          h("input", { type: "radio", checked: sel, style: "accent-color:var(--k-color-primary,#00e5ff)" }),
+          h("input", { type: "radio", checked: sel, style: "accent-color:var(--dsw-alias-brand-primary)" }),
           h("div", null,
             h("div", { style: "font-size:14px;font-weight:600" }, m.label),
-            h("div", { style: "font-size:12px;color:var(--k-color-text-3,#888)" }, m.desc),
+            h("div", { style: "font-size:12px;color:var(--dsw-alias-text-disabled)" }, m.desc),
           ),
         );
       }),
       h("button", {
         disabled: ref.submitting,
         onClick: confirm,
-        style: "width:100%;padding:12px;border:none;border-radius:8px;background:var(--k-color-primary,#00e5ff);color:var(--k-color-bg-1,#000);font-weight:600;font-size:14px;cursor:pointer;margin-top:8px;opacity:" + (ref.submitting ? "0.5" : "1"),
+        style: "width:100%;padding:12px;border:none;border-radius:8px;background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);font-weight:600;font-size:14px;cursor:pointer;margin-top:8px;opacity:" + (ref.submitting ? "0.5" : "1"),
       }, ref.submitting ? "保存中..." : "确认"),
     )
   );
@@ -152,23 +152,23 @@ function MemberIdentifyView({ members, ref, bind }) {
   return h("div", {
     style: "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5)",
   },
-    h("div", { style: "background:var(--k-color-bg,#1a1a2e);border-radius:12px;padding:32px;max-width:380px;width:90%;color:var(--k-color-text,#e8ecf8)" },
+    h("div", { style: "background:var(--dsw-alias-bg-base);border-radius:12px;padding:32px;max-width:380px;width:90%;color:var(--dsw-alias-label-primary)" },
       h("h2", { style: "margin:0 0 16px;font-size:17px;font-weight:700" }, "你是谁？"),
       members.map(function(m) {
         var sel = ref.selected === m.member_id;
         return h("label", {
           key: m.member_id,
           onClick: function() { ref.selected = m.member_id; ref.el.forceUpdate(); },
-          style: "display:flex;align-items:center;gap:10px;padding:12px 14px;margin-bottom:6px;border-radius:8px;cursor:pointer;border:2px solid " + (sel ? "var(--k-color-primary,#00e5ff)" : "transparent"),
+          style: "display:flex;align-items:center;gap:10px;padding:12px 14px;margin-bottom:6px;border-radius:8px;cursor:pointer;border:2px solid " + (sel ? "var(--dsw-alias-brand-primary)" : "transparent"),
         },
-          h("input", { type: "radio", checked: sel, style: "accent-color:var(--k-color-primary,#00e5ff)" }),
+          h("input", { type: "radio", checked: sel, style: "accent-color:var(--dsw-alias-brand-primary)" }),
           h("span", { style: "font-size:14px" }, m.display_name),
         );
       }),
       h("button", {
         onClick: bind,
         disabled: !ref.selected,
-        style: "width:100%;padding:12px;border:none;border-radius:8px;background:var(--k-color-primary,#00e5ff);color:var(--k-color-bg-1,#000);font-weight:600;font-size:14px;cursor:pointer;margin-top:12px;opacity:" + (ref.selected ? "1" : "0.5"),
+        style: "width:100%;padding:12px;border:none;border-radius:8px;background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);font-weight:600;font-size:14px;cursor:pointer;margin-top:12px;opacity:" + (ref.selected ? "1" : "0.5"),
       }, "确认身份"),
     )
   );
@@ -236,57 +236,57 @@ function SettingsPanel(props) {
 
 function SettingsPanelView({ ctx, ref, setMode, addMember, removeMember }) {
   var members = ref.members || [];
-  return h("div", { style: "padding:16px;color:var(--k-color-text,#e8ecf8)" },
+  return h("div", { style: "padding:16px;color:var(--dsw-alias-label-primary)" },
     // ─── 标题 ───
     h("h2", { style: "font-size:18px;font-weight:700;margin:0 0 6px" }, "多用户设置"),
-    h("p", { style: "font-size:12px;color:var(--k-color-text-3,#888);margin:0 0 20px" },
+    h("p", { style: "font-size:12px;color:var(--dsw-alias-text-disabled);margin:0 0 20px" },
       "管理多台设备、多名成员的共享与隔离"),
     // ─── 模式选择（M7） ───
-    h("div", { style: "font-size:13px;font-weight:600;margin-bottom:10px;color:var(--k-color-text-2,#ccc)" }, "模式"),
+    h("div", { style: "font-size:13px;font-weight:600;margin-bottom:10px;color:var(--dsw-alias-label-primary)" }, "模式"),
     MODES.map(function(m) {
       var sel = ref.mode === m.value;
       return h("label", {
         key: m.value, onClick: function() { setMode(m.value); },
-        style: "display:flex;align-items:center;gap:10px;padding:10px 14px;margin-bottom:6px;border-radius:8px;cursor:pointer;border:2px solid " + (sel ? "var(--k-color-primary,#00e5ff)" : "transparent"),
+        style: "display:flex;align-items:center;gap:10px;padding:10px 14px;margin-bottom:6px;border-radius:8px;cursor:pointer;border:2px solid " + (sel ? "var(--dsw-alias-brand-primary)" : "transparent"),
       },
-        h("input", { type: "radio", checked: sel, onChange: function() {}, style: "accent-color:var(--k-color-primary,#00e5ff)" }),
+        h("input", { type: "radio", checked: sel, onChange: function() {}, style: "accent-color:var(--dsw-alias-brand-primary)" }),
         h("span", { style: "font-size:14px" }, m.label),
       );
     }),
     // ─── 成员管理（M5） ───
-    h("div", { style: "font-size:13px;font-weight:600;margin:20px 0 10px;color:var(--k-color-text-2,#ccc)" }, "成员"),
+    h("div", { style: "font-size:13px;font-weight:600;margin:20px 0 10px;color:var(--dsw-alias-label-primary)" }, "成员"),
     h("div", { style: "display:flex;gap:8px;margin-bottom:12px" },
       h("input", {
         value: ref.newName, onChange: function(e) { ref.newName = e.target.value; if (ref.el) ref.el.forceUpdate(); },
         placeholder: "输入成员名称",
-        style: "flex:1;padding:8px 12px;border-radius:6px;border:1px solid var(--k-color-border,#333);background:var(--k-color-bg-2,#1a1a2e);color:var(--k-color-text,#e8ecf8);font-size:13px",
+        style: "flex:1;padding:8px 12px;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font-size:13px",
       }),
       h("button", {
         onClick: addMember, disabled: ref.adding,
-        style: "padding:8px 16px;border:none;border-radius:6px;background:var(--k-color-primary,#00e5ff);color:var(--k-color-bg-1,#000);font-weight:600;font-size:13px;cursor:pointer;opacity:" + (ref.adding ? "0.5" : "1"),
+        style: "padding:8px 16px;border:none;border-radius:6px;background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);font-weight:600;font-size:13px;cursor:pointer;opacity:" + (ref.adding ? "0.5" : "1"),
       }, "+"),
     ),
     members.length === 0
-      ? h("div", { style: "font-size:12px;color:var(--k-color-text-3,#888);padding:8px 0" }, "暂无成员，点击 + 添加")
+      ? h("div", { style: "font-size:12px;color:var(--dsw-alias-text-disabled);padding:8px 0" }, "暂无成员，点击 + 添加")
       : members.map(function(m) {
           return h("div", {
             key: m.member_id,
-            style: "display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;background:var(--k-color-bg-2,#1a1a2e);margin-bottom:6px;font-size:13px",
+            style: "display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;background:var(--dsw-alias-bg-layer-2);margin-bottom:6px;font-size:13px",
           },
-            h("span", { style: m.revoked ? "color:var(--k-color-text-3,#666)" : "" }, m.revoked ? "\u26aa" : "\U0001f7e2"),
+            h("span", { style: m.revoked ? "color:var(--dsw-alias-text-disabled)" : "" }, m.revoked ? "\u26aa" : "\U0001f7e2"),
             h("span", { style: "flex:1" }, m.display_name),
             h("button", { onClick: (function(mid) { return function() { removeMember(mid); }; })(m.member_id),
-              style: "padding:4px 8px;border:1px solid var(--k-color-border,#444);border-radius:4px;background:transparent;color:var(--k-color-text-3,#888);font-size:11px;cursor:pointer" }, "移除"),
+              style: "padding:4px 8px;border:1px solid var(--dsw-alias-border-l2);border-radius:4px;background:transparent;color:var(--dsw-alias-text-disabled);font-size:11px;cursor:pointer" }, "移除"),
           );
         }),
     // ─── 系统信息 + 升级（M6） ───
-    h("div", { style: "font-size:13px;font-weight:600;margin:20px 0 10px;color:var(--k-color-text-2,#ccc)" }, "系统信息"),
-    h("div", { style: "font-size:12px;color:var(--k-color-text-3,#888);line-height:1.8" },
+    h("div", { style: "font-size:13px;font-weight:600;margin:20px 0 10px;color:var(--dsw-alias-label-primary)" }, "系统信息"),
+    h("div", { style: "font-size:12px;color:var(--dsw-alias-text-disabled);line-height:1.8" },
       "deepDDW v" + (ref.version.version || "?") + "  \xb7  网关 v" + (ref.version.version || "?"),
       h("br"),
       "github.com/ccch713/deepddw  \xb7  MIT License",
       h("br"),
-      h("span", { style: "color:var(--k-color-text-2,#aaa)" }, "Network/Workspace/Files 的详细数据请查看 API 文档"),
+      h("span", { style: "color:var(--dsw-alias-label-primary)" }, "Network/Workspace/Files 的详细数据请查看 API 文档"),
     ),
   );
 }

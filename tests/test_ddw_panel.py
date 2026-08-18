@@ -75,6 +75,15 @@ def test_m6_upgrade_entry():
     assert "deepDDW" in content
 
 
+def test_client_bundle_exists():
+    """lib/client.js 存在且符合 __ModuleLoader__ 格式（DSH 加载所需）。"""
+    assert (PLUGIN / "lib" / "client.js").exists()
+    content = (PLUGIN / "lib" / "client.js").read_text(encoding="utf-8")
+    assert "window.__ModuleLoader__.load" in content
+    assert "factory:" in content
+    assert "@deepddw/ddw-teams-panel" in content
+
+
 def test_server_entry():
     assert (PLUGIN / "src" / "index.js").exists()
 

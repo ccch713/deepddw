@@ -8,7 +8,7 @@
  * 网关 API 已由 R4 backend 完成：/deployment/mode、/member/add|list、
  * /device/identify、/version、/admin/stats
  */
-import { h } from 'vue'
+import { createElement as h } from 'react'
 
 const NS = 'settings.ddwMultiuser'
 const GW_KEY = 'gatewayUrl'
@@ -122,7 +122,7 @@ const OnboardingModal = {
         })
         if (r.ok) {
           localStorage.setItem('deepddw_onboarded', 'true')
-          this.$emit('done')
+          this.props.onDone('done')
           location.reload()
         }
       } finally {

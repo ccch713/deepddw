@@ -3,10 +3,33 @@
   "version": "0.5.0",
   "description": "deepDDW 多用户设置——模式选择+成员管理+设备绑定+升级入口",
   "main": "src/index.js",
-  "keywords": ["dsh", "deepddw", "teams", "settings"],
+  "keywords": [
+    "dsh",
+    "deepddw",
+    "teams",
+    "settings"
+  ],
   "license": "MIT",
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
-    "client": { "platform": "web", "inject": [] }
-  }
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
+  },
+  "exports": {
+    ".": {
+      "default": "./src/index.js"
+    },
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "src",
+    "cordis.patch.yml"
+  ]
 }

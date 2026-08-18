@@ -163,6 +163,46 @@ window.__ModuleLoader__.load({
       );
     }
 
+
+    // ─── 成员识别（"你是谁？"弹窗）───
+    function MemberIdentify(props) {
+      var s = React.useState({ selected: null, submitting: false });
+      var st = s[0];
+      var setSt = s[1];
+      var members = props.members || [];
+
+      function bind() {
+        if (!st.selected) return;
+        setSt({ selected: st.selected, submitting: true });
+        fetch(BASE + "/api/v1/device/identify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ device_id: props.deviceId, member_id: st.selected })
+        }).then(function(r) {
+          if (r.ok) {
+            localStorage.setItem("deepddw_member_id", st.selected);
+            // 设置工作区为成员个人空间，实现记忆/知识库隔离
+            localStorage.setItem("deepddw_workspace", "member:" + st.selected);
+            location.reload();
+          } else { setSt({ selected: st.selected, submitting: false }); }
+        }).catch(function(){ setSt({ selected: st.selected, submitting: false }); });
+      }
+
+      return h("div", { style: { position: "fixed", inset: 0, zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.6)" } },
+        h("div", { style: { background: "var(--dsw-alias-bg-base)", border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "12px", padding: "32px", maxWidth: "380px", width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,.5)" } },
+          h("h2", { style: { margin: "0 0 16px", fontSize: "17px", fontWeight: 700, color: "var(--dsw-alias-label-primary)" } }, "你是谁？"),
+          h("p", { style: { margin: "0 0 16px", fontSize: "12px", color: "var(--dsw-alias-text-disabled)" } }, "选择你的身份，本设备将绑定到该成员（记忆/知识库按成员隔离）"),
+          members.map(function(m) {
+            return h("label", { key: m.member_id, style: { display: "flex", alignItems: "flex-start", gap: "10px", padding: "12px 14px", marginBottom: "6px", borderRadius: "8px", cursor: "pointer", border: "2px solid " + (st.selected === m.member_id ? "var(--dsw-alias-brand-primary)" : "transparent") }, onClick: function(){ setSt({ selected: m.member_id, submitting: false }); } },
+              h("input", { type: "radio", checked: st.selected === m.member_id, readOnly: true, style: { marginTop: "2px" } }),
+              h("span", { style: { fontSize: "14px", color: "var(--dsw-alias-label-primary)" } }, m.display_name || "(未命名)")
+            );
+          }),
+          h("button", { onClick: bind, disabled: !st.selected || st.submitting, style: { width: "100%", padding: "12px", border: "none", borderRadius: "8px", background: "var(--dsw-alias-brand-primary)", color: "var(--dsw-alias-bg-base)", fontWeight: 600, fontSize: "14px", cursor: "pointer", marginTop: "12px", opacity: (!st.selected || st.submitting) ? 0.5 : 1 } }, st.submitting ? "绑定中..." : "确认身份")
+        )
+      );
+    }
+
     exports.apply = function(ctx) {
       try {
         // 首次弹窗（未配置时显示）
@@ -193,15 +233,24 @@ window.__ModuleLoader__.load({
           }, SettingsPanel);
         });
 
-        // 成员识别（未绑定时显示"你是谁"）
+        // 成员识别（未绑定时弹出"你是谁"选择成员）
         var deviceId = localStorage.getItem("deepddw_device_id") || ("dev-" + Date.now().toString(36));
         localStorage.setItem("deepddw_device_id", deviceId);
         if (!localStorage.getItem("deepddw_member_id")) {
           fetch(BASE + "/api/v1/member/list").then(function(r){return r.json();}).then(function(d) {
             var mlist = (d && d.data && d.data.results) || [];
             if (mlist.length > 0) {
-              // 简化：在设置面板内选择身份（不做全局弹窗避免干扰）
-              console.log("[ddw] 检测到 " + mlist.length + " 个成员，可在设置面板选择身份");
+              ctx.slots.inject("shell.overlay", function() {
+                return ctx.slots.register({
+                  name: "shell.overlay",
+                  id: "ddw-member-identify",
+                  order: 9999,
+                  label: function() { return "成员识别"; }
+                }, function() {
+                  return h(MemberIdentify, { members: mlist, deviceId: deviceId });
+                });
+              });
+              console.log("[ddw] 弹出成员识别：" + mlist.length + " 个成员");
             }
           }).catch(function(){});
         }

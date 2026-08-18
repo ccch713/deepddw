@@ -4,6 +4,20 @@ All notable changes to deepDDW are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-08-18
+
+### Changed — "DSH for Teams" 架构重写
+
+- **纯 DSH Cordis 插件** — deepDDW 变成 DSH 原生插件，无独立 Launcher；通过 DSH 设置面板（设置 → 多用户设置）管理，100% DSH 原生 UI（`--dsw-alias-*` 语义 Token，零自定义 CSS）
+- **首次使用引导** — 首次打开 DSH 弹出"选择使用模式"（一人多设备 / 家庭 / 小团队）
+- **设置面板** — 部署模式选择、成员管理（添加/移除）、团队统计、系统信息与升级入口
+- **客户端构建管线** — 引入 tsdown，TypeScript 源码 → `__ModuleLoader__` 格式客户端 bundle
+- **成员识别** — 设备绑定 member_id，多设备场景下区分成员身份
+
+### Fixed
+
+- 客户端插件从"独立 Launcher 页面"重构为"纯 DSH 插件"——消除 UI 风格不一致、白屏、手动填字段问题
+
 ## [0.3.0] - 2026-08-17
 
 ### Fixed

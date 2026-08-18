@@ -4,119 +4,210 @@ window.__ModuleLoader__.load({
 var module = { exports: {} };
 var exports = module.exports;
 Object.defineProperty(exports, "__esModule", { value: true });
-var Vue = require("vue");
-var h = Vue.h, ref = Vue.ref, onMounted = Vue.onMounted;
+
+// 工具
 function gw() { return (typeof window !== "undefined" && window.location && window.location.origin) || "http://127.0.0.1:8600"; }
+function api(path, opts) { return fetch(gw() + path, Object.assign({ headers: { "Content-Type": "application/json" } }, opts || {})).then(function(r){ return r.json(); }); }
+
+// Overlay 容器（无 Vue，纯 DOM）
+function makeOverlay(id) {
+  var el = document.createElement("div");
+  el.id = id;
+  el.style.cssText = "position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6)";
+  var card = document.createElement("div");
+  card.style.cssText = "background:var(--dsw-alias-bg-base,#1a1a2e);border:1px solid var(--dsw-alias-border-l2,#333);border-radius:12px;padding:32px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.5);color:var(--dsw-alias-label-primary,#e8ecf8)";
+  el.appendChild(card);
+  return { el: el, card: card };
+}
+
+// M2 首次弹窗
 var MODES = [
-  { value: "solo", label: "一人多设备", desc: "一个人使用多台设备" },
-  { value: "family", label: "家庭多人", desc: "家人之间共享，互相可见" },
-  { value: "team", label: "小团队协作", desc: "团队共享 + 各自空间" }
+  { value: "solo", label: "\u4e00\u4eba\u591a\u8bbe\u5907", desc: "\u4e00\u4e2a\u4eba\u4f7f\u7528\u591a\u53f0\u8bbe\u5907" },
+  { value: "family", label: "\u5bb6\u5ead\u591a\u4eba", desc: "\u5bb6\u4eba\u4e4b\u95f4\u5171\u4eab\uff0c\u4e92\u76f8\u53ef\u89c1" },
+  { value: "team", label: "\u5c0f\u56e2\u961f\u534f\u4f5c", desc: "\u56e2\u961f\u5171\u4eab + \u5404\u81ea\u7a7a\u95f4" }
 ];
-function OnboardingModal() {
-  var selected = ref("solo");
-  var submitting = ref(false);
-  var visible = ref(true);
-  function confirm() {
-    submitting.value = true;
-    fetch(gw() + "/api/v1/deployment/mode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: selected.value }) })
-      .then(function(r){ if (r.ok) { localStorage.setItem("deepddw_onboarded", "1"); visible.value = false; setTimeout(function(){ location.reload(); }, 300); } })
-      .catch(function(){}).finally(function(){ submitting.value = false; });
-  }
-  if (!visible.value) return null;
-  return h("div", { style: "position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6)" }, [
-    h("div", { style: "background:var(--dsw-alias-bg-base,#1a1a2e);border:1px solid var(--dsw-alias-border-l2,#333);border-radius:12px;padding:32px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.5)" }, [
-      h("h2", { style: "margin:0 0 16px;font-size:18px;font-weight:700;color:var(--dsw-alias-label-primary)" }, "选择使用模式"),
-      h("p", { style: "margin:0 0 20px;font-size:13px;color:var(--dsw-alias-text-disabled)" }, "可随时在「设置 → 多用户设置」中切换"),
-      ...MODES.map(function(m){ return h("label", { key: m.value, style: "display:flex;align-items:flex-start;gap:10px;padding:12px 14px;margin-bottom:6px;border-radius:8px;cursor:pointer;border:2px solid " + (selected.value === m.value ? "var(--dsw-alias-brand-primary)" : "transparent") + ";background:" + (selected.value === m.value ? "var(--dsw-alias-bg-layer-2)" : "transparent"), onClick: function(){ selected.value = m.value; } }, [ h("input", { type: "radio", checked: selected.value === m.value, onChange: function(){ selected.value = m.value; }, style: "margin-top:2px;accent-color:var(--dsw-alias-brand-primary)" }), h("div", null, [ h("div", { style: "font-size:14px;font-weight:600;color:var(--dsw-alias-label-primary)" }, m.label), h("div", { style: "font-size:12px;color:var(--dsw-alias-text-disabled);margin-top:2px" }, m.desc) ]) ]); }),
-      h("button", { onClick: confirm, disabled: submitting.value, style: "width:100%;padding:12px;border:none;border-radius:8px;background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);font-weight:600;font-size:14px;cursor:pointer;margin-top:12px;opacity:" + (submitting.value ? ".5" : "1") }, submitting.value ? "保存中..." : "确认")
-    ])
-  ]);
+function showOnboarding() {
+  var o = makeOverlay("ddw-onboard-overlay");
+  var selected = "solo";
+  var title = document.createElement("h2");
+  title.style.cssText = "margin:0 0 16px;font-size:18px;font-weight:700";
+  title.textContent = "\u9009\u62e9\u4f7f\u7528\u6a21\u5f0f";
+  o.card.appendChild(title);
+  var sub = document.createElement("p");
+  sub.style.cssText = "margin:0 0 20px;font-size:13px;color:var(--dsw-alias-text-disabled)";
+  sub.textContent = "\u53ef\u968f\u65f6\u5728\u300c\u8bbe\u7f6e \u2192 \u591a\u7528\u6237\u8bbe\u7f6e\u300d\u4e2d\u5207\u6362";
+  o.card.appendChild(sub);
+  MODES.forEach(function(m) {
+    var lab = document.createElement("label");
+    lab.style.cssText = "display:flex;align-items:flex-start;gap:10px;padding:12px 14px;margin-bottom:6px;border-radius:8px;cursor:pointer;border:2px solid transparent";
+    var inp = document.createElement("input");
+    inp.type = "radio"; inp.name = "ddw-mode"; inp.value = m.value;
+    inp.style.cssText = "margin-top:2px;accent-color:var(--dsw-alias-brand-primary)";
+    inp.onchange = function() { selected = m.value; lab.style.borderColor = "var(--dsw-alias-brand-primary)"; };
+    lab.appendChild(inp);
+    var txt = document.createElement("div");
+    txt.innerHTML = "<div style='font-size:14px;font-weight:600'>" + m.label + "</div><div style='font-size:12px;color:var(--dsw-alias-text-disabled);margin-top:2px'>" + m.desc + "</div>";
+    lab.appendChild(txt);
+    o.card.appendChild(lab);
+  });
+  var btn = document.createElement("button");
+  btn.style.cssText = "width:100%;padding:12px;border:none;border-radius:8px;background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);font-weight:600;font-size:14px;cursor:pointer;margin-top:12px";
+  btn.textContent = "\u786e\u8ba4";
+  btn.onclick = function() {
+    btn.textContent = "\u4fdd\u5b58\u4e2d..."; btn.disabled = true;
+    fetch(gw() + "/api/v1/deployment/mode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: selected }) })
+      .then(function(r) { if (r.ok) { localStorage.setItem("deepddw_onboarded", "1"); o.el.remove(); location.reload(); } })
+      .catch(function() { btn.textContent = "\u786e\u8ba4"; btn.disabled = false; });
+  };
+  o.card.appendChild(btn);
+  document.body.appendChild(o.el);
 }
-function SettingsPanel() {
-  var mode = ref("solo");
-  var members = ref([]);
-  var newName = ref("");
-  var adding = ref(false);
-  var version = ref({ version: "?" });
-  onMounted(function(){ refresh(); });
-  function refresh() {
-    var b = gw();
-    Promise.all([ fetch(b + "/api/v1/deployment/mode").then(function(r){ return r.json(); }), fetch(b + "/api/v1/member/list").then(function(r){ return r.json(); }), fetch(b + "/api/v1/version").then(function(r){ return r.json(); }) ])
-      .then(function(r){ mode.value=(r[0]&&r[0].data&&r[0].data.mode)||"solo"; members.value=(r[1]&&r[1].data&&r[1].data.results)||[]; version.value=(r[2]&&r[2].data)||{version:"?"}; })
-      .catch(function(){});
-  }
-  function setMode(m){ fetch(gw()+"/api/v1/deployment/mode",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:m})}).then(function(r){ if(r.ok){mode.value=m;setTimeout(function(){location.reload();},300);} }); }
-  function addMember(){ if(!newName.value.trim())return; adding.value=true; fetch(gw()+"/api/v1/member/add",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({display_name:newName.value.trim()})}).then(function(){newName.value="";refresh();}).catch(function(){}).finally(function(){adding.value=false;}); }
-  function removeMember(mid){ fetch(gw()+"/api/v1/member/revoke",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({member_id:mid})}).then(function(){refresh();}).catch(function(){}); }
-  return h("div", { style: "padding:16px;color:var(--dsw-alias-label-primary)" }, [
-    h("h2", { style: "font-size:18px;font-weight:700;margin:0 0 6px" }, "多用户设置"),
-    h("p", { style: "margin:0 0 20px;font-size:12px;color:var(--dsw-alias-text-disabled)" }, "管理多台设备、多名成员的共享与隔离"),
-    h("div", { style: "font-size:13px;font-weight:600;margin-bottom:8px;color:var(--dsw-alias-label-primary)" }, "部署模式"),
-    ...MODES.map(function(m){ return h("label",{ key:m.value,style:"display:flex;align-items:flex-start;gap:10px;padding:10px 14px;margin-bottom:4px;border-radius:8px;cursor:pointer;border:2px solid "+(mode.value===m.value?"var(--dsw-alias-brand-primary)":"transparent"),onClick:function(){setMode(m.value);} },[ h("input",{type:"radio",checked:mode.value===m.value,onChange:function(){setMode(m.value);},style:"margin-top:2px;accent-color:var(--dsw-alias-brand-primary)"}), h("div",null,[ h("div",{style:"font-size:14px;font-weight:600;color:var(--dsw-alias-label-primary)"},m.label), h("div",{style:"font-size:12px;color:var(--dsw-alias-text-disabled);margin-top:2px"},m.desc) ]) ]); }),
-    h("div", { style: "font-size:13px;font-weight:600;margin:20px 0 8px;color:var(--dsw-alias-label-primary)" }, "成员"),
-    h("div", { style: "display:flex;gap:8px;margin-bottom:10px" }, [
-      h("input", { value:newName.value, onInput:function(e){newName.value=e.target.value;}, placeholder:"输入成员名称", onKeydown:function(e){if(e.key==="Enter")addMember();}, style:"flex:1;padding:8px 12px;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font-size:13px" }),
-      h("button", { onClick:addMember, disabled:adding.value, style:"padding:8px 16px;border:none;border-radius:6px;background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);font-weight:600;font-size:13px;cursor:pointer;opacity:"+(adding.value?".5":"1") }, "+")
-    ]),
-    members.value.length===0
-      ? h("div", { style:"font-size:12px;color:var(--dsw-alias-text-disabled);padding:8px 0" }, "暂无成员，点击 + 添加")
-      : members.value.map(function(m){ return h("div",{key:m.member_id,style:"display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;background:var(--dsw-alias-bg-layer-2);margin-bottom:4px;font-size:13px"},[ h("span",{style:"color:var(--dsw-alias-text-disabled)"},m.revoked?"⚪":"🟢"), h("span",{style:"flex:1"},m.display_name), h("button",{onClick:function(){removeMember(m.member_id);},style:"padding:4px 8px;border:1px solid var(--dsw-alias-border-l2);border-radius:4px;background:transparent;color:var(--dsw-alias-text-disabled);font-size:11px;cursor:pointer" }, "移除") ]); }),
-    h("div", { style:"font-size:13px;font-weight:600;margin:20px 0 8px;color:var(--dsw-alias-label-primary)" }, "系统信息"),
-    h("div", { style:"font-size:12px;color:var(--dsw-alias-text-disabled);line-height:1.8" }, [
-      "deepDDW v"+version.value.version, h("br"), "github.com/ccch713/deepddw", h("br"), h("span", { style:"color:var(--dsw-alias-text-disabled);font-size:11px" }, "更多配置请在网关 config/deployment.yaml 中调整")
-    ])
-  ]);
+
+// M3 设置面板（纯 DOM）
+function renderSettingsPanel() {
+  var o = makeOverlay("ddw-settings-panel");
+  o.el.style.cssText = "position:relative;inset:auto;background:none;max-width:600px;width:100%;margin:0 auto;padding:24px";
+  o.card.style.cssText = "background:var(--dsw-alias-bg-base,#1a1a2e);border:1px solid var(--dsw-alias-border-l2,#333);border-radius:12px;padding:24px;color:var(--dsw-alias-label-primary)";
+  var title = document.createElement("h2");
+  title.style.cssText = "margin:0 0 6px;font-size:18px;font-weight:700";
+  title.textContent = "\u591a\u7528\u6237\u8bbe\u7f6e";
+  o.card.appendChild(title);
+  var desc = document.createElement("p");
+  desc.style.cssText = "margin:0 0 20px;font-size:12px;color:var(--dsw-alias-text-disabled)";
+  desc.textContent = "\u7ba1\u7406\u591a\u53f0\u8bbe\u5907\u3001\u591a\u540d\u6210\u5458\u7684\u5171\u4eab\u4e0e\u9694\u79bb";
+  o.card.appendChild(desc);
+  Promise.all([
+    api("/api/v1/deployment/mode"),
+    api("/api/v1/member/list"),
+    api("/api/v1/admin/stats"),
+    api("/api/v1/version")
+  ]).then(function(r) {
+    var mode = (r[0] && r[0].data && r[0].data.mode) || "solo";
+    var members = (r[1] && r[1].data && r[1].data.results) || [];
+    var stats = (r[2] && r[2].data) || {};
+    var ver = (r[3] && r[3].data && r[3].data.version) || "?";
+    // 模式
+    var modeH = document.createElement("h3");
+    modeH.style.cssText = "font-size:13px;font-weight:600;margin:20px 0 8px;color:var(--dsw-alias-label-primary)";
+    modeH.textContent = "\u90e8\u7f72\u6a21\u5f0f";
+    o.card.appendChild(modeH);
+    var MODES2 = [{v:"solo",l:"\u4e00\u4eba\u591a\u8bbe\u5907",d:"\u4e00\u4e2a\u4eba\u4f7f\u7528\u591a\u53f0\u8bbe\u5907"},{v:"family",l:"\u5bb6\u5ead\u591a\u4eba",d:"\u5bb6\u4eba\u4e4b\u95f4\u5171\u4eab\uff0c\u4e92\u76f8\u53ef\u89c1"},{v:"team",l:"\u5c0f\u56e2\u961f\u534f\u4f5c",d:"\u56e2\u961f\u5171\u4eab + \u5404\u81ea\u7a7a\u95f4"}];
+    MODES2.forEach(function(m) {
+      var lab = document.createElement("label");
+      lab.style.cssText = "display:flex;align-items:flex-start;gap:10px;padding:10px 14px;margin-bottom:4px;border-radius:8px;cursor:pointer;border:2px solid " + (mode===m.v?"var(--dsw-alias-brand-primary)":"transparent");
+      lab.innerHTML = "<input type='radio' name='ddw-mode-s' " + (mode===m.v?"checked":"") + " style='margin-top:2px;accent-color:var(--dsw-alias-brand-primary)'><div><div style='font-size:14px;font-weight:600'>" + m.l + "</div><div style='font-size:12px;color:var(--dsw-alias-text-disabled);margin-top:2px'>" + m.d + "</div></div>";
+      lab.onclick = function() { fetch(gw()+"/api/v1/deployment/mode",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:m.v})}).then(function(r){if(r.ok){localStorage.setItem("deepddw_onboarded","1");location.reload();}}); };
+      o.card.appendChild(lab);
+    });
+    // 成员
+    var memH = document.createElement("h3");
+    memH.style.cssText = "font-size:13px;font-weight:600;margin:20px 0 8px;color:var(--dsw-alias-label-primary)";
+    memH.textContent = "\u6210\u5458";
+    o.card.appendChild(memH);
+    var inputRow = document.createElement("div");
+    inputRow.style.cssText = "display:flex;gap:8px;margin-bottom:10px";
+    var inp = document.createElement("input");
+    inp.placeholder = "\u8f93\u5165\u6210\u5458\u540d\u79f0";
+    inp.style.cssText = "flex:1;padding:8px 12px;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font-size:13px";
+    var addBtn = document.createElement("button");
+    addBtn.textContent = "+";
+    addBtn.style.cssText = "padding:8px 16px;border:none;border-radius:6px;background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);font-weight:600;font-size:13px;cursor:pointer";
+    addBtn.onclick = function() {
+      if (!inp.value.trim()) return;
+      fetch(gw()+"/api/v1/member/add",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({display_name:inp.value.trim()})}).then(function(){inp.value="";o.el.remove();renderSettingsPanel();});
+    };
+    inp.onkeydown = function(e) { if(e.key==="Enter") addBtn.click(); };
+    inputRow.appendChild(inp); inputRow.appendChild(addBtn);
+    o.card.appendChild(inputRow);
+    if (members.length === 0) {
+      var empty = document.createElement("div");
+      empty.style.cssText = "font-size:12px;color:var(--dsw-alias-text-disabled);padding:8px 0";
+      empty.textContent = "\u6682\u65e0\u6210\u5458\uff0c\u70b9\u51fb + \u6dfb\u52a0";
+      o.card.appendChild(empty);
+    } else {
+      members.forEach(function(m) {
+        var row = document.createElement("div");
+        row.style.cssText = "display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;background:var(--dsw-alias-bg-layer-2);margin-bottom:4px;font-size:13px";
+        row.innerHTML = "<span style='color:var(--dsw-alias-text-disabled)'>" + (m.revoked ? "\u26aa" : "\ud83d\udfe2") + "</span><span style='flex:1'>" + (m.display_name||"") + "</span>";
+        var rmBtn = document.createElement("button");
+        rmBtn.textContent = "\u79fb\u9664";
+        rmBtn.style.cssText = "padding:4px 8px;border:1px solid var(--dsw-alias-border-l2);border-radius:4px;background:transparent;color:var(--dsw-alias-text-disabled);font-size:11px;cursor:pointer";
+        rmBtn.onclick = function() { fetch(gw()+"/api/v1/member/revoke",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({member_id:m.member_id})}).then(function(){o.el.remove();renderSettingsPanel();}); };
+        row.appendChild(rmBtn);
+        o.card.appendChild(row);
+      });
+    }
+    // 系统信息
+    var sysH = document.createElement("h3");
+    sysH.style.cssText = "font-size:13px;font-weight:600;margin:20px 0 8px;color:var(--dsw-alias-label-primary)";
+    sysH.textContent = "\u7cfb\u7edf\u4fe1\u606f";
+    o.card.appendChild(sysH);
+    var sysBody = document.createElement("div");
+    sysBody.style.cssText = "font-size:12px;color:var(--dsw-alias-text-disabled);line-height:1.8";
+    sysBody.innerHTML = "deepDDW v" + ver + " &middot; github.com/ccch713/deepddw &middot; MIT License";
+    o.card.appendChild(sysBody);
+  }).catch(function(e) { o.card.innerHTML = "<p style='color:red'>\u52a0\u8f7d\u5931\u8d25: " + e.message + "</p>"; });
+  return o.el;
 }
-function MemberIdentify(props) {
-  var members = ref(props.members||[]);
-  var selected = ref(null);
-  var done = ref(false);
-  function bind(){
-    if(!selected.value)return;
-    fetch(gw()+"/api/v1/device/identify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({device_id:props.deviceId,member_id:selected.value})})
-      .then(function(){localStorage.setItem("deepddw_member_id",selected.value);done.value=true;setTimeout(function(){location.reload();},300);})
-      .catch(function(){});
-  }
-  if(done.value)return null;
-  return h("div",{style:"position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6)"},
-    [ h("div",{style:"background:var(--dsw-alias-bg-base);border:1px solid var(--dsw-alias-border-l2);border-radius:12px;padding:32px;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.5)"},
-      [ h("h2",{style:"margin:0 0 16px;font-size:17px;font-weight:700;color:var(--dsw-alias-label-primary)"}, "你是谁？"),
-      ...members.value.map(function(m){ return h("label",{key:m.member_id,onClick:function(){selected.value=m.member_id;},style:"display:flex;align-items:flex-start;gap:10px;padding:12px 14px;margin-bottom:6px;border-radius:8px;cursor:pointer;border:2px solid "+(selected.value===m.member_id?"var(--dsw-alias-brand-primary)":"transparent")},[ h("input",{type:"radio",checked:selected.value===m.member_id,onChange:function(){selected.value=m.member_id;},style:"margin-top:2px;accent-color:var(--dsw-alias-brand-primary)"}), h("span",{style:"font-size:14px;color:var(--dsw-alias-label-primary)"},m.display_name) ]); }),
-      h("button",{onClick:bind,disabled:!selected.value,style:"width:100%;padding:12px;border:none;border-radius:8px;background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);font-weight:600;font-size:14px;cursor:pointer;margin-top:12px;opacity:"+(selected.value?"1":".5") }, "确认身份")
-    ]) ]
-  );
-}
-exports.__esModule = true;
+
+// ══════ 主入口 ══════
 exports.inject = ["slots", "locale"];
 exports.apply = function(ctx) {
-  var deviceId = localStorage.getItem("deepddw_device_id") || ("dev-"+Date.now().toString(36));
-  localStorage.setItem("deepddw_device_id", deviceId);
-  if(!localStorage.getItem("deepddw_member_id")){
-    fetch(gw()+"/api/v1/member/list").then(function(r){return r.json();}).then(function(d){
-      var mlist=(d&&d.data&&d.data.results)||[];
-      if(mlist.length>0){
-        ctx.slots.inject("shell.overlay",function(){
-          return ctx.slots.register({name:"shell.overlay",id:"ddw-member-identify",order:9999,label:"identify"},function(){return h(MemberIdentify,{members:mlist,deviceId:deviceId});});
-        });
+  // M2 首次弹窗
+  if (!localStorage.getItem("deepddw_onboarded")) {
+    api("/api/v1/deployment/mode").then(function(d) {
+      if (d && d.data && d.data.configured) {
+        localStorage.setItem("deepddw_onboarded", "1");
+      } else {
+        showOnboarding();
       }
-    }).catch(function(){});
+    }).catch(function() {});
   }
-  if(!localStorage.getItem("deepddw_onboarded")){
-    fetch(gw()+"/api/v1/deployment/mode").then(function(r){return r.json();}).then(function(d){
-      if(d&&d.data&&d.data.configured){localStorage.setItem("deepddw_onboarded","1");return;}
-      ctx.slots.inject("settings.onboarding",function(){
-        return ctx.slots.register({name:"settings.onboarding",id:"ddw-multiuser-onboard",order:50,label:"onboard"},function(){return h(OnboardingModal,{});});
-      });
-    }).catch(function(){});
-  }
-  ctx.slots.inject("settings.section",function(){
-    return ctx.slots.register({name:"settings.section",id:"ddw-multiuser-settings",order:100,label:"多用户设置"},function(){return h(SettingsPanel,{});});
+  // M3 设置面板
+  ctx.slots.inject("settings.section", function() {
+    return ctx.slots.register({
+      name: "settings.section",
+      id: "ddw-multiuser-settings",
+      order: 100,
+      label: function() { return "\u591a\u7528\u6237\u8bbe\u7f6e"; }
+    }, function() { return renderSettingsPanel(); });
   });
+  // M4 成员识别
+  var deviceId = localStorage.getItem("deepddw_device_id") || ("dev-" + Date.now().toString(36));
+  localStorage.setItem("deepddw_device_id", deviceId);
+  if (!localStorage.getItem("deepddw_member_id")) {
+    api("/api/v1/member/list").then(function(d) {
+      var mlist = (d && d.data && d.data.results) || [];
+      if (mlist.length > 0) {
+        var overlay = makeOverlay("ddw-identify-overlay");
+        var title2 = document.createElement("h2");
+        title2.style.cssText = "margin:0 0 16px;font-size:17px;font-weight:700";
+        title2.textContent = "\u4f60\u662f\u8c01\uff1f";
+        overlay.card.appendChild(title2);
+        var selectedId = null;
+        mlist.forEach(function(m) {
+          var lab = document.createElement("label");
+          lab.style.cssText = "display:flex;align-items:flex-start;gap:10px;padding:12px 14px;margin-bottom:6px;border-radius:8px;cursor:pointer;border:2px solid transparent";
+          lab.innerHTML = "<input type='radio' name='ddw-who' style='margin-top:2px;accent-color:var(--dsw-alias-brand-primary)'><span style='font-size:14px'>" + (m.display_name||"") + "</span>";
+          lab.onclick = function() { selectedId = m.member_id; lab.style.borderColor = "var(--dsw-alias-brand-primary)"; };
+          overlay.card.appendChild(lab);
+        });
+        var btn2 = document.createElement("button");
+        btn2.style.cssText = "width:100%;padding:12px;border:none;border-radius:8px;background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);font-weight:600;font-size:14px;cursor:pointer;margin-top:12px";
+        btn2.textContent = "\u786e\u8ba4\u8eab\u4efd";
+        btn2.onclick = function() {
+          if (!selectedId) return;
+          fetch(gw()+"/api/v1/device/identify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({device_id:deviceId,member_id:selectedId})})
+            .then(function(){localStorage.setItem("deepddw_member_id",selectedId);overlay.el.remove();location.reload();});
+        };
+        overlay.card.appendChild(btn2);
+        document.body.appendChild(overlay.el);
+      }
+    }).catch(function() {});
+  }
 };
-exports.default = SettingsPanel;
-exports.SettingsPanel = SettingsPanel;
-exports.OnboardingModal = OnboardingModal;
-exports.MemberIdentify = MemberIdentify;
+
+exports.default = exports;
     return module.exports;
   }
 });

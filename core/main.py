@@ -446,21 +446,21 @@ def create_app() -> FastAPI:
 
     # 静态前端（deepddw-launcher / welcome / docs）
     frontend = Path(__file__).resolve().parent.parent / "frontend"
+    # v0.5.0：旧 launcher 路径兼容跳转（必须在 StaticFiles mount 之前注册，
+    # 避免 StaticFiles 拦截返回 404）。
+    @app.get("/ui/deepddw-launcher.html", include_in_schema=False)
+    async def legacy_launcher_redirect() -> Any:
+        return RedirectResponse(url="/dsh/")
+
     if frontend.exists():
         app.mount(
             "/ui", StaticFiles(directory=str(frontend), html=True), name="frontend"
         )
 
         @app.get("/", include_in_schema=False)
-        async def root(request: Request):
-            # 体验优化 A2（2026-08-16 竞品抢生态位提速）：LAN 免密时根路径直接进 dsh 工作台
-            # （经 deepDDW 网关反代，零配置直达；dsh 保持 localhost 安全绑定）。
-            # 外网/需 Token 才走启动页。
-            from core.security.token_gate import client_ip, lan_bypass_enabled, is_lan_client
-
-            if lan_bypass_enabled() and is_lan_client(client_ip(request)):
-                return RedirectResponse(url="/dsh/")
-            return RedirectResponse(url="/ui/deepddw-launcher.html")
+        async def root(request: Request) -> Any:
+            """v0.5.0：根路径 → dsh 工作台（deepDDW 无独立 launcher）。"""
+            return RedirectResponse(url="/dsh/")
 
         # ---- dsh 工作台反代（2026-08-16）：手机/浏览器只连 deepDDW 网关，
         #     网关把 /dsh/* 和 /api/*（dsh 的 RPC/API）代理到本机 dsh 引擎

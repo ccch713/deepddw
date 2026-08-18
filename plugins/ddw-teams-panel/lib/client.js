@@ -106,7 +106,8 @@ window.__ModuleLoader__.load({
         // 统计
         (data.stats && data.stats.members) ?
           h("div", { style: { marginTop: "16px", padding: "12px", borderRadius: "8px", background: "var(--dsw-alias-bg-layer-2)", fontSize: "12px", color: "var(--dsw-alias-text-disabled)", lineHeight: 1.8 } },
-            "团队成员: " + (data.stats.members.total || 0) + " | 在线: " + (data.stats.members.active || 0) +
+            "活跃成员: " + (data.stats.members.active || 0) + " 人" +
+            ((data.stats.members.revoked || 0) > 0 ? "（已吊销 " + data.stats.members.revoked + "）" : "") +
             " | 共享记忆: " + ((data.stats.shared_memory || {}).logs_3d || 0) + " 条")
           : null,
 

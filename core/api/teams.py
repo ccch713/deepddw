@@ -432,6 +432,16 @@ async def device_bind(
     return ok(bind_device_to_member(payload.device_id, payload.member_id))
 
 
+# M4 v0.5.0：/device/identify（与 /device/bind-member 同义，M4 弹窗使用）
+@router.post("/device/identify")
+async def device_identify(
+    payload: DeviceBindReq,
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """M4 成员识别：设备首次打开 DSH 后弹窗绑定（device_id + member_id）。"""
+    return ok(bind_device_to_member(payload.device_id, payload.member_id))
+
+
 @router.get("/device/member")
 async def device_member(
     device_id: str,

@@ -1,0 +1,9 @@
+# deepDDW 多用户设置插件 — bundle 补丁层
+# v0.5.0：纯 DSH cordis 插件，无独立 launcher
+# 入口：设置 → 多用户设置（社区插件区域，与皮肤中心/宠物同级）
+# onboarding：首次打开 DSH 弹出模式选择
+- insert:
+    - id: ddw-multiuser
+      name: '@deepddw/ddw-teams-panel'
+      config:
+        gatewayUrl: http://127.0.0.1:8500

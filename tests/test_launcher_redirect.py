@@ -10,8 +10,6 @@ import os
 
 os.environ.setdefault("DDW_ACCESS_TOKEN", "test-m1-redirect-token")
 
-import pytest  # noqa: E402
-
 
 def test_launcher_file_removed():
     """v0.5.0：frontend/deepddw-launcher.html 已删除。"""

@@ -1,3 +1,9 @@
+window.__ModuleLoader__.load({
+  id: "@deepddw/ddw-teams-panel",
+  factory: (require) => {
+var module = { exports: {} };
+var exports = module.exports;
+Object.defineProperty(exports, "__esModule", { value: true });
 var Vue = require("vue");
 var h = Vue.h, ref = Vue.ref, onMounted = Vue.onMounted;
 function gw() { return (typeof window !== "undefined" && window.location && window.location.origin) || "http://127.0.0.1:8600"; }
@@ -111,3 +117,6 @@ exports.default = SettingsPanel;
 exports.SettingsPanel = SettingsPanel;
 exports.OnboardingModal = OnboardingModal;
 exports.MemberIdentify = MemberIdentify;
+    return module.exports;
+  }
+});

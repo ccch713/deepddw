@@ -9,40 +9,179 @@ window.__ModuleLoader__.load({
 
     exports.inject = ["slots"];
 
+    // ─── 完整设置面板 ───
     function SettingsPanel() {
-      var state = React.useState({ mode: "solo", members: 0, active: 0, version: "?", loading: true, error: "" });
-      var data = state[0];
-      var setData = state[1];
+      var s = React.useState({ mode: "solo", members: [], stats: {}, version: "?", loading: true, error: "" });
+      var data = s[0];
+      var setData = s[1];
+      var nameS = React.useState("");
+      var newName = nameS[0];
+      var setName = nameS[1];
 
-      React.useEffect(function() {
-        fetch(BASE + "/api/v1/admin/stats").then(function(r){ return r.json(); }).then(function(d) {
-          var s = d.data || {};
-          setData({ mode: s.mode || "solo", members: (s.members || {}).total || 0, active: (s.members || {}).active || 0, version: "?", loading: false, error: "" });
+      function refresh() {
+        setData({ mode: "solo", members: [], stats: {}, version: "?", loading: true, error: "" });
+        Promise.all([
+          fetch(BASE + "/api/v1/deployment/mode").then(function(r){return r.json();}),
+          fetch(BASE + "/api/v1/member/list").then(function(r){return r.json();}),
+          fetch(BASE + "/api/v1/admin/stats").then(function(r){return r.json();}).catch(function(){return {};})
+        ]).then(function(rs) {
+          setData({
+            mode: (rs[0] && rs[0].data && rs[0].data.mode) || "solo",
+            members: (rs[1] && rs[1].data && rs[1].data.results) || [],
+            stats: (rs[2] && rs[2].data) || {},
+            version: "?",
+            loading: false,
+            error: ""
+          });
         }).catch(function(e) {
-          setData({ mode: "solo", members: 0, active: 0, version: "?", loading: false, error: e.message });
+          setData({ mode: "solo", members: [], stats: {}, version: "?", loading: false, error: e.message });
         });
-      }, []);
-
-      if (data.error) {
-        return h("div", { style: { padding: "16px", color: "#e74c3c" } },
-          "API 请求失败: " + data.error);
       }
 
-      return h("div", { style: { padding: "16px" } },
-        h("h2", { style: { fontSize: "18px", fontWeight: 700, marginBottom: "8px", color: "var(--dsw-alias-label-primary)" } },
+      React.useEffect(refresh, []);
+
+      function setMode(m) {
+        fetch(BASE + "/api/v1/deployment/mode", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ mode: m }) })
+          .then(function(r){ if (r.ok) { refresh(); } });
+      }
+
+      function addMember() {
+        if (!newName.trim()) return;
+        fetch(BASE + "/api/v1/member/add", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ display_name: newName.trim() }) })
+          .then(function(){ setName(""); refresh(); });
+      }
+
+      function removeMember(mid) {
+        fetch(BASE + "/api/v1/member/revoke", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ member_id: mid }) })
+          .then(function(){ refresh(); });
+      }
+
+      var MODES = [
+        { value: "solo", label: "一人多设备", desc: "一个人使用多台设备" },
+        { value: "family", label: "家庭多人", desc: "家人之间共享，互相可见" },
+        { value: "team", label: "小团队协作", desc: "团队共享 + 各自空间" }
+      ];
+
+      if (data.error) {
+        return h("div", { style: { padding: "16px", color: "#e74c3c" } }, "API 请求失败: " + data.error);
+      }
+
+      return h("div", { style: { padding: "16px", maxWidth: "600px" } },
+        h("h2", { style: { fontSize: "18px", fontWeight: 700, marginBottom: "6px", color: "var(--dsw-alias-label-primary)" } },
           "多用户设置"),
         h("p", { style: { fontSize: "12px", color: "var(--dsw-alias-text-disabled)", marginBottom: "20px" } },
-          "deepDDW v0.5.0 · 管理多台设备、多名成员的共享与隔离"),
-        data.loading ? h("div", { style: { padding: "12px", color: "var(--dsw-alias-text-disabled)" } }, "加载中...")
-        : h("div", { style: { lineHeight: 1.8, fontSize: "13px", color: "var(--dsw-alias-label-primary)" } },
-            h("p", null, h("b", null, "部署模式："), data.mode),
-            h("p", null, h("b", null, "成员："), data.members + " 人，在线 " + data.active + " 人")
-          )
+          "管理多台设备、多名成员的共享与隔离"),
+
+        // 部署模式
+        h("h3", { style: { fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: "var(--dsw-alias-label-primary)" } },
+          "部署模式"),
+        MODES.map(function(m) {
+          return h("label", { key: m.value, style: { display: "flex", alignItems: "flex-start", gap: "10px", padding: "10px 14px", marginBottom: "4px", borderRadius: "8px", cursor: "pointer", border: "2px solid " + (data.mode === m.value ? "var(--dsw-alias-brand-primary)" : "transparent") }, onClick: function(){ setMode(m.value); } },
+            h("input", { type: "radio", checked: data.mode === m.value, readOnly: true, style: { marginTop: "2px" } }),
+            h("div", null,
+              h("div", { style: { fontSize: "14px", fontWeight: 600 } }, m.label),
+              h("div", { style: { fontSize: "12px", color: "var(--dsw-alias-text-disabled)", marginTop: "2px" } }, m.desc)
+            )
+          );
+        }),
+
+        // 成员管理
+        h("h3", { style: { fontSize: "13px", fontWeight: 600, margin: "20px 0 8px", color: "var(--dsw-alias-label-primary)" } },
+          "成员"),
+        h("div", { style: { display: "flex", gap: "8px", marginBottom: "10px" } },
+          h("input", { value: newName, onChange: function(e){ setName(e.target.value); }, placeholder: "输入成员名称", onKeyDown: function(e){ if(e.key === "Enter") addMember(); }, style: { flex: 1, padding: "8px 12px", borderRadius: "6px", border: "1px solid var(--dsw-alias-border-l2)", background: "var(--dsw-alias-bg-layer-2)", color: "var(--dsw-alias-label-primary)", fontSize: "13px" } }),
+          h("button", { onClick: addMember, style: { padding: "8px 16px", border: "none", borderRadius: "6px", background: "var(--dsw-alias-brand-primary)", color: "var(--dsw-alias-bg-base)", fontWeight: 600, fontSize: "13px", cursor: "pointer" } }, "+")
+        ),
+        data.members.length === 0
+          ? h("div", { style: { fontSize: "12px", color: "var(--dsw-alias-text-disabled)", padding: "8px 0" } }, "暂无成员，点击 + 添加")
+          : data.members.map(function(m) {
+              return h("div", { key: m.member_id, style: { display: "flex", alignItems: "center", gap: "10px", padding: "8px 12px", borderRadius: "6px", background: "var(--dsw-alias-bg-layer-2)", marginBottom: "4px", fontSize: "13px" } },
+                h("span", { style: { color: "var(--dsw-alias-text-disabled)" } }, m.revoked ? "⚪" : "🟢"),
+                h("span", { style: { flex: 1, color: "var(--dsw-alias-label-primary)" } }, m.display_name || ""),
+                h("button", { onClick: function(){ removeMember(m.member_id); }, style: { padding: "4px 8px", border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "4px", background: "transparent", color: "var(--dsw-alias-text-disabled)", fontSize: "11px", cursor: "pointer" } }, "移除")
+              );
+            }),
+
+        // 统计
+        (data.stats && data.stats.members) ?
+          h("div", { style: { marginTop: "16px", padding: "12px", borderRadius: "8px", background: "var(--dsw-alias-bg-layer-2)", fontSize: "12px", color: "var(--dsw-alias-text-disabled)", lineHeight: 1.8 } },
+            "团队成员: " + (data.stats.members.total || 0) + " | 在线: " + (data.stats.members.active || 0) +
+            " | 共享记忆: " + ((data.stats.shared_memory || {}).logs_3d || 0) + " 条")
+          : null,
+
+        // 系统信息
+        h("h3", { style: { fontSize: "13px", fontWeight: 600, margin: "20px 0 8px", color: "var(--dsw-alias-label-primary)" } },
+          "系统信息"),
+        h("div", { style: { fontSize: "12px", color: "var(--dsw-alias-text-disabled)", lineHeight: 1.8 } },
+          "deepDDW v" + (data.version || "0.5.0"),
+          h("br"),
+          "github.com/ccch713/deepddw · MIT License",
+          h("br"),
+          h("a", { href: "https://github.com/ccch713/deepddw/releases", target: "_blank", style: { color: "var(--dsw-alias-brand-primary)" } }, "检查更新 →")
+        )
+      );
+    }
+
+    // ─── 首次弹窗（onboarding）───
+    function OnboardingModal() {
+      var s = React.useState({ selected: "solo", submitting: false });
+      var st = s[0];
+      var setSt = s[1];
+      var MODES = [
+        { value: "solo", label: "一人多设备", desc: "一个人使用多台设备" },
+        { value: "family", label: "家庭多人", desc: "家人之间共享，互相可见" },
+        { value: "team", label: "小团队协作", desc: "团队共享 + 各自空间" }
+      ];
+      function confirm() {
+        setSt({ selected: st.selected, submitting: true });
+        fetch(BASE + "/api/v1/deployment/mode", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ mode: st.selected }) })
+          .then(function(r) {
+            if (r.ok) {
+              localStorage.setItem("deepddw_onboarded", "1");
+              location.reload();
+            } else { setSt({ selected: st.selected, submitting: false }); }
+          })
+          .catch(function(){ setSt({ selected: st.selected, submitting: false }); });
+      }
+      return h("div", { style: { position: "fixed", inset: 0, zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.6)" } },
+        h("div", { style: { background: "var(--dsw-alias-bg-base)", border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "12px", padding: "32px", maxWidth: "420px", width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,.5)" } },
+          h("h2", { style: { margin: "0 0 16px", fontSize: "18px", fontWeight: 700, color: "var(--dsw-alias-label-primary)" } }, "选择使用模式"),
+          h("p", { style: { margin: "0 0 20px", fontSize: "13px", color: "var(--dsw-alias-text-disabled)" } }, "可随时在「设置 → 多用户设置」中切换"),
+          MODES.map(function(m) {
+            return h("label", { key: m.value, style: { display: "flex", alignItems: "flex-start", gap: "10px", padding: "12px 14px", marginBottom: "6px", borderRadius: "8px", cursor: "pointer", border: "2px solid " + (st.selected === m.value ? "var(--dsw-alias-brand-primary)" : "transparent") }, onClick: function(){ setSt({ selected: m.value, submitting: st.submitting }); } },
+              h("input", { type: "radio", checked: st.selected === m.value, readOnly: true, style: { marginTop: "2px" } }),
+              h("div", null,
+                h("div", { style: { fontSize: "14px", fontWeight: 600 } }, m.label),
+                h("div", { style: { fontSize: "12px", color: "var(--dsw-alias-text-disabled)", marginTop: "2px" } }, m.desc)
+              )
+            );
+          }),
+          h("button", { onClick: confirm, disabled: st.submitting, style: { width: "100%", padding: "12px", border: "none", borderRadius: "8px", background: "var(--dsw-alias-brand-primary)", color: "var(--dsw-alias-bg-base)", fontWeight: 600, fontSize: "14px", cursor: "pointer", marginTop: "12px", opacity: st.submitting ? 0.5 : 1 } }, st.submitting ? "保存中..." : "确认")
+        )
       );
     }
 
     exports.apply = function(ctx) {
       try {
+        // 首次弹窗（未配置时显示）
+        if (!localStorage.getItem("deepddw_onboarded")) {
+          fetch(BASE + "/api/v1/deployment/mode").then(function(r){return r.json();}).then(function(d) {
+            if (d && d.data && d.data.configured) {
+              localStorage.setItem("deepddw_onboarded", "1");
+            } else {
+              ctx.slots.inject("settings.onboarding", function() {
+                return ctx.slots.register({
+                  name: "settings.onboarding",
+                  id: "ddw-multiuser-onboard",
+                  order: 50,
+                  label: function() { return "初次设置"; }
+                }, OnboardingModal);
+              });
+            }
+          }).catch(function(){});
+        }
+
+        // 设置面板
         ctx.slots.inject("settings.section", function() {
           return ctx.slots.register({
             name: "settings.section",
@@ -51,7 +190,21 @@ window.__ModuleLoader__.load({
             label: function() { return "多用户设置"; }
           }, SettingsPanel);
         });
-        console.log("[ddw] settings.section registered with React component");
+
+        // 成员识别（未绑定时显示"你是谁"）
+        var deviceId = localStorage.getItem("deepddw_device_id") || ("dev-" + Date.now().toString(36));
+        localStorage.setItem("deepddw_device_id", deviceId);
+        if (!localStorage.getItem("deepddw_member_id")) {
+          fetch(BASE + "/api/v1/member/list").then(function(r){return r.json();}).then(function(d) {
+            var mlist = (d && d.data && d.data.results) || [];
+            if (mlist.length > 0) {
+              // 简化：在设置面板内选择身份（不做全局弹窗避免干扰）
+              console.log("[ddw] 检测到 " + mlist.length + " 个成员，可在设置面板选择身份");
+            }
+          }).catch(function(){});
+        }
+
+        console.log("[ddw] settings.section + onboarding registered");
       } catch(e) {
         console.error("[ddw] registration failed:", e);
       }

@@ -85,7 +85,7 @@ function setupSection(ctx) {
 // ──────────────────────────────────────────────────────────────
 // 主入口
 // ──────────────────────────────────────────────────────────────
-export const inject = ['slots', 'locale', 'http']
+export const inject = ['slots', 'locale']
 
 export function apply(ctx) {
   ctx.effect(() => ctx.locale?.register?.(NS, {

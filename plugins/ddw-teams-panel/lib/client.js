@@ -294,7 +294,7 @@ function SettingsPanelView({ ctx, ref, setMode, addMember, removeMember }) {
 // ═══════════════════════════════════════════════════════════════
 // DSH 插件注册（apply + locale）
 // ═══════════════════════════════════════════════════════════════
-exports.inject = ["slots", "locale", "http"];
+exports.inject = ["slots", "locale"];
 
 exports.apply = function(ctx) {
   // 注册本地化

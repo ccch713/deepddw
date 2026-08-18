@@ -8,3 +8,5 @@
 | 2026-08-17 | v0.5.0 删除 Launcher，deepDDW 纯 cordis 插件 | 用户指令：所有 UI 100% 在 DSH 内，零自定义页面/CSS；网关保留 | 独立 launcher + 前端静态页 |
 | 2026-08-17 | M4 成员识别 → 新建 POST /device/identify 端点 | M4 弹窗调用 POST /device/identify（与 bind-member 同义），新增端点而非改名 | 仅新增，不改动现有 bind-member |
 | 2026-08-17 | 新插件包 ddw-teams-panel 替代 dsh-teams-panel | 新名称体现"deepDDW 多用户"（非 DSH 官方）；删除旧包 | 保留旧包名 |
+| 2026-08-18 | 客户端构建改用手写 lib/client.js 而非 tsdown | tsdown 在当前环境安装失败（npm 依赖冲突）；手写 __ModuleLoader__ 格式已验证可用（dshmarket 参考） | tsdown 正式构建（依赖 resolve 后可切回） |
+| 2026-08-18 | 源码 Vue h() → React h() | DSH 运行时模块表提供 react/require()，Vue 不在模块表中 → 用 React + 无 JSX（DSH 不转译） | Vue CDN 注入 |

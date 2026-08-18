@@ -92,12 +92,13 @@ window.__ModuleLoader__.load({
           h("input", { value: newName, onChange: function(e){ setName(e.target.value); }, placeholder: "输入成员名称", onKeyDown: function(e){ if(e.key === "Enter") addMember(); }, style: { flex: 1, padding: "8px 12px", borderRadius: "6px", border: "1px solid var(--dsw-alias-border-l2)", background: "var(--dsw-alias-bg-layer-2)", color: "var(--dsw-alias-label-primary)", fontSize: "13px" } }),
           h("button", { onClick: addMember, style: { padding: "8px 16px", border: "none", borderRadius: "6px", background: "var(--dsw-alias-brand-primary)", color: "var(--dsw-alias-bg-base)", fontWeight: 600, fontSize: "13px", cursor: "pointer" } }, "+")
         ),
-        data.members.length === 0
+        (data.members || []).filter(function(m) { return !m.revoked; }).length === 0
           ? h("div", { style: { fontSize: "12px", color: "var(--dsw-alias-text-disabled)", padding: "8px 0" } }, "暂无成员，点击 + 添加")
-          : data.members.map(function(m) {
+          : (data.members || []).filter(function(m) { return !m.revoked; }).map(function(m) {
               return h("div", { key: m.member_id, style: { display: "flex", alignItems: "center", gap: "10px", padding: "8px 12px", borderRadius: "6px", background: "var(--dsw-alias-bg-layer-2)", marginBottom: "4px", fontSize: "13px" } },
-                h("span", { style: { color: "var(--dsw-alias-text-disabled)" } }, m.revoked ? "⚪" : "🟢"),
-                h("span", { style: { flex: 1, color: "var(--dsw-alias-label-primary)" } }, m.display_name || ""),
+                h("span", { style: { color: "var(--dsw-alias-text-disabled)" } }, "⚪"),
+                h("span", { style: { flex: 1, color: "var(--dsw-alias-label-primary)" } }, m.display_name || "(未命名)"),
+                h("span", { style: { fontSize: "11px", color: "var(--dsw-alias-text-disabled)" } }, "离线"),
                 h("button", { onClick: function(){ removeMember(m.member_id); }, style: { padding: "4px 8px", border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "4px", background: "transparent", color: "var(--dsw-alias-text-disabled)", fontSize: "11px", cursor: "pointer" } }, "移除")
               );
             }),

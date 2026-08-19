@@ -129,15 +129,14 @@ window.__ModuleLoader__.load({
         );
       }
 
-      return h("div", { style: { padding: "16px", display: "flex", flexDirection: "column", minHeight: "100%" } },
-        h("div", { style: { flex: 1 } },
-          // 标题
-          var currentMemberName = (function() {
+      var currentMemberName = (function() {
             var mid = localStorage.getItem("deepddw_member_id") || "";
             if (!mid) return "\u533f\u540d";
             var found = activeMembers.find(function(m) { return m.member_id === mid; });
             return found ? found.display_name : "\u533f\u540d";
           })();
+      return h("div", { style: { padding: "16px", display: "flex", flexDirection: "column", minHeight: "100%" } },
+        h("div", { style: { flex: 1 } },
           h("div", { style: { marginBottom: "16px" } },
             h("div", { style: { fontSize: "13px", color: "var(--dsw-alias-text-disabled)", marginBottom: "4px" } }, "\u5f53\u524d\u6210\u5458\uff1a" + h("span", { style: { fontWeight: 600, color: "var(--dsw-alias-label-primary)" } }, currentMemberName)),
             h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },

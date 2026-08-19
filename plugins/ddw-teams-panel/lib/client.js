@@ -138,7 +138,7 @@ window.__ModuleLoader__.load({
       return h("div", { style: { padding: "16px", display: "flex", flexDirection: "column", minHeight: "100%" } },
         h("div", { style: { flex: 1 } },
           h("div", { style: { marginBottom: "16px" } },
-            h("div", { style: { fontSize: "13px", color: "var(--dsw-alias-text-disabled)", marginBottom: "4px" } }, "\u5f53\u524d\u6210\u5458\uff1a" + h("span", { style: { fontWeight: 600, color: "var(--dsw-alias-label-primary)" } }, currentMemberName)),
+            h("div", { style: { fontSize: "13px", color: "var(--dsw-alias-text-disabled)", marginBottom: "4px" } }, "\u5f53\u524d\u6210\u5458\uff1a " + String(currentMemberName)),
             h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
               h("h2", { style: { fontSize: "18px", fontWeight: 700, margin: 0, color: "var(--dsw-alias-label-primary)" } }, "\u591a\u7528\u6237\u8bbe\u7f6e"),
               h("span", { style: { fontSize: "12px", padding: "4px 10px", borderRadius: "10px", background: "var(--dsw-alias-bg-layer-2)", color: "var(--dsw-alias-text-disabled)" } }, curMode ? curMode.label : data.mode)

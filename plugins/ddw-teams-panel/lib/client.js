@@ -132,7 +132,7 @@ window.__ModuleLoader__.load({
       var currentMemberName = (function() {
             var mid = localStorage.getItem("deepddw_member_id") || "";
             if (!mid) return "\u533f\u540d";
-            var found = activeMembers.find(function(m) { return m.member_id === mid; });
+            var found = active.find(function(m) { return m.member_id === mid; });
             return found ? found.display_name : "\u533f\u540d";
           })();
       return h("div", { style: { padding: "16px", display: "flex", flexDirection: "column", minHeight: "100%" } },

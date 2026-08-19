@@ -132,9 +132,18 @@ window.__ModuleLoader__.load({
       return h("div", { style: { padding: "16px", display: "flex", flexDirection: "column", minHeight: "100%" } },
         h("div", { style: { flex: 1 } },
           // 标题
-          h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" } },
-            h("h2", { style: { fontSize: "18px", fontWeight: 700, margin: 0, color: "var(--dsw-alias-label-primary)" } }, "\u591a\u7528\u6237\u8bbe\u7f6e"),
-            h("span", { style: { fontSize: "12px", padding: "4px 10px", borderRadius: "10px", background: "var(--dsw-alias-bg-layer-2)", color: "var(--dsw-alias-text-disabled)" } }, curMode ? curMode.label : data.mode)
+          var currentMemberName = (function() {
+            var mid = localStorage.getItem("deepddw_member_id") || "";
+            if (!mid) return "\u533f\u540d";
+            var found = activeMembers.find(function(m) { return m.member_id === mid; });
+            return found ? found.display_name : "\u533f\u540d";
+          })();
+          h("div", { style: { marginBottom: "16px" } },
+            h("div", { style: { fontSize: "13px", color: "var(--dsw-alias-text-disabled)", marginBottom: "4px" } }, "\u5f53\u524d\u6210\u5458\uff1a" + h("span", { style: { fontWeight: 600, color: "var(--dsw-alias-label-primary)" } }, currentMemberName)),
+            h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+              h("h2", { style: { fontSize: "18px", fontWeight: 700, margin: 0, color: "var(--dsw-alias-label-primary)" } }, "\u591a\u7528\u6237\u8bbe\u7f6e"),
+              h("span", { style: { fontSize: "12px", padding: "4px 10px", borderRadius: "10px", background: "var(--dsw-alias-bg-layer-2)", color: "var(--dsw-alias-text-disabled)" } }, curMode ? curMode.label : data.mode)
+            )
           ),
           // 模式下拉
           h("div", { style: { background: "var(--dsw-alias-bg-layer-2)", borderRadius: "10px", padding: "14px", marginBottom: "12px" } },
@@ -235,6 +244,10 @@ window.__ModuleLoader__.load({
         }
         ctx.slots.inject("settings.section",function(){return ctx.slots.register({name:"settings.section",id:"ddw-multiuser-settings",order:100,label:function(){return "\u591a\u7528\u6237\u8bbe\u7f6e";}},SettingsPanel);});
         var deviceId=localStorage.getItem("deepddw_device_id")||("dev-"+Date.now().toString(36));localStorage.setItem("deepddw_device_id",deviceId);
+        // 每次页面加载都注册设备心跳（解决在线状态问题）
+        var currentMemberId = localStorage.getItem("deepddw_member_id") || "";
+        fetch(BASE+"/api/v1/device/identify", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({device_id:deviceId,member_id:currentMemberId})}).catch(function(){});
+
         if(!localStorage.getItem("deepddw_member_id")){
           fetch(BASE+"/api/v1/member/list").then(function(r){return r.json();}).then(function(d){
             var active=((d&&d.data&&d.data.results)||[]).filter(function(m){return !m.revoked&&!m.deleted;});

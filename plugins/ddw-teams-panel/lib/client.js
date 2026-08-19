@@ -133,7 +133,7 @@ window.__ModuleLoader__.load({
             var mid = localStorage.getItem("deepddw_member_id") || "";
             if (!mid) return "\u533f\u540d";
             var found = active.find(function(m) { return m.member_id === mid; });
-            return found ? found.display_name : "\u533f\u540d";
+            return found ? String(found.display_name || "\u533f\u540d") : "\u533f\u540d";
           })();
       return h("div", { style: { padding: "16px", display: "flex", flexDirection: "column", minHeight: "100%" } },
         h("div", { style: { flex: 1 } },
@@ -245,6 +245,7 @@ window.__ModuleLoader__.load({
         var deviceId=localStorage.getItem("deepddw_device_id")||("dev-"+Date.now().toString(36));localStorage.setItem("deepddw_device_id",deviceId);
         // 每次页面加载都注册设备心跳（解决在线状态问题）
         var currentMemberId = localStorage.getItem("deepddw_member_id") || "";
+        fetch(BASE+"/api/v1/device/register", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({device_id:deviceId,device_name:"web-client",workspace:localStorage.getItem("deepddw_workspace")||"shared"})}).catch(function(){});
         fetch(BASE+"/api/v1/device/identify", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({device_id:deviceId,member_id:currentMemberId})}).catch(function(){});
 
         if(!localStorage.getItem("deepddw_member_id")){

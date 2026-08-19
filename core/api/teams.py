@@ -19,10 +19,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 from pydantic import BaseModel, Field
 
-from core.api_response import ok
+from core.api_response import fail, ok
 from core.config import get_deployment_mode, get_settings
 from core.security.token_gate import require_access_token
 
@@ -554,4 +554,4 @@ async def extract_member_memory(
         return ok({"extracted": extracted, "deleted": len(member_ids)})
     except Exception as e:
         logger.warning("extract member memory failed: %s", e)
-        return error(500, "提取失败: " + str(e))
+        return fail("提取失败: " + str(e), code=500)

@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [0.5.0] - 2026-08-18
 
 > **"DSH for Teams" 架构重写 — 深度重构为 DSH 原生插件，实现多用户记忆/知识库隔离。**
+> 📌 **Listed in [awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge)** (500+ stars DSH 生态导航，Memory & Knowledge 板块唯一多设备/团队方案)。
 
 ### Changed — 架构重写
 

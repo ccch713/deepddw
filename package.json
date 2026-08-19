@@ -1,1 +1,14 @@
-{}
+{
+  "name": "deepddw-build",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsdown",
+    "watch": "tsdown --watch",
+    "build:panel": "tsdown"
+  },
+  "devDependencies": {
+    "tsdown": "^0.22.14",
+    "typescript": "^5.7.2"
+  }
+}

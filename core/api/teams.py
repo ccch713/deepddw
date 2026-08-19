@@ -19,10 +19,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 from pydantic import BaseModel, Field
 
-from core.api_response import ok
+from core.api_response import fail, ok
 from core.config import get_deployment_mode, get_settings
 from core.security.token_gate import require_access_token
 
@@ -72,6 +72,8 @@ def _ensure_members_table(conn) -> None:  # noqa: ANN001
             invited_by   TEXT NOT NULL DEFAULT '',
             registered_at TEXT NOT NULL,
             revoked      INTEGER NOT NULL DEFAULT 0,
+            deleted      INTEGER NOT NULL DEFAULT 0,
+            deleted_at   TEXT NOT NULL DEFAULT '',
             workspace    TEXT NOT NULL DEFAULT 'shared'
         )
         """
@@ -504,3 +506,52 @@ async def admin_distill(
         return ok({"ok": False, "note": f"无蒸馏目标（mode={mode}）"})
     result = await targets[0].distill_fn(recent_days=payload.recent_days)
     return ok(result)
+
+
+# ─── v0.5.0-patch8：成员记忆提取（提取到团队共享空间）
+@router.post("/member/extract")
+async def extract_member_memory(
+    member_ids: List[str] = Body(..., description="要提取记忆的成员 ID 列表"),
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """将指定成员的个人记忆/知识库提取到团队共享空间，然后标记为"已删除"。"""
+    try:
+        conn = _get_conn()
+        extracted = 0
+        for mid in member_ids:
+            if not mid or not mid.startswith("m-"):
+                continue
+            ns = f"member:{mid}"
+            # 提取记忆到 team:default
+            memories = conn.execute(
+                "SELECT key, value, tags FROM memories WHERE namespace LIKE ? ORDER BY updated_at DESC LIMIT 100",
+                (f"{ns}%",)
+            ).fetchall()
+            for row in memories:
+                tags = row[2] or ""
+                new_tags = f"extracted_from:{mid},{tags}" if tags else f"extracted_from:{mid}"
+                try:
+                    conn.execute(
+                        "INSERT OR REPLACE INTO memories (namespace, key, value, tags, updated_at) VALUES (?, ?, ?, ?, ?)",
+                        ("team:default", row[0], row[1], new_tags, time.time())
+                    )
+                    extracted += 1
+                except Exception:
+                    pass
+            # 标记为已删除（移入 deleted_members）
+            # 无 deleted 字段时回退到 revoked=2 标记
+            try:
+                conn.execute(
+                    "UPDATE members SET deleted = 1, deleted_at = ? WHERE member_id = ?",
+                    (time.strftime("%Y-%m-%d %H:%M:%S"), mid)
+                )
+            except sqlite3.OperationalError:
+                conn.execute(
+                    "UPDATE members SET revoked = 2 WHERE member_id = ?",
+                    (mid,)
+                )
+        conn.commit()
+        return ok({"extracted": extracted, "deleted": len(member_ids)})
+    except Exception as e:
+        logger.warning("extract member memory failed: %s", e)
+        return fail("提取失败: " + str(e), code=500)

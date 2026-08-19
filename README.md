@@ -24,7 +24,17 @@ git clone https://github.com/ccch713/deepddw.git && cd deepddw
 
 > 📸 *Screenshot: phone / tablet accessing the workbench (coming soon).*
 
-**Status**: v0.3.0 · MIT · CI (pytest + ruff) ✅ · Multi-device on LAN + workspace isolation + backup/restore + TLS (opt-in) + LLM reflections & ranked memory search · [Listed in awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · Roadmap below
+**Status**: v0.5.0 · MIT · CI (pytest + ruff) ✅ · DSH for Teams — multi-user, LAN multi-device, memory & KB with team distillation · [Listed in awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · Roadmap below
+
+> ## ⚠️ IMPORTANT — Read Before Installing
+>
+> deepDDW implements **its own memory and knowledge-base isolation**. To avoid conflicts or memory confusion, **before installing**:
+>
+> 1. **Back up** your existing memory and knowledge-base contents (wherever they live in your DSH setup);
+> 2. **Uninstall/disable** any other memory or knowledge-base plugins you have installed;
+> 3. Only then install deepDDW and let it own the memory & knowledge-base stack.
+>
+> Running deepDDW alongside other memory/KB plugins may cause **data conflicts or memory mixing** between namespaces. You have been warned. ⚠️
 
 ---
 

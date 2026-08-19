@@ -25,7 +25,17 @@ git clone https://github.com/ccch713/deepddw.git && cd deepddw
 
 > 📸 *截图位：手机/平板访问工作台实拍（稍后补充）。*
 
-**当前状态**：v0.3.0 · MIT · CI（pytest + ruff）✅ · 多设备联机 + 工作区隔离 + 备份恢复 + 可选 TLS + 反思 LLM 化与记忆检索优化 · [入选 awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · 路线图见文末
+**当前状态**：v0.5.0 · MIT · CI（pytest + ruff）✅ · DSH for Teams —— 多用户、局域网多设备、记忆与知识库团队蒸馏 · [入选 awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · 路线图见文末
+
+> ## ⚠️ 重要 —— 安装前必读
+>
+> deepDDW 实现了**独立的记忆体与知识库隔离机制**。为避免冲突或记忆混乱，**安装前**请务必：
+>
+> 1. **备份**你现有的记忆体与知识库内容（无论它们在 DSH 环境中的哪个位置）；
+> 2. **卸载/停用**你已安装的其他任何记忆体或知识库插件；
+> 3. 然后再安装 deepDDW，让它接管记忆体与知识库。
+>
+> 如果 deepDDW 与其他记忆/知识库插件同时运行，可能导致**数据冲突或命名空间之间的记忆混淆**。特此警告。⚠️
 
 ---
 

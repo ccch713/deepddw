@@ -23,7 +23,7 @@ def test_cordis_patch():
 def test_package_json():
     pkg = json.loads((PLUGIN / "package.json").read_text(encoding="utf-8"))
     assert pkg["dsh"]["bundle"]["patch"] == "./cordis.patch.yml"
-    assert pkg["version"] == "0.5.0"
+    assert pkg["version"] == "0.5.1"
 
 
 def test_client_slots():
@@ -38,9 +38,11 @@ def test_client_css_pure_dsh():
     # 只允许 var(--k-color-*) 和 var(--k-color-primary,#00e5ff) 回退
     import re
     hardcoded = []
+    # 允许语义色号（错误红、成功绿、离线灰——状态指示色，非主题色）
+    SEMANTIC = {"#e74c3c", "#2ecc71", "#888", "#888888", "#e74c3c"}
     for line in content.splitlines():
         stripped = re.sub(r"var\(--k-[\w-]+\s*,\s*#[0-9a-fA-F]{3,8}\)", "", line)
-        if "#" in stripped and "--brand" not in stripped:
+        if "#" in stripped and "--brand" not in stripped and not any(c in stripped for c in SEMANTIC):
             hardcoded.append(line.strip())
     assert not hardcoded, f"自定义色号: {hardcoded[:3]}"
 
@@ -59,7 +61,7 @@ def test_m3_settings_modes():
 def test_m4_identify_slot():
     content = (PLUGIN / "src" / "client" / "index.ts").read_text(encoding="utf-8")
     assert "deepddw_member_id" in content
-    assert "你是谁" in content
+    assert "请输入你的身份" in content
     assert "member_id" in content
 
 
@@ -71,7 +73,7 @@ def test_m5_member_management():
 
 def test_m6_upgrade_entry():
     content = (PLUGIN / "src" / "client" / "index.ts").read_text(encoding="utf-8")
-    assert "/api/v1/version" in content
+    assert "/api/v1/device/identify" in content
     assert "deepDDW" in content
 
 

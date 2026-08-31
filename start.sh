@@ -4,7 +4,7 @@
 # 数据与日志: ~/deepddw/data/ ~/deepddw/logs/
 
 DEEPDDW_HOME="$HOME/deepddw"
-PYTHON="/opt/homebrew/bin/python3.12"
+PYTHON="/Users/chenye/.local/bin/python3.11"
 PORT=8500
 
 start() {

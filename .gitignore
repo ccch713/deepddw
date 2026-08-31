@@ -35,3 +35,4 @@ logs/
 *.sqlite
 *.sqlite3
 .deepddw.pid
+venv/

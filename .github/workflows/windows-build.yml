@@ -1,10 +1,12 @@
-# deepDDW Windows 出包 CI — windows-latest 自动构建 exe（维护升级友好）
-# 触发：手动（workflow_dispatch）+ main 推送（可自行去掉 on.push 只留手动）
-# 产出：deepddw-windows.zip（deepddw.exe + _internal/），见 Actions Artifacts
+# deepDDW Windows 出包 CI — v0.5.0+（tag 触发 + 自动 attach Release）
+# 触发：v* tag 推送（自动构建+自动 attach 到 Release）+ main push（CI 验证）+ workflow_dispatch（紧急）
+# 产出：deepddw-windows.zip（deepddw.exe + _internal/），tag 触发时自动 attach 到 GitHub Release
 name: windows-build
 
 on:
-  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
   push:
     branches: [main]
     paths:
@@ -15,6 +17,10 @@ on:
       - 'scripts/build_windows.py'
       - 'entry_win.py'
       - '.github/workflows/windows-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -100,3 +106,12 @@ jobs:
           name: deepddw-windows
           path: deepddw-windows.zip
           retention-days: 30
+
+      # 自动 attach 到 Release（仅 v* tag 触发时执行）
+      - name: Attach EXE to Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: deepddw-windows.zip
+          fail_on_unmatched_files: false

@@ -4,6 +4,15 @@ All notable changes to deepDDW are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added — 迁移来源适配器
+
+- **`format: "claude-code"`** — 直接吃 Claude Code 的 `CLAUDE.md` / `MEMORY.md`：`- **key**: value` 加粗要点 → user 偏好层、`## 分段` → notes 层；H1 文件标题与 `- [ ]` 任务勾选行自动跳过
+- **`format: "codex"`** — 吃 Codex CLI 的 `AGENTS.md`：分段与顶层约定 → notes 层（顶层内容归入 `instructions` 单条）
+- **`format: "auto"`** — 按内容探测 deepddw / generic / claude-code / codex / markdown，`dry_run` 预检响应新增 `format` 字段回显探测结果
+- 来源溯源：claude-code / codex 导入默认按来源命名空间隔离（`claude-code` / `codex`，显式指定 `namespace` 时优先），每行打 `import:<来源>` 标签
+
 ## [0.6.0] - 2026-09-16
 
 > **社区「可治理」需求落地：迁移导入导出、作用域提升、无痕会话、检索健康、CJK 调优。**

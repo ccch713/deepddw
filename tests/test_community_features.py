@@ -50,7 +50,99 @@ def test_import_jsonl_deepddw_format():
     assert "偏好语言" in keys
 
 
+def test_import_claude_code_md():
+    from core.api.migration import _normalize_rows, apply_import
+    from core.knowledge import memory_note_list, memory_user_list
+
+    md = """# CLAUDE.md
+
+- **语言**: 中文回复
+- **代码风格**: 类型注解优先
+- [ ] 待办不算记忆
+
+## 部署
+
+用 docker compose，端口 8600。
+"""
+    rows = _normalize_rows("claude-code", md, "imported")
+    user_rows = [r for r in rows if r["layer"] == "user"]
+    note_rows = [r for r in rows if r["layer"] == "notes"]
+    assert {r["key"] for r in user_rows} == {"语言", "代码风格"}
+    assert any(r["key"] == "部署" for r in note_rows)
+    # H1 与任务勾选行不产生条目
+    assert not any("CLAUDE.md" in r["key"] for r in rows)
+    assert not any("待办" in r["key"] for r in rows)
+    # 溯源：默认命名空间按来源隔离 + import 标签
+    assert all(r["namespace"] == "claude-code" for r in rows)
+    assert all("import:claude-code" in r["tags"] for r in rows)
+    apply_import(rows, workspace="shared")
+    assert "语言" in {r["key"] for r in memory_user_list("shared").get("results", [])}
+    assert "部署" in {r["key"] for r in memory_note_list("shared").get("results", [])}
+
+
+def test_import_codex_agents_md():
+    from core.api.migration import _normalize_rows, apply_import
+    from core.knowledge import memory_note_list
+
+    md = """# AGENTS.md
+
+## Coding conventions
+
+- 类型注解必须齐全
+- 测试与实现同一 PR
+
+## Deployment
+
+用 pnpm，不用 npm。
+"""
+    rows = _normalize_rows("codex", md, "imported")
+    assert all(r["layer"] == "notes" for r in rows)
+    assert any(r["key"] == "Coding conventions" for r in rows)
+    assert any(r["key"] == "Deployment" and "pnpm" in r["value"] for r in rows)
+    assert all(r["namespace"] == "codex" for r in rows)
+    assert all("import:codex" in r["tags"] for r in rows)
+    apply_import(rows, workspace="shared")
+    keys = {r["key"] for r in memory_note_list("shared").get("results", [])}
+    assert "Coding conventions" in keys
+
+
+def test_import_codex_top_level_instructions():
+    from core.api.migration import _normalize_rows
+
+    md = """# AGENTS.md
+
+Always reply in the user's language.
+Keep answers short.
+"""
+    rows = _normalize_rows("codex", md, "imported")
+    assert len(rows) == 1
+    assert rows[0]["key"] == "instructions"
+    assert "Always reply" in rows[0]["value"]
+
+
+def test_import_auto_detect():
+    from core.api.migration import _detect_format, _resolve_format
+
+    claude_md = "# CLAUDE.md\n\n- **语言**: 中文\n"
+    agents_md = "# AGENTS.md\n\n## Scope\n写测试。\n"
+    deepddw_jsonl = json.dumps({"layer": "user", "key": "k", "value": "v"}, ensure_ascii=False)
+    generic_jsonl = json.dumps({"key": "k", "value": "v"}, ensure_ascii=False)
+    assert _detect_format(claude_md) == "claude-code"
+    assert _detect_format(agents_md) == "codex"
+    assert _detect_format(deepddw_jsonl) == "deepddw"
+    assert _detect_format(generic_jsonl) == "generic"
+    assert _resolve_format("auto", claude_md) == "claude-code"
+    assert _resolve_format("AUTO", agents_md) == "codex"
+    # 显式指定 namespace 时不被来源默认值覆盖
+    from core.api.migration import _normalize_rows
+
+    rows = _normalize_rows("claude-code", claude_md, "teamA")
+    assert rows[0]["namespace"] == "teamA"
+    assert rows[0]["tags"] == ["import:claude-code"]
+
+
 def test_import_markdown_sections():
+
     from core.api.migration import _normalize_rows, apply_import
     from core.knowledge import memory_note_list
 

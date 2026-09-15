@@ -85,7 +85,7 @@ def test_sqlite_wal_pragma_enabled(tmp_path):
     import core.database.session as db_session
     from sqlalchemy import text
 
-    asyncio.get_event_loop().run_until_complete(_ensure_engine(tmp_path))
+    asyncio.run(_ensure_engine(tmp_path))
     assert db_session._engine is not None
 
     async def check() -> None:
@@ -96,7 +96,7 @@ def test_sqlite_wal_pragma_enabled(tmp_path):
             sync = (await conn.execute(text("PRAGMA synchronous"))).scalar()
         return mode, timeout, sync
 
-    mode, timeout, sync = asyncio.get_event_loop().run_until_complete(check())
+    mode, timeout, sync = asyncio.run(check())
     assert str(mode).lower() == "wal"
     assert timeout == 5000
     assert sync == 1  # NORMAL

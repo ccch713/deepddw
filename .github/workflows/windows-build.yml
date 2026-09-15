@@ -3,20 +3,14 @@
 # 产出：deepddw-windows.zip（deepddw.exe + _internal/），tag 触发时自动 attach 到 GitHub Release
 name: windows-build
 
+# 注意：一个 workflow 只能有一个 push 块（重复键会被 GitHub 判为非法文件，
+# 2026-08-31 起所有 windows-build 运行均因此未执行任何 job）。
+# paths 过滤撤掉：与 tags 混在同一 push 块时对 tag 推送不可靠。
 on:
   push:
+    branches: [main]
     tags:
       - 'v*'
-  push:
-    branches: [main]
-    paths:
-      - 'core/**'
-      - 'plugins/**'
-      - 'frontend/**'
-      - 'requirements.txt'
-      - 'scripts/build_windows.py'
-      - 'entry_win.py'
-      - '.github/workflows/windows-build.yml'
   workflow_dispatch:
 
 permissions:

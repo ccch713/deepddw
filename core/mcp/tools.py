@@ -371,6 +371,15 @@ async def memory_put_handler(
     from core.knowledge import memory_put
 
     try:
+        from core.privacy import is_incognito
+
+        sid = ctx.get("session_id") or args.get("session_id")
+        if is_incognito(sid) or is_incognito(None):
+            return {
+                "content": [{"type": "text", "text": "无痕会话：本条记忆未写入（隐私模式）"}],
+                "ok": False,
+                "incognito": True,
+            }
         result = memory_put(
             namespace=str(args.get("namespace") or "default"),
             key=str(args.get("key", "")),

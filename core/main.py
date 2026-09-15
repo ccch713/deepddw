@@ -296,6 +296,16 @@ def create_app() -> FastAPI:
     from core.api.files import router as files_router
 
     app.include_router(files_router)
+    # P0/P1（社区需求）：迁移导入导出 + 作用域提升 + 无痕/检索健康
+    from core.api.migration import router as migration_router
+
+    app.include_router(migration_router)
+    from core.api.scope import router as scope_router
+
+    app.include_router(scope_router)
+    from core.api.privacy_health import router as privacy_router
+
+    app.include_router(privacy_router)
 
     # 健康检查（公开）
     @app.get("/health")

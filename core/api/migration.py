@@ -4,6 +4,10 @@
 - ``deepddw`` JSONL：``{"layer":"user|notes|logs|reflection","key","value","workspace"?}``
 - ``generic`` JSONL：``{"key","value","tags"?}`` → memory_entries
 - ``markdown``：Claude MEMORY.md / 笔记导出（``## 标题`` 或 ``- key: value``）
+- ``claude-code``：Claude Code 的 CLAUDE.md / MEMORY.md（``## 分段`` → notes、
+  ``- **key**: value`` 加粗要点 → user 偏好、H1 标题与任务勾选行跳过）
+- ``codex``：Codex CLI 的 AGENTS.md（``## 分段`` 与顶层约定 → notes）
+- ``auto``：按内容探测以上格式
 
 导出：
 - JSONL（分层记忆）
@@ -32,7 +36,7 @@ _LAYER_ALLOWED = {"user", "notes", "logs", "reflection", "entries"}
 
 
 class ImportPayload(BaseModel):
-    format: str = Field("deepddw", description="deepddw|generic|markdown")
+    format: str = Field("deepddw", description="deepddw|generic|markdown|claude-code|codex|auto")
     content: str = Field(..., min_length=1, max_length=8_000_000)
     workspace: str = Field("shared", max_length=32)
     namespace: str = Field("imported", max_length=64)
@@ -55,6 +59,11 @@ def _parse_jsonl(content: str) -> List[Dict[str, Any]]:
     return rows
 
 
+_KV_RE = re.compile(r"^[-*]\s+([^:：]{1,120})\s*[:：]\s*(.+)$")
+_KV_BOLD_RE = re.compile(r"^[-*]\s+\*\*(.{1,120}?)\*\*\s*[:：]\s*(.+)$")
+_CHECKBOX_RE = re.compile(r"^[-*]\s+\[[ xX]\]\s+")
+
+
 def _parse_markdown(content: str) -> List[Dict[str, Any]]:
     """MEMORY.md / 笔记：``## 标题`` 分段，正文作 value；或 ``- key: value``。"""
     rows: List[Dict[str, Any]] = []
@@ -68,14 +77,13 @@ def _parse_markdown(content: str) -> List[Dict[str, Any]]:
             rows.append({"layer": "notes", "key": section_title, "value": body})
         section_buf = []
 
-    kv_re = re.compile(r"^[-*]\s+([^:：]{1,120})\s*[:：]\s*(.+)$")
     for raw in content.splitlines():
         line = raw.rstrip()
         if re.match(r"^#{1,3}\s+", line):
             _flush()
             section_title = re.sub(r"^#{1,3}\s+", "", line).strip()[:120]
             continue
-        m = kv_re.match(line.strip())
+        m = _KV_RE.match(line.strip())
         if m and not section_title:
             rows.append({
                 "layer": "user",
@@ -89,16 +97,135 @@ def _parse_markdown(content: str) -> List[Dict[str, Any]]:
     return rows
 
 
+def _parse_claude_md(content: str) -> List[Dict[str, Any]]:
+    """Claude Code 的 CLAUDE.md / MEMORY.md。
+
+    - H1 文件标题跳过；``- [ ]`` 任务勾选行跳过（任务不是记忆）。
+    - ``- **key**: value`` 加粗要点（Claude Code 记忆惯例）→ user 层。
+    - ``## 分段`` 正文 → notes 层。
+    """
+    rows: List[Dict[str, Any]] = []
+    section_title = ""
+    section_buf: List[str] = []
+
+    def _flush() -> None:
+        nonlocal section_buf, section_title
+        body = "\n".join(section_buf).strip()
+        if section_title and body:
+            rows.append({"layer": "notes", "key": section_title, "value": body})
+        section_buf = []
+
+    for raw in content.splitlines():
+        line = raw.rstrip()
+        if re.match(r"^#\s+", line):
+            continue  # H1 文件标题
+        if re.match(r"^#{2,3}\s+", line):
+            _flush()
+            section_title = re.sub(r"^#{2,3}\s+", "", line).strip()[:120]
+            continue
+        stripped = line.strip()
+        if _CHECKBOX_RE.match(stripped):
+            continue
+        m = _KV_BOLD_RE.match(stripped) or _KV_RE.match(stripped)
+        if m:
+            rows.append({
+                "layer": "user",
+                "key": m.group(1).strip().strip("*").strip(),
+                "value": m.group(2).strip(),
+            })
+            continue
+        if stripped:
+            section_buf.append(line)
+    _flush()
+    return rows
+
+
+def _parse_agents_md(content: str) -> List[Dict[str, Any]]:
+    """Codex CLI 的 AGENTS.md：``## 分段`` → notes；分段前的顶层约定 → 单条 notes。"""
+    rows: List[Dict[str, Any]] = []
+    section_title = ""
+    section_buf: List[str] = []
+
+    def _flush() -> None:
+        nonlocal section_buf, section_title
+        body = "\n".join(section_buf).strip()
+        if body:
+            rows.append({
+                "layer": "notes",
+                "key": (section_title or "instructions")[:120],
+                "value": body,
+            })
+        section_buf = []
+
+    for raw in content.splitlines():
+        line = raw.rstrip()
+        if re.match(r"^#\s+", line):
+            continue  # H1 文件标题
+        if re.match(r"^#{2,3}\s+", line):
+            _flush()
+            section_title = re.sub(r"^#{2,3}\s+", "", line).strip()[:120]
+            continue
+        if line.strip():
+            section_buf.append(line)
+    _flush()
+    return rows
+
+
+def _detect_format(content: str) -> str:
+    """按内容探测导入格式（``format: "auto"`` 时使用）。"""
+    for line in content.splitlines():
+        line = line.strip()
+        if not line or line.startswith("<!--"):
+            continue
+        if line.startswith("{"):
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                return "markdown"
+            if isinstance(obj, dict):
+                return "deepddw" if "layer" in obj else "generic"
+            return "markdown"
+        m = re.match(r"^#\s+(.{0,40})", line)
+        if m:
+            head = m.group(1).strip().lower()
+            if "agents" in head:
+                return "codex"
+            if "claude" in head or "memory" in head or "记忆" in head:
+                return "claude-code"
+            return "markdown"
+        if _KV_BOLD_RE.match(line):
+            return "claude-code"
+        return "markdown"
+    return "markdown"
+
+
+def _resolve_format(fmt: str, content: str) -> str:
+    fmt = (fmt or "deepddw").lower().strip()
+    if fmt == "auto":
+        return _detect_format(content)
+    return fmt
+
+
 def _normalize_rows(fmt: str, content: str, default_ns: str) -> List[Dict[str, Any]]:
-    fmt = (fmt or "deepddw").lower()
+    fmt = _resolve_format(fmt, content)
+    ns_default = default_ns
+    provenance: List[str] = []
     if fmt == "markdown":
         raw = _parse_markdown(content)
+    elif fmt == "claude-code":
+        raw = _parse_claude_md(content)
+        provenance = ["import:claude-code"]
+    elif fmt == "codex":
+        raw = _parse_agents_md(content)
+        provenance = ["import:codex"]
     elif fmt in ("generic", "porter", "claude"):
         raw = _parse_jsonl(content)
         for r in raw:
             r.setdefault("layer", "entries")
     else:
         raw = _parse_jsonl(content)
+    if provenance and default_ns.strip() == "imported":
+        ns_default = fmt  # 溯源：未显式指定命名空间时按来源隔离
     out: List[Dict[str, Any]] = []
     for r in raw:
         key = str(r.get("key") or r.get("title") or "").strip()
@@ -110,13 +237,17 @@ def _normalize_rows(fmt: str, content: str, default_ns: str) -> List[Dict[str, A
         layer = str(r.get("layer") or "notes").lower()
         if layer not in _LAYER_ALLOWED:
             layer = "notes"
+        tags = [str(t) for t in (r.get("tags") or [])]
+        for p in provenance:
+            if p not in tags:
+                tags.append(p)
         out.append({
             "layer": layer,
             "key": key,
             "value": value,
-            "tags": list(r.get("tags") or []),
+            "tags": tags,
             "workspace": str(r.get("workspace") or "").strip() or None,
-            "namespace": str(r.get("namespace") or default_ns).strip() or default_ns,
+            "namespace": str(r.get("namespace") or ns_default).strip() or ns_default,
             "content": value,  # logs/reflection 列名兼容
         })
     return out
@@ -236,7 +367,8 @@ async def import_endpoint(
 ) -> Dict[str, Any]:
     if payload.session_id and is_incognito(payload.session_id):
         return fail("incognito session cannot import into persistent memory")
-    rows = _normalize_rows(payload.format, payload.content, payload.namespace)
+    resolved = _resolve_format(payload.format, payload.content)
+    rows = _normalize_rows(resolved, payload.content, payload.namespace)
     if not rows:
         return fail("no importable rows found")
     result = apply_import(
@@ -245,6 +377,7 @@ async def import_endpoint(
         namespace=payload.namespace,
         dry_run=payload.dry_run,
     )
+    result["format"] = resolved
     return ok(result)
 
 

@@ -130,8 +130,6 @@ def apply_import(
 ) -> Dict[str, Any]:
     """把规范化行写入对应分层表；dry_run 只计数。"""
     from core.knowledge import (
-        get_conn,
-        close_conn,
         memory_note_put,
         memory_user_put,
         memory_log_append,

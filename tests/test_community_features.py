@@ -139,7 +139,6 @@ def test_scope_promote_conflict_and_resolve(tmp_path, monkeypatch):
 
 def test_incognito_blocks_memory_put():
     from core.privacy import set_incognito, is_incognito, reset_privacy_map
-    from core.knowledge import memory_put, memory_get
 
     set_incognito("sess-1", True)
     assert is_incognito("sess-1") is True

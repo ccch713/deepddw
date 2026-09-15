@@ -25,7 +25,7 @@ git clone https://github.com/ccch713/deepddw.git && cd deepddw
 
 > 📸 *截图位：手机/平板访问工作台实拍（稍后补充）。*
 
-**当前状态**：v0.5.0 · MIT · CI（pytest + ruff）✅ · DSH for Teams —— 多用户、局域网多设备、记忆与知识库团队蒸馏 · [入选 awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · 路线图见文末
+**当前状态**：v0.6.0 · MIT · CI（pytest + ruff）✅ · DSH for Teams —— 多用户、局域网多设备、记忆与知识库团队蒸馏 · 迁移导入导出 / 作用域提升 / 无痕会话 / 检索健康 · [入选 awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · 路线图见文末
 
 > ## ⚠️ 重要 —— 安装前必读
 >

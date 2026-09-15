@@ -4,6 +4,28 @@ All notable changes to deepDDW are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-09-16
+
+> **社区「可治理」需求落地：迁移导入导出、作用域提升、无痕会话、检索健康、CJK 调优。**
+
+### Added — P0
+
+- **迁移导入器** `POST /api/v1/migration/import` — 支持 deepddw JSONL / generic JSONL / Markdown（MEMORY.md）→ 分层记忆；`dry_run` 预检
+- **开放导出** `POST /api/v1/migration/export` — JSONL / Markdown 导出 workspace 记忆（数据逃生舱）
+- **作用域提升** `POST /api/v1/scope/promote` — 私有 workspace 笔记/偏好提升到 shared 团队库；同 key 不同 value 自动入冲突队列
+- **冲突裁决** `GET /api/v1/scope/conflicts` + `POST .../resolve` — approve / reject / use_source / use_target
+- **无痕会话** `POST /api/v1/privacy/incognito` + chat `privacy: true` — 本会话不写记忆、不自动沉淀；MCP `ddw.memory.put` 同步拦截
+
+### Added — P1
+
+- **检索健康** `GET /api/v1/privacy/retrieval-health` — FTS5 / LanceDB / kb_search 显式探针，禁止静默降级
+- **注入预览** `GET /api/v1/privacy/injection-preview` — 可观测「此刻注入了什么」
+- **CJK 检索调优** — 中文 bigram 分词 + `DDW_MEMORY_MIN_SCORE` 相关性阈值
+
+### Tests
+
+- `tests/test_community_features.py` — 13 项：导入/导出/提升/冲突/无痕/健康/CJK
+
 ## [0.5.1] - 2026-08-20
 
 > **修复了多用户设置面板无法加载、间歇性 API 请求失败、成员在线状态不准确三大问题。**

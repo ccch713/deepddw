@@ -17,6 +17,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import math
+import os
 import re
 import sqlite3
 import threading
@@ -1259,6 +1260,40 @@ def memory_search_v2(
 # 跨层排序权重（v0.3.0 记忆检索优化）：用户规则 > 项目笔记 > 反思 > 日志
 _LAYER_WEIGHT = {"user": 4, "notes": 3, "reflection": 2, "logs": 1}
 
+# P1-5：相关性阈值——命中分低于该值的结果被过滤（可 env 覆盖）
+_DEFAULT_MIN_SCORE = 1.0
+
+
+def _min_score() -> float:
+    try:
+        raw = os.environ.get("DDW_MEMORY_MIN_SCORE", "").strip()
+        return float(raw) if raw else _DEFAULT_MIN_SCORE
+    except (TypeError, ValueError):
+        return _DEFAULT_MIN_SCORE
+
+
+def _tokenize_query(query: str) -> List[str]:
+    """查询分词：空白/标点切分 + 中日文字符 bigram（CJK 检索调优）。
+
+    纯中文查询「部署流程」→ 部署/署流/流程 + 全串；避免整句 LIKE 无命中。
+    """
+    parts = [t for t in re.split(r"[\s,，、;；|/]+", query) if t]
+    tokens: List[str] = []
+    for part in parts[:8]:
+        tokens.append(part)
+        # CJK 连续段生成 bigram（≤12 字，防爆炸）
+        for run in re.findall(r"[一-鿿㐀-䶿]{2,12}", part):
+            for i in range(len(run) - 1):
+                tokens.append(run[i : i + 2])
+    # 去重保序
+    seen: set = set()
+    out: List[str] = []
+    for t in tokens:
+        if t and t not in seen:
+            seen.add(t)
+            out.append(t)
+    return out[:16]
+
 
 def _score_item(it: Dict[str, Any], tokens: List[str], now_ts: float) -> float:
     """轻量相关性评分：命中关键词数 × 层权重 + 新鲜度小量加分。
@@ -1301,7 +1336,7 @@ def _search_v2_tokens(
     query = sanitize_unicode(query or "", max_length=200)
     tokens: List[str] = tokens_override or []
     if not tokens:
-        tokens = [t for t in re.split(r"[\s,，、]+", query) if t][:8]
+        tokens = _tokenize_query(query)
     if not tokens:
         return {
             "results": [], "degraded": False, "note": "empty query",
@@ -1355,12 +1390,17 @@ def _search_v2_tokens(
             seen.add(sig)
             dedup.append(it)
         # v0.3.0：跨层排序——评分降序（命中数×层权重 + 新鲜度），稳定排序
+        # P1-5：相关性阈值过滤（DDW_MEMORY_MIN_SCORE，默认 1.0）
         now_ts = time.time()
-        dedup.sort(key=lambda it: _score_item(it, tokens, now_ts), reverse=True)
+        scored = [(it, _score_item(it, tokens, now_ts)) for it in dedup]
+        scored = [x for x in scored if x[1] >= _min_score()] or scored
+        scored.sort(key=lambda x: x[1], reverse=True)
         return {
-            "results": dedup[: max(1, min(int(top_k), 20))],
+            "results": [it for it, _ in scored[: max(1, min(int(top_k), 20))]],
             "degraded": False,
             "expanded": llm_expanded or [],
+            "min_score": _min_score(),
+            "tokens": tokens[:12],
         }
     except Exception as exc:  # noqa: BLE001
         logger.warning("memory_search_v2 degraded: %s", exc)

@@ -62,6 +62,7 @@ class ChatRequest(BaseModel):
     system: str | None = None
     rag: bool = True  # 自动 RAG：先检索知识库拼入上下文（无命中/故障自动降级）
     auto_consolidate: bool = True  # 回复后自动沉淀：对话要点写今日日志（后台，不阻塞）
+    privacy: bool = False  # 无痕：本请求不写记忆/不自动沉淀（读保持默认）
 
 
 class StreamRequest(ChatRequest):
@@ -124,6 +125,11 @@ def _apply_memory(messages: List[LLMChatMessage]) -> Dict[str, Any]:
     """
     try:
         from core.knowledge import memory_context_build
+        from core.privacy import is_incognito
+
+        # 无痕：跳过记忆注入（不把个人/团队记忆带进本会话上下文）
+        if is_incognito(None):
+            return {"context": "", "chars": 0, "degraded": False, "incognito": True}
 
         mem = memory_context_build()
         block = mem.get("context", "")
@@ -152,8 +158,15 @@ async def post_chat(
     if payload.system:
         messages.append(LLMChatMessage(role="system", content=payload.system))
     messages.append(LLMChatMessage(role="user", content=payload.message))
-    rag = _apply_rag(messages, payload)  # 自动 RAG（可开关；失败降级）
-    memory_inject = _apply_memory(messages)  # 记忆注入（长期记忆块）
+    from core.privacy import clear_request_incognito, set_request_incognito
+
+    if payload.privacy:
+        set_request_incognito(True)
+    try:
+        rag = _apply_rag(messages, payload)  # 自动 RAG（可开关；失败降级）
+        memory_inject = _apply_memory(messages)  # 记忆注入（长期记忆块）
+    finally:
+        clear_request_incognito()
     ctx = RouteContext(user_id=user_id, tenant_id=tenant_id, rule=payload.rule)
     response = await llm_chat(messages, rule=payload.rule, ctx=ctx)
     conv_id = payload.conversation_id or uuid.uuid4().hex
@@ -183,7 +196,7 @@ async def post_chat(
         logger.warning("chat history persist degraded: %s", exc)
     # 自动沉淀（优化②）：回复后后台提炼对话要点写今日日志；不阻塞响应。
     # 寒暄/短轮由 memory_consolidate_llm 内部跳过；LLM 不可用规则降级。
-    if payload.auto_consolidate:
+    if payload.auto_consolidate and not payload.privacy:
         try:
             import asyncio
 
@@ -225,8 +238,15 @@ async def post_stream(
     if payload.system:
         messages.append(LLMChatMessage(role="system", content=payload.system))
     messages.append(LLMChatMessage(role="user", content=payload.message))
-    _apply_rag(messages, payload)  # 自动 RAG（流式同样生效；失败降级）
-    _apply_memory(messages)  # 记忆注入（流式同样生效）
+    from core.privacy import clear_request_incognito, set_request_incognito
+
+    if payload.privacy:
+        set_request_incognito(True)
+    try:
+        _apply_rag(messages, payload)  # 自动 RAG（流式同样生效；失败降级）
+        _apply_memory(messages)  # 记忆注入（流式同样生效）
+    finally:
+        clear_request_incognito()
     ctx = RouteContext(user_id=0, tenant_id=0, rule=payload.rule)
 
     async def gen() -> AsyncIterator[bytes]:

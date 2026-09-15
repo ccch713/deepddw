@@ -24,7 +24,7 @@ git clone https://github.com/ccch713/deepddw.git && cd deepddw
 
 > 📸 *Screenshot: phone / tablet accessing the workbench (coming soon).*
 
-**Status**: v0.5.0 · MIT · CI (pytest + ruff) ✅ · DSH for Teams — multi-user, LAN multi-device, memory & KB with team distillation · [Listed in awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · Roadmap below
+**Status**: v0.6.0 · MIT · CI (pytest + ruff) ✅ · DSH for Teams — multi-user, LAN multi-device, memory & KB with team distillation · migration import/export, scope promote, incognito, retrieval health · [Listed in awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · Roadmap below
 
 > ## ⚠️ IMPORTANT — Read Before Installing
 >

@@ -198,6 +198,40 @@ See [`NOTICE`](NOTICE) for full third-party attribution.
 
 ---
 
+
+## Commercial & Support
+
+**deepDDW is free and fully featured forever.** The paid tiers exist for exactly two things: *convenience* (hosting, zero-ops) and *enterprise collaboration* (permissions, audit, compliance). Every core capability ships in the open-source build — there are no feature gates and no "Pro-only" paywalls, period.
+
+| Tier | Price | Best for | What you get |
+| --- | --- | --- | --- |
+| **Open Source** | Free forever | Individual developers, self-hosters | MIT licensed, full features, no feature gates |
+| **Pro Cloud** | ¥19/mo or ¥199/yr | People who'd rather not run it | Cloud-hosted memory & knowledge base, zero ops, managed multi-device sync, daily backups |
+| **Founder License** (lifetime) | ¥499, one-time | Early supporters | Lifetime Pro. **Capped at the first 100 licenses — once they're gone, they're gone** |
+| **Enterprise** | From ¥9,800/yr | Teams and companies | Multi-user & permissions, SSO, audit logs, private-deployment support (remote), commercial license letter, 24h priority response |
+
+- Enterprise on-site deployment & implementation: ¥3,000 per engagement.
+- VAT invoices available for corporate purchases.
+- Sales & support: [GitHub Issues](https://github.com/ccch713/deepddw/issues).
+
+### Pro Cloud — skip the ops
+
+Everything you'd get from self-hosting, running in the cloud: hosted memory and knowledge base, managed multi-device sync, automatic daily backups. ¥19/month, or ¥199/year (works out to about ¥16.6/mo). Built for people who want the full deepDDW experience without owning a server.
+
+### Founder License — lifetime, 100 seats only
+
+Pay ¥499 once, keep Pro for life. A permanent thank-you to early supporters — **100 seats, first come first served, never restocked.** When the last seat sells, this tier is retired for good. No second wave.
+
+### Enterprise — built for teams
+
+User management and permissions, SSO, audit logs, remote private-deployment support, and a formal commercial license letter — the document your procurement and legal teams actually need. 24-hour priority response included. On-site deployment and implementation available at ¥3,000 per engagement.
+
+### Sponsor — buy the author a coffee
+
+Don't need any of the paid tiers? Totally fine — deepDDW stays free either way. Star the repo — it means a lot.
+
+---
+
 ## Roadmap
 
 Only items actually planned or already delivered are listed here.

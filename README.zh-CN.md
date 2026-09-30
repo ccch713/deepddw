@@ -51,7 +51,7 @@ git clone https://github.com/ccch713/deepddw.git && cd deepddw
 
 **一句话**：把"个人玩具"变成"小组织能用的工具"——**整体封装、简便部署、降低运维成本，让小型商业组织部署即可使用**，基本可以支撑 20 人以下企业的日常 AI 工作流。
 
-deepDDW 由我们的 **DDW AI HUB** 平台沉淀而来——经过企业级部署验证，以开源（MIT）形式封装进 DSH 生态。
+deepDDW 沉淀自真实的企业级部署实践——以开源（MIT）形式封装进 DSH 生态。
 
 ---
 

@@ -50,7 +50,7 @@ Most DSH extensions give you memory *alone*. deepDDW is a **complete workstation
 
 **In one sentence**: turn a "personal toy" into a tool a small team can actually use — **fully packaged, easy to deploy, low maintenance, ready for small businesses** (up to ~20 people) for their daily AI workflow.
 
-deepDDW is built on our **DDW AI HUB** platform — validated in enterprise deployments and packaged into the DSH ecosystem as open source (MIT).
+deepDDW distills lessons from real-world enterprise deployments into the DSH ecosystem as open source (MIT).
 
 ---
 

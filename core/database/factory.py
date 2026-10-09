@@ -1,24 +1,15 @@
-"""EngineFactory — equally deep support for 6 RDBMS engines.
+"""EngineFactory — SQLite-focused database engine factory.
 
-Per PRD §6.1 the platform must be first-class on:
+deepDDW (开源版) focuses on SQLite for simplicity and portability.
+The factory supports SQLite with optional aiosqlite for async operations.
 
-* PostgreSQL    — asyncpg
-* MySQL         — aiomysql
-* MariaDB       — aiomysql (the wire protocol is identical)
-* SQLite        — aiosqlite
-* SQL Server    — aioodbc
-* Oracle        — cx_Oracle (sync; we wrap with run_in_executor)
-
-The factory exposes async engines and session factories. The same
-model classes are then created on all engines, with engine-specific
-quirks centralised in :mod:`core.database.sqlite_compat` and
-:mod:`core.database.types`.
+Note: Commercial DDW AI Hub version supports multiple engines (PostgreSQL,
+MySQL, etc.). This is a simplified version for the open-source release.
 """
 
 from __future__ import annotations
 
 import logging
-import os
 from contextlib import asynccontextmanager
 from typing import AsyncIterator, Dict, Optional
 
@@ -43,7 +34,7 @@ class Base(DeclarativeBase):
     pass
 
 
-SUPPORTED_ENGINES = {"sqlite", "postgresql", "mysql", "mariadb", "mssql", "oracle"}
+SUPPORTED_ENGINES = {"sqlite"}  # deepDDW only supports SQLite
 
 
 def _dialect_url(cfg: DatabaseInstanceConfig) -> str:
@@ -53,20 +44,8 @@ def _dialect_url(cfg: DatabaseInstanceConfig) -> str:
         return ensure_sqlite_path(cfg.url)
     if cfg.engine == "sqlite" and cfg.path:
         return ensure_sqlite_path(f"sqlite+aiosqlite:///{cfg.path}")
-    if cfg.engine == "postgresql":
-        return "postgresql+asyncpg://localhost/ddw"
-    if cfg.engine in ("mysql", "mariadb"):
-        return "mysql+aiomysql://localhost/ddw"
-    if cfg.engine == "mssql":
-        return (
-            "mssql+aioodbc://localhost/ddw?"
-            "driver=ODBC+Driver+17+for+SQL+Server"
-        )
-    if cfg.engine == "oracle":
-        # Oracle has no first-party async driver; cx_Oracle is sync.
-        # We use the run-in-executor pattern in the session helper.
-        return "oracle+cx_oracle://***:****@localhost:1521/?service_name=ORCL"
-    raise ValueError(f"Unsupported engine: {cfg.engine}")
+    # For open-source version, only SQLite is supported
+    raise ValueError(f"Unsupported engine: {cfg.engine}. deepDDW only supports SQLite.")
 
 
 class EngineFactory:
@@ -87,19 +66,13 @@ class EngineFactory:
 
     def _new_engine(self, name: str, cfg: DatabaseInstanceConfig) -> AsyncEngine:
         if cfg.engine not in SUPPORTED_ENGINES:
-            raise ValueError(f"Unknown engine '{cfg.engine}' for db '{name}'")
+            raise ValueError(f"Unknown engine '{cfg.engine}' for db '{name}'. deepDDW only supports SQLite.")
 
         url = _dialect_url(cfg)
         kwargs: dict = {"echo": False, "future": True}
-        if cfg.engine == "sqlite":
-            # SQLite + async: enforce check_same_thread=False (aiosqlite
-            # already manages this but be explicit).
-            kwargs["connect_args"] = {"check_same_thread": False}
-        elif cfg.engine in ("postgresql", "mysql", "mariadb", "mssql"):
-            kwargs["pool_size"] = int(os.getenv("DDW_DB_POOL_SIZE", "5"))
-            kwargs["max_overflow"] = int(os.getenv("DDW_DB_MAX_OVERFLOW", "10"))
-        # Oracle: no async engine; engine returned will be sync but we
-        # still return it for use in run_in_executor paths.
+        # SQLite + async: enforce check_same_thread=False (aiosqlite
+        # already manages this but be explicit).
+        kwargs["connect_args"] = {"check_same_thread": False}
         engine = create_async_engine(url, **kwargs)
         logger.info("EngineFactory: created engine for %s (%s)", name, cfg.engine)
         return engine

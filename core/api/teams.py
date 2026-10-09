@@ -152,10 +152,11 @@ def register_member(
             return {"ok": False, "note": "邀请码已过期"}
         # 生成 member_id（8 位短码，防猜）
         member_id = "m-" + "".join(secrets.choice(_INVITE_CHARS) for _ in range(8))
+        import json as _json
         conn.execute(
             "INSERT INTO members (member_id, display_name, role, device_ids, "
             "invite_code, registered_at) VALUES (?, ?, 'member', ?, ?, datetime('now'))",
-            (member_id, (display_name or "")[:40], f'["{device_id}"]', code),
+            (member_id, (display_name or "")[:40], _json.dumps([device_id]), code),
         )
         conn.execute(
             "UPDATE invites SET used_count=used_count+1 WHERE invite_code=?",
@@ -177,10 +178,11 @@ def add_member_direct(
     member_id = "m-" + "".join(secrets.choice(_INVITE_CHARS) for _ in range(8))
     conn = _get_conn()
     try:
+        import json as _json
         conn.execute(
             "INSERT INTO members (member_id, display_name, role, device_ids, "
             "registered_at) VALUES (?, ?, 'member', ?, datetime('now'))",
-            (member_id, (display_name or "")[:40], f'["{device_id}"]'),
+            (member_id, (display_name or "")[:40], _json.dumps([device_id])),
         )
         conn.commit()
         return {"ok": True, "member_id": member_id, "display_name": display_name or member_id}
@@ -524,7 +526,7 @@ async def extract_member_memory(
             ns = f"member:{mid}"
             # 提取记忆到 team:default
             memories = conn.execute(
-                "SELECT key, value, tags FROM memories WHERE namespace LIKE ? ORDER BY updated_at DESC LIMIT 100",
+                "SELECT key, value, tags FROM memory_entries WHERE namespace LIKE ? ORDER BY updated_at DESC LIMIT 100",
                 (f"{ns}%",)
             ).fetchall()
             for row in memories:
@@ -532,7 +534,7 @@ async def extract_member_memory(
                 new_tags = f"extracted_from:{mid},{tags}" if tags else f"extracted_from:{mid}"
                 try:
                     conn.execute(
-                        "INSERT OR REPLACE INTO memories (namespace, key, value, tags, updated_at) VALUES (?, ?, ?, ?, ?)",
+                        "INSERT OR REPLACE INTO memory_entries (namespace, key, value, tags, updated_at) VALUES (?, ?, ?, ?, ?)",
                         ("team:default", row[0], row[1], new_tags, time.time())
                     )
                     extracted += 1

@@ -4,7 +4,7 @@ All notable changes to deepDDW are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.0] - 2026-10-10
 
 ### Added — 组织连接（bindcode-v1 服务端，默认关闭）
 

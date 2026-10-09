@@ -118,7 +118,17 @@ class PluginBase(ABC):
 
         router = getattr(self, "router", None) or getattr(self, "_router", None)
         if self.app is not None and hasattr(self.app, "include_router") and router is not None:
+            before = len(self.app.router.routes)
             self.app.include_router(router)
+            # 插件在 lifespan 启动期才挂载，晚于 create_app() 里注册的
+            # /api/{path:path} DSH 反代 catch-all；Starlette 按注册顺序匹配，
+            # 不前插的话插件路由会被 catch-all 吞掉（被转发给 DSH 引擎）。
+            # 把本次新增的路由单元移到最前，保证插件端点可达。
+            routes = self.app.router.routes
+            added = routes[before:]
+            if added and before:
+                del routes[before:]
+                routes[0:0] = added
         import logging
 
         logging.getLogger(__name__).info("plugin %s registered", self.name)

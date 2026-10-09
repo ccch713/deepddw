@@ -179,6 +179,29 @@ GET  /api/v1/status             # 状态面板（需 Token）
 ---
 
 
+## 作为 DDW AI 助手的企业后端
+
+deepDDW 内置一个**默认关闭**的可选插件，让单个实例通过开放协议 [bindcode-v1](docs/组织连接协议-bindcode-v1.md) 成为 DDW AI 助手系列 App 的组织后端。管理员签发一枚短时效绑定码，员工在 App 里粘贴/扫码（**设置 → 高级 → 连接企业服务器**）完成绑定，之后这些成员的助手就跑在*你自己的*基础设施上。
+
+开启前值得知道的三件事：
+
+- **LLM 供应商由部署者自配。** 绑定成员的对话走本实例的 `llm_gateway`——你配置了什么供应商（DeepSeek、Ollama 或任意自建 OpenAI 兼容网关），成员就用什么。插件不指向任何托管服务，没有任何预置渠道。
+- **绑定是身份关系，不是锁定。** 成员随时可切回个人模式（自己的模型、本机记忆体），切换/解绑不改变设备上的任何个人数据（协议 §4）。服务端不持有员工个人数据，解绑不删除任何内容。
+- **影响面很小。** 成员级 `access_token` 只能调用插件的对话端点，碰不到管理 API。绑定码经 HMAC 签名、短时效、限用次、可吊销；公网端点按产品令牌限速（10 req/min）。
+
+快速开始：
+
+```bash
+# 1) 在 config/deployment.yaml 开启（org_relay.enabled: true + product_tokens），然后：
+curl -X POST :8500/api/v1/plugins/ddw-org-relay/admin/orgs      -H "Authorization: Bearer $DDW_ACCESS_TOKEN"      -H 'Content-Type: application/json' -d '{"name":"某某诊所"}'
+curl -X POST :8500/api/v1/plugins/ddw-org-relay/admin/orgs/<org_id>/bindcode      -H "Authorization: Bearer $DDW_ACCESS_TOKEN"      -H 'Content-Type: application/json' -d '{"ttl_min":15,"max_uses":50}'
+# 2) 员工 App：设置 → 高级 → 连接企业服务器 → 粘贴绑定码
+```
+
+完整端点、配置项与安全说明：[plugins/ddw_org_relay/README.md](plugins/ddw_org_relay/README.md)。
+
+---
+
 ## Commercial · 商业化与支持
 
 **deepDDW 的承诺很简单：开源版永久免费、永久全功能。** 我们只收两样东西的钱——"帮你省事"（托管与免运维）和"企业协作"（权限、审计与合规）。核心能力没有任何功能门控，不存在"Pro 才解锁"的暗门。
@@ -229,6 +252,7 @@ GET  /api/v1/status             # 状态面板（需 Token）
 - [x] **知识库向量检索增强** — 混合检索（SQLite FTS5/LIKE + LanceDB，RRF 融合；可选，无 LanceDB 时自动降级纯关键词）
 - [x] **Windows 打包** — `windows-build` CI 工作流 PyInstaller one-dir 自动出包，以 Actions 产物分发，v0.1.0 发布已验证（见 `docs/windows-packaging.md`）
 - [x] **反思与沉淀（LLM 化收尾）** — 每日反思按风格指南（自动/专业/随意）生成、强制"进展/问题/明日注意"结构并避免与昨日重复；LLM 判定对话无价值时不再落日志
+- [x] **组织连接 bindcode-v1 服务端（可选插件）** — 作为 DDW AI 助手系列 App 的企业后端：HMAC 签名短时效绑定码、公网 bind/unbind/me 端点（产品令牌+限速）、成员级令牌直连 OpenAI 兼容对话端点（LLM 供给走部署者自配供应商，见 `plugins/ddw_org_relay/`）
 - [x] **记忆检索质量** — 结果按相关性评分排序（命中数×层权重：用户规则优先于旧日志，近期日志加权），取代原插入序；扩写缓存过期行为已测试
 
 ---

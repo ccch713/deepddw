@@ -199,6 +199,29 @@ See [`NOTICE`](NOTICE) for full third-party attribution.
 ---
 
 
+## Enterprise Backend for the DDW AI Assistant
+
+deepDDW ships an optional, **off-by-default** plugin that lets a single instance act as the organization backend for the DDW AI Assistant app family, via the open [bindcode-v1](docs/组织连接协议-bindcode-v1.md) protocol. The admin issues a short-lived bind code; staff paste or scan it in the app (**Settings → Advanced → Connect to enterprise server**); from then on those members can run their assistant on *your* infrastructure.
+
+Three things worth knowing before you enable it:
+
+- **The LLM provider is yours.** Bound members chat through this instance's `llm_gateway` — whatever provider you configured (DeepSeek, Ollama, or any self-hosted OpenAI-compatible gateway). Nothing in the plugin points to any hosted service, and there is no preset channel.
+- **Binding is an identity relation, not lock-in.** Members can switch back to personal mode (their own models, their on-device memory) at any time; unbinding changes nothing on their device (protocol §4). The server never holds staff personal data, and unbind deletes nothing.
+- **Blast radius is small.** A member-level `access_token` only unlocks the plugin's chat endpoint — never the admin API. Bind codes are HMAC-signed, short-lived, use-capped and revocable; the public endpoints are rate-limited (10 req/min per product token).
+
+Quick start:
+
+```bash
+# 1) enable in config/deployment.yaml (org_relay.enabled: true + product_tokens), then:
+curl -X POST :8500/api/v1/plugins/ddw-org-relay/admin/orgs      -H "Authorization: Bearer $DDW_ACCESS_TOKEN"      -H 'Content-Type: application/json' -d '{"name":"Acme Clinic"}'
+curl -X POST :8500/api/v1/plugins/ddw-org-relay/admin/orgs/<org_id>/bindcode      -H "Authorization: Bearer $DDW_ACCESS_TOKEN"      -H 'Content-Type: application/json' -d '{"ttl_min":15,"max_uses":50}'
+# 2) staff app: Settings → Advanced → Connect to enterprise server → paste code
+```
+
+Full endpoint list, config reference and security notes: [plugins/ddw_org_relay/README_EN.md](plugins/ddw_org_relay/README_EN.md).
+
+---
+
 ## Commercial & Support
 
 **deepDDW is free and fully featured forever.** The paid tiers exist for exactly two things: *convenience* (hosting, zero-ops) and *enterprise collaboration* (permissions, audit, compliance). Every core capability ships in the open-source build — there are no feature gates and no "Pro-only" paywalls, period.
@@ -249,6 +272,7 @@ Only items actually planned or already delivered are listed here.
 - [x] **Vector search enhancement** — hybrid retrieval (SQLite FTS5/LIKE + LanceDB, RRF fusion; optional, degrades to keyword-only when LanceDB is absent)
 - [x] **Windows packaging** — PyInstaller one-dir build via the `windows-build` CI workflow, distributed as an Actions artifact, verified in release v0.1.0 (see `docs/windows-packaging.md`)
 - [x] **Reflection & consolidation (LLM polish)** — daily reflection follows a style guide (auto/professional/casual), enforces a progress/issues/tomorrow structure and avoids repeating the previous day; consolidation skips logging when the LLM judges the conversation valueless
+- [x] **Organization binding, bindcode-v1 server (optional plugin)** — act as an enterprise backend for the DDW AI Assistant app family: HMAC-signed short-lived bind codes, public bind/unbind/me endpoints (product-token + rate limit), member-level tokens for an OpenAI-compatible chat endpoint backed by your own llm_gateway providers (see `plugins/ddw_org_relay/`)
 - [x] **Memory search quality** — results ranked by relevance score (hit-count × layer weight: user > notes > reflection > logs, plus freshness) instead of insertion order; keyword-expansion cache expiry tested
 
 ---

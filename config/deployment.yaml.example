@@ -56,5 +56,16 @@ security:
     key_file: ./data/tls/key.pem
     port: 0             # 0 = 沿用主端口（HTTP 同端口升级为 HTTPS）
 
+  # ---- 组织连接（bindcode-v1 服务端，默认关闭） ----
+  # 让本实例作为 DDW AI 助手系列 App 的组织后端（详见 plugins/ddw_org_relay/README.md）
+  # env 覆盖：DDW_ORG_RELAY_ENABLED / PRODUCT_TOKENS / SERVER_BASE_URL / RATE_LIMIT / TTL_MIN / MAX_USES
+  org_relay:
+    enabled: false
+    product_tokens: []          # 产品令牌（可多枚），公网 bind/unbind/me 端点鉴权
+    server_base_url: ""         # 本实例 LLM 端点 base；公网部署务必显式配置（无外部默认值）
+    rate_limit_per_token: 10    # 每产品令牌 req/min（协议 §6）
+    bindcode_ttl_min: 15        # 绑定码默认时效（分钟）
+    bindcode_max_uses: 50       # 绑定码默认用次
+
 plugins:
   root_dir: ./plugins

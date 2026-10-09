@@ -1,0 +1,47 @@
+name: ddw-org-relay
+tier: beta
+version: 0.1.0
+display_name: 组织连接（bindcode-v1）
+description: >
+  让本实例作为组织后端被 DDW AI 助手系列 App 绑定连接（开放协议 bindcode-v1）。
+  绑定码签发/校验、bind/unbind/me 公网端点（产品令牌+限速）、成员级
+  access_token 直连本实例 LLM 端点（OpenAI 兼容，供给由部署者自配供应商）。
+  默认关闭。管理端复用实例静态 Token 门禁，不引入账号体系。
+engine: plugin_base
+isolation: inline
+
+permissions:
+  - network.read
+
+config_schema:
+  type: object
+  properties:
+    enabled:
+      type: boolean
+      default: false
+      description: 默认关闭；开启后挂载公网三件与成员 LLM 端点（也可 DDW_ORG_RELAY_ENABLED=1）
+    product_tokens:
+      type: array
+      items: { type: string }
+      default: []
+      description: "产品令牌（可多枚，Authorization: Bearer 或 X-Product-Key）"
+    server_base_url:
+      type: string
+      default: ""
+      description: 本实例 LLM 端点 base（OpenAI 兼容）；留空按请求 Host 推导，公网部署务必显式配置
+    rate_limit_per_token:
+      type: integer
+      default: 10
+      description: 每产品令牌每分钟请求上限
+    bindcode_ttl_min:
+      type: integer
+      default: 15
+      description: 绑定码默认时效（分钟）
+    bindcode_max_uses:
+      type: integer
+      default: 50
+      description: 绑定码默认用次上限
+
+router_prefix: /api/v1/plugins/ddw-org-relay
+
+license: free

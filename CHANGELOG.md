@@ -4,6 +4,18 @@ All notable changes to deepDDW are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added — 组织连接（bindcode-v1 服务端，默认关闭）
+
+- **`plugins/ddw_org_relay`**：本实例可作为 DDW AI 助手系列 App 的组织后端（开放协议 `docs/组织连接协议-bindcode-v1.md` 随仓公开）
+  - 公网三件 `POST /api/v1/relay/org/pub/{bind,unbind}`、`GET .../me`：Bearer 产品令牌（可多枚，兼容协议 §3 `X-Product-Key` 头）+ 每令牌 10 req/min 限速（429 + Retry-After）
+  - 绑定码 `DDWORG-<b64url(org_id|exp_ts|nonce)>.<hmac16>`：HMAC 常数时间比较、时效（410）、用次（409）、吊销（404）、伪造（403）；org_secret Fernet 加密落盘且支持轮换（旧码时效内仍有效）
+  - 成员级 `access_token`（`orgm_` 前缀）直连本实例 OpenAI 兼容端点 `POST /api/v1/plugins/ddw-org-relay/chat/completions`（支持 stream）；解绑/吊销/组织停用即失效；组织级请求配额可配
+  - 管理端复用实例静态 Token 门禁（建组织/签码/吊销/轮换/停用/配额/解绑/用量对账），不引入用户账号体系；LLM 供给完全走部署者自配的 `llm_gateway` 供应商
+  - 日志与流水仅元数据（协议 §6）；独立库 `data/org_relay.db`
+- **修复插件路由遮蔽**：插件在 lifespan 挂载晚于 `/api/{path:path}` DSH 反代 catch-all，按注册顺序匹配会被吞掉——`sdk/plugin_base.register()` 现将插件路由前插，修复全部插件的 HTTP 端点可达性
+
 ## [0.6.1] - 2026-09-17
 
 ### Added — 迁移来源适配器

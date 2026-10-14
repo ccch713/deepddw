@@ -52,6 +52,19 @@ Most DSH extensions give you memory *alone*. deepDDW is a **complete workstation
 
 deepDDW distills lessons from real-world enterprise deployments into the DSH ecosystem as open source (MIT).
 
+## Which Scenario Fits You?
+
+deepDDW is built for **individuals, families, departments and small businesses — roughly up to 20 people and 20 devices on one LAN**. Find your scenario:
+
+| Scenario | Typical setup | What you get |
+|---|---|---|
+| 🧑‍💻 **Individual · multi-device** | One person; laptop + phone + tablet | Deploy once on any always-on machine you own (NAS / mini host / old PC): every device of yours shares the same memory & knowledge base, and the data never leaves your hardware. Don't want to run anything? **Pro Cloud** hosts it for you with managed multi-device sync and daily backups. |
+| 👨‍👩‍👧 **Family · multi-person, multi-device** | A household; one server, several members | "Deploy once, the whole family can use it." Each member gets an independent account with a private memory namespace; **family distillation** merges everyone's recent highlights into a shared family space (rule-based dedup — works even without an LLM key). |
+| 🏢 **Department-level** | One department (≤20 people) inside a larger organization | Run deepDDW as your department workbench. Optionally enable the **bindcode-v1 org backend**: staff apps bind with a scan code, the server becomes the org backend for the assistant — while each member keeps personal mode (their own models, on-device memory) and can switch back at any time, unbinding deletes nothing. |
+| 🏪 **Small business** | A company of up to ~20 people running daily AI workflows | **Team mode**: multi-user accounts, team distillation (LLM-refined, deduplicated shared team memory), scope promote, incognito sessions, retrieval health — all in the open-source build. Need SSO, audit logs or private-deployment support on top? That's the Enterprise tier (see [Commercial & Support](#commercial--support)). |
+
+**Rule of thumb**: one instance per team of ≤20 people on one network — if your scenario fits in one room, one floor, or one VPN, deepDDW fits you.
+
 ---
 
 ## How It Works (Technical Path)

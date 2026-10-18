@@ -33,8 +33,8 @@
 
   // ---------- 默认主题（深色像素风，三产品共用；accent 可覆盖） ----------
   var DEFAULT_THEME = {
-    bg: '#0b0f14', floorA: '#11161d', floorB: '#141b24', wall: '#1a2330', wallTop: '#223041',
-    furniture: '#1e2836', furnitureEdge: '#223041', screen: '#3fb1ff', screenGlow: 'rgba(63,177,255,.25)',
+    bg: '#0b0f14', floorA: '#131a24', floorB: '#182030', wall: '#1a2330', wallTop: '#223041',
+    furniture: '#26334a', furnitureEdge: '#324260', screen: '#3fb1ff', screenGlow: 'rgba(63,177,255,.25)',
     plant: '#2f9e63', coffee: '#8b5a2b',
     accent: '#3fb1ff', mint: '#7ee2b8', warn: '#ffd44d', bad: '#ff7b72', good: '#3fb950', dim: '#5c7086',
     textPanel: '#c9d4e0', panelBg: '#11161d', panelLine: '#1e2836', pageBg: '#0b0f14', headText: '#eaf2fb'
@@ -57,7 +57,7 @@
     this.opts = opts;
     this.theme = Object.assign({}, DEFAULT_THEME, opts.theme || {});
     this.S = Object.assign({}, DEFAULT_STRINGS, opts.strings || {});
-    this.roster = opts.rooster || opts.roster;
+    this.roster = opts.roster;
     this.states = {};        // id -> {state, note, since, today}
     this.pos = {};           // id -> {x, y} 当前渲染坐标（瓦片）
     this.target = {};        // id -> {x, y} 目标坐标
@@ -189,7 +189,7 @@
 
   // 布局：按 roster 顺序给每个居民分配工位（自动网格）
   VirtualOffice.prototype._layoutDesks = function () {
-    var perRow = 4, x0 = 4, y0 = 6, dx = 5, dy = 4, i = 0;
+    var perRow = 4, x0 = 3, y0 = 5, dx = 5.5, dy = 5.2, i = 0;
     for (var r = 0; r < 4; r++) for (var c = 0; c < perRow && i < this.roster.length; c++, i++) {
       var m = this.roster[i];
       var d = m.desk && m.desk.x != null ? m.desk : { x: x0 + c * dx, y: y0 + r * dy };
@@ -334,20 +334,26 @@
       ctx.fillStyle = ((x + y) & 1) ? T.floorA : T.floorB;
       ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
     }
-    // 门口地毯
-    ctx.fillStyle = 'rgba(63,177,255,.12)';
-    ctx.fillRect((this._door.x - 2) * TILE, (GRID_H - 3) * TILE, TILE * 4, TILE * 2);
+    // 门口地毯（迎宾垫）
+    ctx.fillStyle = 'rgba(63,177,255,.14)';
+    ctx.fillRect((this._door.x - 2.4) * TILE, (GRID_H - 3.2) * TILE, TILE * 4.8, TILE * 2.2);
+    ctx.strokeStyle = 'rgba(63,177,255,.35)'; ctx.lineWidth = 2;
+    ctx.strokeRect((this._door.x - 2.4) * TILE, (GRID_H - 3.2) * TILE, TILE * 4.8, TILE * 2.2);
+    // 左下 + 右上角大绿植（画在地板之后才不被覆盖）
+    this._drawPlant(ctx, TILE * 1.2, TILE * (GRID_H - 6), 1.6);
+    this._drawPlant(ctx, TILE * (GRID_W - 4.2), TILE * 3.4, 1.4);
   };
 
   VirtualOffice.prototype._drawWalls = function (ctx) {
     var T = this.theme;
-    ctx.fillStyle = T.wall; ctx.fillRect(0, 0, W_ = GRID_W * TILE, TILE * 2.6);
+    ctx.fillStyle = T.wall; ctx.fillRect(0, 0, GRID_W * TILE, TILE * 2.6);
     ctx.fillStyle = T.wallTop; ctx.fillRect(0, TILE * 2.6, GRID_W * TILE, 4);
     // 窗户
     for (var i = 0; i < 6; i++) {
       var wx = 3 + i * 7.6;
       ctx.fillStyle = '#0e1a26'; ctx.fillRect(wx * TILE, TILE * 0.5, TILE * 3.4, TILE * 1.5);
-      ctx.fillStyle = 'rgba(126,226,184,.18)'; ctx.fillRect(wx * TILE + 2, TILE * 0.5 + 2, TILE * 3.4 - 4, TILE * 1.5 - 4);
+      ctx.fillStyle = 'rgba(122,162,255,.30)'; ctx.fillRect(wx * TILE + 2, TILE * 0.5 + 2, TILE * 3.4 - 4, TILE * 1.5 - 4);
+      ctx.fillStyle = 'rgba(255,255,255,.10)'; ctx.fillRect(wx * TILE + 2, TILE * 0.5 + 2, TILE * 3.4 - 4, 3);
       ctx.strokeStyle = T.wallTop; ctx.lineWidth = 2;
       ctx.strokeRect(wx * TILE, TILE * 0.5, TILE * 3.4, TILE * 1.5);
     }
@@ -366,6 +372,10 @@
     // 长桌
     ctx.fillStyle = T.furniture; ctx.fillRect(x + TILE * 0.4, y + TILE * 0.6, TILE * 5.2, TILE * 2.6);
     ctx.fillStyle = T.furnitureEdge; ctx.fillRect(x + TILE * 0.4, y + TILE * 0.6, TILE * 5.2, 4);
+    // 桌面水杯 ×2
+    ctx.fillStyle = '#cfe0ff';
+    ctx.fillRect(x + TILE * 1.2, y + TILE * 1.7, 4, 5); ctx.fillRect(x + TILE * 3.6, y + TILE * 1.7, 4, 5);
+    ctx.fillStyle = T.mint; ctx.fillRect(x + TILE * 1.2, y + TILE * 1.7, 4, 2); ctx.fillRect(x + TILE * 3.6, y + TILE * 1.7, 4, 2);
     // 椅子四个
     for (var i = 0; i < 3; i++) {
       ctx.fillStyle = '#161e2a';
@@ -382,17 +392,19 @@
     ctx.fillStyle = T.warn; ctx.fillRect(x + TILE * 1.3, y + 6, 6, 6);
     // 吧台
     ctx.fillStyle = T.furniture; ctx.fillRect(x - TILE * 2.8, y + TILE * 1.6, TILE * 5.2, TILE * 0.8);
-    // 绿植两盆
-    this._drawPlant(ctx, x + TILE * 2.8, y - TILE * 0.4);
+    // 绿植（咖啡机旁 + 吧台尾）
+    this._drawPlant(ctx, x + TILE * 2.6, y - TILE * 0.4, 1.3);
+    this._drawPlant(ctx, x - TILE * 3.4, y + TILE * 0.4, 1.1);
   };
 
-  VirtualOffice.prototype._drawPlant = function (ctx, px, py) {
-    var T = this.theme;
-    ctx.fillStyle = T.furniture; ctx.fillRect(px, py + 10, 12, 8);
+  VirtualOffice.prototype._drawPlant = function (ctx, px, py, scale) {
+    var T = this.theme, k = scale || 1;
+    ctx.fillStyle = T.furniture; ctx.fillRect(px, py + 10 * k, 14 * k, 9 * k);
     ctx.fillStyle = T.plant;
-    ctx.fillRect(px + 2, py + 2, 8, 8);
-    ctx.fillRect(px, py - 3, 4, 6); ctx.fillRect(px + 8, py - 3, 4, 6);
-    ctx.fillRect(px + 4, py - 6, 4, 6);
+    ctx.fillRect(px + 2 * k, py + 2 * k, 10 * k, 8 * k);
+    ctx.fillRect(px - 1 * k, py - 4 * k, 5 * k, 7 * k); ctx.fillRect(px + 9 * k, py - 4 * k, 5 * k, 7 * k);
+    ctx.fillRect(px + 4 * k, py - 8 * k, 5 * k, 8 * k);
+    ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.fillRect(px + 3 * k, py + 3 * k, 3 * k, 3 * k);
   };
 
   VirtualOffice.prototype._drawDoor = function (ctx) {
@@ -646,7 +658,7 @@
     tc.fillStyle = pal.hair || '#ffd44d'; tc.fillRect(5, 0, 6, 3);
     tc.fillStyle = pal.clothes || '#3fb1ff'; tc.fillRect(4, 8, 8, 8);
     tc.fillStyle = '#2a3342'; tc.fillRect(5, 16, 2, 4); tc.fillRect(9, 16, 2, 4);
-    c2.drawImage(tmp, 0, 0, 64, 80 > 64 ? 64 : 64, 0, 0, 64, 64);
+    c2.drawImage(tmp, 0, 0, 16, 20, 0, 0, 64, 64);
     inn.querySelector('.vo-card-close').addEventListener('click', function () { self.card.style.display = 'none'; });
   };
 

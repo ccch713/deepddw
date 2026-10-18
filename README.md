@@ -24,7 +24,7 @@ git clone https://github.com/ccch713/deepddw.git && cd deepddw
 
 > 📸 *Screenshot: phone / tablet accessing the workbench (coming soon).*
 
-**Status**: v0.7.0 · MIT · CI (pytest + ruff) ✅ · DSH for Teams — multi-user, LAN multi-device, memory & KB with team distillation · migration import/export, scope promote, incognito, retrieval health · **org binding server (bindcode-v1, optional)** · [Listed in awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · Roadmap below
+**Status**: v0.8.0 · MIT · CI (pytest + ruff) ✅ · DSH for Teams — multi-user, LAN multi-device, memory & KB with team distillation · migration import/export, scope promote, incognito, retrieval health · org binding server (bindcode-v1, optional) · **virtual office (view-only activity visualization)** · [Listed in awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · Roadmap below
 
 > ## ⚠️ IMPORTANT — Read Before Installing
 >
@@ -77,6 +77,16 @@ deepDDW MCP tools (auto-invoked by the model)
 **Integration = DSH standard MCP**: DSH natively supports MCP clients; deepDDW exposes a standard `streamable-http` endpoint — **zero intrusion, zero changes to DSH source**. The UI, settings and model configuration all remain official.
 
 ---
+
+## Virtual Office (0.8.0)
+
+Open `/ui/office.html` and watch your deepDDW at work: every subsystem is a pixel-art staff member —
+the gateway doorman waves devices in, the chat receptionist types away, the memory butler files notes,
+the librarian shelves new docs, the meter clerk bills LLM calls. Real activity drives the animations
+(no fake loops: 30 min without events → back to idle), failures raise a banner, and the day's digest
+is importance-weighted. Fully programmatic rendering — zero third-party art assets, zero runtime
+dependencies. **View-only by design**: the API exposes nothing but job titles and whitelisted count
+phrases — never document contents, memory values, or chat transcripts.
 
 ## Why Does It Work on Your LAN?
 

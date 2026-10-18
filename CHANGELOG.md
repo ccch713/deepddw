@@ -4,6 +4,16 @@ All notable changes to deepDDW are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-10-18
+
+### Added — 虚拟办公室（virtual-office，view-only 状态可视化）
+
+- **`/ui/office.html`**：像素风虚拟办公室——deepDDW 的每个子系统都是一位"虚拟员工"（门卫大白/接待小深/记忆管家/藏书员/计量员/蒸馏师/备份员/网关中继），真实活动驱动动画：设备心跳、对话消息、记忆写入、知识库入库、LLM 用量、备份时间、组织绑定
+  - 渲染核心 `frontend/assets/virtual-office.js`：单文件、零依赖、全程序化像素绘制（无任何第三方图片/字体/音频资产，规避版权风险）；演示模式内置剧本，可作截图/宣传素材
+  - `GET /api/v1/office/state`（Token 门禁）：只读聚合，**view-only 白名单透出**——响应只含岗位名与统计短语，任何文档内容/记忆 value/对话原文不出此端点；缺表缺库自动容错为待命态，绝不 500
+  - 30 分钟无新事件的员工自动回落 idle（拒绝"永远在打字"的假在岗）；LLM 失败 >3 次顶部横幅告警
+- 落地页导航新增"虚拟办公室"入口
+
 ## [0.7.0] - 2026-10-10
 
 ### Added — 组织连接（bindcode-v1 服务端，默认关闭）

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>deepDDW · 虚拟办公室</title>
+<!--
+  deepDDW 虚拟办公室（v0.8.0）
+  原创程序化像素实现（frontend/assets/virtual-office.js），零第三方资产。
+  数据：GET /api/v1/office/state（Token 门禁；LAN 免密模式下零配置直连）。
+  view-only：只读聚合，不做操控；透出文本只有岗位名与白名单统计短语。
+-->
+<style>
+  :root{--bg:#050816;--panel:#0d1226;--line:#1c2340;--brand:#7aa2ff;--txt:#c8cfe6;--dim:#6b7392}
+  html,body{margin:0;background:var(--bg)}
+  .page{max-width:1280px;margin:0 auto;padding:14px}
+  .tokenbar{display:none;align-items:center;gap:8px;margin-bottom:10px;background:var(--panel);
+    border:1px solid var(--line);border-radius:10px;padding:10px 14px;font:13px/1.5 -apple-system,"PingFang SC",sans-serif;color:var(--txt)}
+  .tokenbar input{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:7px 10px;color:var(--txt);font-size:13px;outline:none}
+  .tokenbar button{background:var(--brand);border:0;color:#0a1030;border-radius:8px;padding:7px 16px;font-size:13px;cursor:pointer;font-weight:600}
+  .tokenbar.show{display:flex}
+  footer{color:var(--dim);font:12px/1.6 -apple-system,"PingFang SC",sans-serif;text-align:center;padding:10px 0 18px}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="tokenbar" id="tokenbar">
+    <span>访问令牌：</span>
+    <input id="tok" type="password" placeholder="X-DDW-Token（部署方配置的 DDW_ACCESS_TOKEN）">
+    <button id="toksave">连接</button>
+  </div>
+  <div id="office" style="min-height:640px"></div>
+  <footer>deepDDW 虚拟办公室 · 只读状态镜像（view-only）· 页面不透出任何文档/记忆/对话内容</footer>
+</div>
+<script src="/ui/assets/virtual-office.js"></script>
+<script>
+(function () {
+  // ===== 固定编制：与 core/api/office.py 的 residents id 一一对应 =====
+  var ROSTER = [
+    { id: 'gateway', name: '门卫大白',   role: '设备网关',   bio: '每台设备的握手都逃不过他，60 秒不见就算离岗', palette: { hair: '#c8cfe6', clothes: '#7aa2ff' } },
+    { id: 'chat',    name: '接待小深',   role: '对话接待',   bio: 'DSH 会话的第一站，消息永远不过夜', palette: { hair: '#ffb86b', clothes: '#50fa7b' } },
+    { id: 'memory',  name: '记忆管家',   role: '长期记忆',   bio: '把值得记的都收进抽屉，跨会话不忘', palette: { hair: '#f2c9a0', clothes: '#8e6bd8' } },
+    { id: 'kb',      name: '藏书员',     role: '知识库',     bio: '文档上架编目一把好手，FTS 和向量双索引', palette: { hair: '#ffd44d', clothes: '#3fb1ff' } },
+    { id: 'llm',     name: '计量员',     role: 'LLM 网关',   bio: '每一次模型调用都记一笔账，失败比谁都在意', palette: { hair: '#8b96a5', clothes: '#ff7b72' } },
+    { id: 'distill', name: '蒸馏师',     role: '团队蒸馏',   bio: '把散落的经验蒸成共识，慢工出细活', palette: { hair: '#5c7086', clothes: '#7ee2b8' } },
+    { id: 'backup',  name: '备份员',     role: '备份值守',   bio: '深夜搬砖侠，数据库快照一份不少', palette: { hair: '#ff9d5c', clothes: '#ffd44d' } },
+    { id: 'relay',   name: '网关中继',   role: '组织连接',   bio: 'bindcode 组织后端的值班窗口', palette: { hair: '#c8cfe6', clothes: '#50fa7b' } }
+  ];
+
+  var TOKEN_KEY = 'ddw_office_token';
+  function headers() {
+    var t = localStorage.getItem(TOKEN_KEY) || '';
+    return t ? { 'X-DDW-Token': t } : {};
+  }
+  async function pull() {
+    var r = await fetch('/api/v1/office/state', { headers: headers(), cache: 'no-store' });
+    if (r.status === 401) {
+      var bar = document.getElementById('tokenbar');
+      bar.classList.add('show');
+      throw new Error('need token');
+    }
+    if (!r.ok) throw new Error('http ' + r.status);
+    var j = await r.json();
+    // 统一包一层 {ok, data} 兼容 core.api_response
+    var d = j && j.data ? j.data : j;
+    // API 的 residents 转成渲染核心要的 {id:{state,note,today}}；digest 字段已同名
+    var rs = {};
+    Object.keys(d.residents || {}).forEach(function (k) {
+      var v = d.residents[k];
+      rs[k] = { state: v.state, note: v.note, today: v.today };
+    });
+    return { residents: rs, digest: d.digest, banner: d.banner };
+  }
+
+  document.getElementById('toksave').addEventListener('click', function () {
+    localStorage.setItem(TOKEN_KEY, document.getElementById('tok').value.trim());
+    location.reload();
+  });
+
+  // ===== 演示剧本（README 截图/视频素材用；不写任何服务端数据） =====
+  var DEMO = {
+    speed: 1, holdAfter: 10,
+    script: [
+      { t: 0,  set: { gateway: { state: 'idle', note: '无设备在线' }, chat: { state: 'sleeping', note: '今天还没人说话' } } },
+      { t: 3,  set: { gateway: { state: 'walking', note: '新设备进门' } } },
+      { t: 8,  set: { gateway: { state: 'working', note: '2 台设备在线' } } },
+      { t: 13, set: { chat: { state: 'working', note: '刚收到消息' } } },
+      { t: 19, set: { memory: { state: 'doc', note: '正在记笔记' } } },
+      { t: 25, set: { kb: { state: 'search', note: '检索知识库' } } },
+      { t: 31, set: { llm: { state: 'working', note: '结算中' } } },
+      { t: 37, set: { chat: { state: 'celebrating', note: '会话交付' }, memory: { state: 'celebrating', note: '记忆已归档' } } },
+      { t: 44, set: { backup: { state: 'celebrating', note: '备份完成' } } },
+      { t: 50, set: { llm: { state: 'upset', note: '3 次调用失败' } }, banner: { level: 'bad', count: 3, text: '次 LLM 调用失败（近 24h），建议看下网关日志' } },
+      { t: 58, set: { llm: { state: 'celebrating', note: '网关恢复' } }, banner: null },
+      { t: 64, set: { gateway: { state: 'working', note: '2 台设备在线' }, chat: { state: 'idle', note: '今日 36 条消息' } } }
+    ]
+  };
+
+  new VirtualOffice(document.getElementById('office'), {
+    title: 'deepDDW 虚拟办公室',
+    subtitle: '记忆 · 知识库 · 网关 · 设备 —— 每个像素小人都是 deepDDW 的一个真实子系统',
+    roster: ROSTER,
+    poll: { fn: pull, interval: 5000 },
+    demo: DEMO,
+    theme: {
+      pageBg: '#050816', panelBg: '#0d1226', panelLine: '#1c2340', bg: '#070b1a',
+      floorA: '#0b1020', floorB: '#0d1326', wall: '#141a33', wallTop: '#1c2340',
+      accent: '#7aa2ff', headText: '#e8ecfa', textPanel: '#c8cfe6', dim: '#6b7392'
+    },
+    strings: { offline: 'deepDDW 服务暂离（未启动或需要令牌）…恢复后自动重连' }
+  });
+
+  // 首次无 token 且非 LAN 免密时，主动弹 token 栏
+  pull().catch(function () { document.getElementById('tokenbar').classList.add('show'); });
+})();
+</script>
+</body>
+</html>

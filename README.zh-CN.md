@@ -25,7 +25,7 @@ git clone https://github.com/ccch713/deepddw.git && cd deepddw
 
 > 📸 *截图位：手机/平板访问工作台实拍（稍后补充）。*
 
-**当前状态**：v0.7.0 · MIT · CI（pytest + ruff）✅ · DSH for Teams —— 多用户、局域网多设备、记忆与知识库团队蒸馏 · 迁移导入导出 / 作用域提升 / 无痕会话 / 检索健康 · **组织连接服务端（bindcode-v1，可选）** · [入选 awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · 路线图见文末
+**当前状态**：v0.8.0 · MIT · CI（pytest + ruff）✅ · DSH for Teams —— 多用户、局域网多设备、记忆与知识库团队蒸馏 · 迁移导入导出 / 作用域提升 / 无痕会话 / 检索健康 · 组织连接服务端（bindcode-v1，可选） · **虚拟办公室（view-only 活动可视化）** · [入选 awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · 路线图见文末
 
 > ## ⚠️ 重要 —— 安装前必读
 >
@@ -78,6 +78,14 @@ deepDDW MCP 工具（模型自动调用）
 **接入方式 = DSH 标准 MCP**：DSH 原生支持 MCP 客户端，deepDDW 暴露标准 `streamable-http` 端点——**零侵入、不改 DSH 一行源码**，界面、设置、模型配置全部保持官方原版。
 
 ---
+
+## 虚拟办公室（0.8.0）
+
+打开 `/ui/office.html`，亲眼看到 deepDDW 在上班：每个子系统都是一位像素小人——门卫大白迎设备进门、
+接待小深接消息、记忆管家归档笔记、藏书员上架文档、计量员给 LLM 调用记账。动画全部由**真实活动**驱动
+（30 分钟无事件自动回 idle，拒绝"永远在打字"的假在岗），失败会弹横幅，今日战报按重要性加权。
+渲染 100% 程序化绘制——零第三方美术资产、零运行时依赖。**天生 view-only**：
+API 只透出岗位名与白名单统计短语，文档内容 / 记忆 value / 对话原文一概不出端点。
 
 ## 为什么你在局域网内能用？
 

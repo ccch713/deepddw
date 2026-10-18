@@ -306,6 +306,10 @@ def create_app() -> FastAPI:
     from core.api.privacy_health import router as privacy_router
 
     app.include_router(privacy_router)
+    # v0.8.0（virtual-office）：虚拟办公室状态面板（只读聚合，view-only）
+    from core.api.office import router as office_router
+
+    app.include_router(office_router)
 
     # 健康检查（公开）
     @app.get("/health")

@@ -1,3 +1,7 @@
+> 🚚 **Project update · 项目进展** — The standalone small-team product now lives at **[Staffwright](https://github.com/ccch713/staffwright)**: same engine, complete product packaging, international-first. This repository continues as the deepDDW **DSH-plugin line** (memory & knowledge base for DeepSeek Harness).
+>
+> 独立的小团队产品线已迁移至 **[Staffwright](https://github.com/ccch713/staffwright)**（同一引擎、完整产品化、面向国际市场）。本仓库继续作为 deepDDW 的 **DSH 插件线**（DeepSeek Harness 的记忆与知识库）维护。
+
 # deepDDW — Memory & Knowledge Base for DeepSeek Harness, Reachable from Any Device on Your LAN
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)

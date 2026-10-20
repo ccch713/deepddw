@@ -26,7 +26,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
@@ -153,7 +153,7 @@ def office_snapshot() -> Dict[str, Any]:
             busy = last_chat is not None and now - last_chat <= ACTIVE_WINDOW_S
             residents["chat"] = {
                 "state": "working" if busy else ("sleeping" if n_chat == 0 else "idle"),
-                "note": (f"刚收到消息" if busy else (f"今日 {n_chat} 条消息" if n_chat else "今天还没人说话")),
+                "note": ("刚收到消息" if busy else (f"今日 {n_chat} 条消息" if n_chat else "今天还没人说话")),
                 "today": {"done": n_chat, "failed": 0},
             }
             if n_chat:
@@ -168,7 +168,7 @@ def office_snapshot() -> Dict[str, Any]:
             busy = last_mem is not None and now - last_mem <= ACTIVE_WINDOW_S
             residents["memory"] = {
                 "state": "doc" if busy else "idle",
-                "note": (f"正在记笔记" if busy else f"共 {conn.execute('SELECT COUNT(*) FROM memory_entries').fetchone()[0]} 条记忆"),
+                "note": ("正在记笔记" if busy else f"共 {conn.execute('SELECT COUNT(*) FROM memory_entries').fetchone()[0]} 条记忆"),
                 "today": {"done": n_mem, "failed": 0},
             }
             if n_mem:
@@ -184,7 +184,7 @@ def office_snapshot() -> Dict[str, Any]:
             busy = last_kb is not None and now - last_kb <= ACTIVE_WINDOW_S
             residents["kb"] = {
                 "state": "doc" if busy else "idle",
-                "note": (f"正在上架文档" if busy else f"藏书 {total_kb} 本"),
+                "note": ("正在上架文档" if busy else f"藏书 {total_kb} 本"),
                 "today": {"done": n_kb, "failed": 0},
             }
             if n_kb:
@@ -208,7 +208,7 @@ def office_snapshot() -> Dict[str, Any]:
             busy = last_llm is not None and now - last_llm <= ACTIVE_WINDOW_S
             residents["llm"] = {
                 "state": "upset" if n_fail > 3 else ("working" if busy else "idle"),
-                "note": (f"结算中" if busy else f"今日 {n_llm} 次调用"),
+                "note": ("结算中" if busy else f"今日 {n_llm} 次调用"),
                 "today": {"done": n_llm, "failed": n_fail},
             }
             if n_llm:

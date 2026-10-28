@@ -99,7 +99,7 @@ jobs:
         with:
           name: deepddw-windows
           path: deepddw-windows.zip
-          retention-days: 30
+          retention-days: 3
 
       # 自动 attach 到 Release（仅 v* tag 触发时执行）
       - name: Attach EXE to Release

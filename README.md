@@ -14,6 +14,7 @@
 
 - 🧠 **Memory** — cross-session long-term memory, write/search via DSH's official MCP interface
 - 📚 **Knowledge base** — ingest & search your docs (industry docs, SOPs, research notes) anytime
+- 🎒 **Take your AI assets with you** — one click packs memory + knowledge into a portable `ddw_assets_v1.zip` (importable into DDW AI Hub or another deepDDW). Your data, your call — no lock-in
 - 🌐 **LAN-wide multi-device** — deploy once; phones, laptops and tablets on the same network all use the same DSH workbench
 
 **Try it in 60 seconds:**
@@ -28,7 +29,7 @@ git clone https://github.com/ccch713/deepddw.git && cd deepddw
 
 > 📸 *Screenshot: phone / tablet accessing the workbench (coming soon).*
 
-**Status**: v0.8.0 · MIT · CI (pytest + ruff) ✅ · DSH for Teams — multi-user, LAN multi-device, memory & KB with team distillation · migration import/export, scope promote, incognito, retrieval health · org binding server (bindcode-v1, optional) · **virtual office (view-only activity visualization)** · [Listed in awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · Roadmap below
+**Status**: v0.8.1 · MIT · CI (pytest + ruff) ✅ · DSH for Teams — multi-user, LAN multi-device, memory & KB with team distillation · migration import/export, scope promote, incognito, retrieval health · org binding server (bindcode-v1, optional) · **virtual office (view-only activity visualization)** · **AI assets export/import (`ddw_assets_v1`, anti-lock-in)** · [Listed in awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · Roadmap below
 
 > ## ⚠️ IMPORTANT — Read Before Installing
 >
@@ -301,6 +302,7 @@ Only items actually planned or already delivered are listed here.
 - [x] **Reflection & consolidation (LLM polish)** — daily reflection follows a style guide (auto/professional/casual), enforces a progress/issues/tomorrow structure and avoids repeating the previous day; consolidation skips logging when the LLM judges the conversation valueless
 - [x] **Organization binding, bindcode-v1 server (optional plugin)** — act as an enterprise backend for the DDW AI Assistant app family: HMAC-signed short-lived bind codes, public bind/unbind/me endpoints (product-token + rate limit), member-level tokens for an OpenAI-compatible chat endpoint backed by your own llm_gateway providers (see `plugins/ddw_org_relay/`)
 - [x] **Memory search quality** — results ranked by relevance score (hit-count × layer weight: user > notes > reflection > logs, plus freshness) instead of insertion order; keyword-expansion cache expiry tested
+- [x] **AI assets export / import, `ddw_assets_v1` (0.8.1)** — "take your AI assets with you": one click packs knowledge + five-layer memory into a portable zip (neutral format shared with DDW AI Hub); import it back or into Hub (downgrade-friendly, no lock-in). Skills/flows sections are preserved in the package format but ignored on import in this product line
 
 ---
 

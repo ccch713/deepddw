@@ -284,6 +284,12 @@ def create_app() -> FastAPI:
     from core.api.backup import router as backup_router
 
     app.include_router(backup_router)
+    # P0-3（R6 带得走的AI资产）：一键导出/导入 ddw_assets_v1.zip
+    from core.api.assets_export import router as assets_export_router
+    from core.api.assets_import import router as assets_import_router
+
+    app.include_router(assets_export_router)
+    app.include_router(assets_import_router)
     # R4-0/R4-1（DSH for Teams）：部署模式 + 成员系统
     from core.api.teams import router as teams_router
 

@@ -4,6 +4,15 @@ All notable changes to deepDDW are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-11-03
+
+### Added — AI 资产导出/导入（`ddw_assets_v1`，反锁定）
+
+- **"带走我的 AI 资产"一键导出**：`POST /api/v1/assets/export` 把知识库 + 五层记忆（user/notes/logs/reflection/entries）打包为 `ddw_assets_v1.zip`（产品中立格式，与 DDW AI Hub 同构）；导出列表/下载端点（Token 门禁 + 防路径穿越）；导出动作发 `assets.exported` 事件（审计痕）
+- **资产包导入**：`POST /api/v1/assets/import`（`conflict=skip|overwrite`、`dry_run` 预检）——deepDDW 包找回（换机/重装）、DDW AI Hub 包降级带入；knowledge 按 title+content 判重幂等（FTS 重建、向量按内容重打）、memory 各层按 key 幂等（logs append-only 判重、reflection 保留原日期）；skills/flows 段格式保留、本产品导入时忽略并说明
+- **工作台「资产」面板**（`frontend/welcome.html` 第 5 个底部导航）：一键打包、导出列表、blob 下载、上传导入/预检
+- 向量索引不迁移（LanceDB hash-trick 与目标侧不兼容，导入方按内容重建）——格式只搬内容与分块，不搬索引
+
 ## [0.8.0] - 2026-10-18
 
 ### Added — 虚拟办公室（virtual-office，view-only 状态可视化）

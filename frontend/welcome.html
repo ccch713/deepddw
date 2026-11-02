@@ -117,6 +117,30 @@ nav button.active{color:var(--brand)}
       <div class="item">公开文档：<a href="/ui/docs/index.html" style="color:var(--brand)">deepDDW 文档中心</a></div>
     </div>
   </section>
+
+  <!-- 资产（带走我的AI资产） -->
+  <section class="panel hidden" id="panel-assets">
+    <div class="card">
+      <h2>🎒 一键导出</h2>
+      <div class="item">把记忆体 + 知识库打包为 ddw_assets_v1.zip——你的数据你带走，可导入 DDW AI Hub 或另一台 deepDDW。</div>
+      <div class="row"><button class="btn" id="assets-export">打包导出</button></div>
+      <div class="msg" id="assets-export-msg"></div>
+      <div id="assets-list"></div>
+    </div>
+    <div class="card">
+      <h2>📥 导入资产包</h2>
+      <input type="file" id="assets-file" accept=".zip">
+      <div class="row">
+        <select id="assets-conflict">
+          <option value="skip">重复跳过</option>
+          <option value="overwrite">重复覆盖</option>
+        </select>
+        <button class="btn" id="assets-import">导入</button>
+        <button class="btn ghost" id="assets-import-dry" type="button">预检</button>
+      </div>
+      <div class="msg" id="assets-import-msg"></div>
+    </div>
+  </section>
 </main>
 
 <nav>
@@ -124,6 +148,7 @@ nav button.active{color:var(--brand)}
   <button data-panel="kb"><span class="ic">📚</span>知识库</button>
   <button data-panel="mem"><span class="ic">🧠</span>记忆</button>
   <button data-panel="docs"><span class="ic">📄</span>文档</button>
+  <button data-panel="assets"><span class="ic">🎒</span>资产</button>
 </nav>
 
 <script>
@@ -299,6 +324,95 @@ nav button.active{color:var(--brand)}
         });
       }).catch(function (e) { document.getElementById("docs-out").innerHTML = '<div class="item">失败：' + esc(e.message) + "</div>"; });
   });
+
+  // ---- 资产（带走我的AI资产） ----
+  function fmtBytes(n) {
+    if (n > 1048576) return (n / 1048576).toFixed(1) + " MB";
+    if (n > 1024) return (n / 1024).toFixed(1) + " KB";
+    return n + " B";
+  }
+  function refreshAssetsList() {
+    fetch("/api/v1/assets/exports", { headers: headers() })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var items = (d.data && d.data.results) || [];
+        if (!items.length) { document.getElementById("assets-list").innerHTML = '<div class="item">暂无导出包</div>'; return; }
+        appendItems("assets-list", items, function (it) {
+          var kb = Math.max(0, Math.round(it.size_bytes / 1024));
+          return "<b>" + esc(it.file) + "</b>（" + fmtBytes(it.size_bytes) + '）<button class="btn ghost" data-dl="' + esc(it.file) + '">下载</button>';
+        });
+        document.querySelectorAll("#assets-list [data-dl]").forEach(function (b) {
+          b.addEventListener("click", function () { downloadExport(b.getAttribute("data-dl")); });
+        });
+      })
+      .catch(function (e) { document.getElementById("assets-list").innerHTML = '<div class="item">失败：' + esc(e.message) + "</div>"; });
+  }
+  function downloadExport(fname) {
+    // Token 经 header 传递，需 fetch→blob 下载（LAN 免密时同样可用）
+    fetch("/api/v1/assets/exports/" + encodeURIComponent(fname), { headers: headers() })
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.blob();
+      })
+      .then(function (blob) {
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = fname;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+      })
+      .catch(function (e) { document.getElementById("assets-export-msg").textContent = "下载失败：" + e.message; });
+  }
+  document.getElementById("assets-export").addEventListener("click", function () {
+    var msg = document.getElementById("assets-export-msg");
+    msg.textContent = "打包中…";
+    fetch("/api/v1/assets/export", {
+      method: "POST", headers: headers(),
+      body: JSON.stringify({ workspace: "shared" }),
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      var data = d.data || {};
+      if (!data.ok) { msg.textContent = "导出失败：" + (data.note || "未知错误"); return; }
+      var c = data.counts || {};
+      msg.textContent = "已导出 " + data.file + "（知识 " + (c.knowledge || 0) + " 条 / 记忆 " + (c.memory || 0) + " 条）";
+      refreshAssetsList();
+    }).catch(function (e) { msg.textContent = "失败：" + e.message; });
+  });
+  function doAssetsImport(dry) {
+    var msg = document.getElementById("assets-import-msg");
+    var f = document.getElementById("assets-file").files[0];
+    if (!f) { msg.textContent = "请先选择 .zip 资产包"; return; }
+    msg.textContent = dry ? "预检中…" : "导入中…";
+    var fd = new FormData();
+    fd.append("file", f);
+    fd.append("workspace", "shared");
+    fd.append("conflict", document.getElementById("assets-conflict").value);
+    fd.append("dry_run", dry ? "true" : "false");
+    var h = {};
+    if (token) h["X-DDW-Token"] = token;  // FormData 不设 Content-Type（浏览器自动带 boundary）
+    fetch("/api/v1/assets/import", { method: "POST", headers: h, body: fd })
+      .then(function (r) {
+        return r.json().then(function (d) { return { status: r.status, body: d }; });
+      })
+      .then(function (res) {
+        if (res.status >= 400) {
+          var detail = (res.body && res.body.detail) || "导入失败";
+          msg.textContent = "失败：" + detail;
+          return;
+        }
+        var data = res.body.data || {};
+        var c = data.counts || {};
+        var k = c.knowledge || {}, m = c.memory || {};
+        msg.textContent = (data.dry_run ? "预检完成：" : "导入完成：")
+          + "知识 +" + (k.added || 0) + " 跳过 " + (k.skipped || 0)
+          + "；记忆 +" + (m.upserted || 0) + " 跳过 " + (m.skipped || 0)
+          + ((c.skills_ignored || c.flows_ignored) ? "；skills/flows 已忽略（本产品无对应能力）" : "");
+      })
+      .catch(function (e) { msg.textContent = "失败：" + e.message; });
+  }
+  document.getElementById("assets-import").addEventListener("click", function () { doAssetsImport(false); });
+  document.getElementById("assets-import-dry").addEventListener("click", function () { doAssetsImport(true); });
+  // 切到资产面板时刷新导出列表
+  document.querySelector('nav button[data-panel="assets"]').addEventListener("click", refreshAssetsList);
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {

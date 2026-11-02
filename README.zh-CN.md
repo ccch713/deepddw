@@ -11,6 +11,7 @@
 
 - 🧠 **记忆体** — 跨会话长期记忆，读写走 DSH 官方标准 MCP 接口
 - 📚 **知识库** — 文档入库与检索（行业资料、SOP、研究笔记）随时可查
+- 🎒 **AI 资产一键打包带走** — 记忆体 + 知识库一键打包为 `ddw_assets_v1.zip`（可导入 DDW AI Hub 或另一台 deepDDW）。你的数据你做主，不锁定
 - 🌐 **局域网多设备** — 部署一次，手机/平板/笔记本同网可用，共用同一个 DSH 工作台
 
 **60 秒上手：**
@@ -25,7 +26,7 @@ git clone https://github.com/ccch713/deepddw.git && cd deepddw
 
 > 📸 *截图位：手机/平板访问工作台实拍（稍后补充）。*
 
-**当前状态**：v0.8.0 · MIT · CI（pytest + ruff）✅ · DSH for Teams —— 多用户、局域网多设备、记忆与知识库团队蒸馏 · 迁移导入导出 / 作用域提升 / 无痕会话 / 检索健康 · 组织连接服务端（bindcode-v1，可选） · **虚拟办公室（view-only 活动可视化）** · [入选 awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · 路线图见文末
+**当前状态**：v0.8.1 · MIT · CI（pytest + ruff）✅ · DSH for Teams —— 多用户、局域网多设备、记忆与知识库团队蒸馏 · 迁移导入导出 / 作用域提升 / 无痕会话 / 检索健康 · 组织连接服务端（bindcode-v1，可选） · **虚拟办公室（view-only 活动可视化）** · **AI 资产导出/导入（`ddw_assets_v1`，反锁定）** · [入选 awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness#memory--knowledge) · 路线图见文末
 
 > ## ⚠️ 重要 —— 安装前必读
 >
@@ -275,6 +276,7 @@ curl -X POST :8500/api/v1/plugins/ddw-org-relay/admin/orgs/<org_id>/bindcode    
 - [x] **反思与沉淀（LLM 化收尾）** — 每日反思按风格指南（自动/专业/随意）生成、强制"进展/问题/明日注意"结构并避免与昨日重复；LLM 判定对话无价值时不再落日志
 - [x] **组织连接 bindcode-v1 服务端（可选插件）** — 作为 DDW AI 助手系列 App 的企业后端：HMAC 签名短时效绑定码、公网 bind/unbind/me 端点（产品令牌+限速）、成员级令牌直连 OpenAI 兼容对话端点（LLM 供给走部署者自配供应商，见 `plugins/ddw_org_relay/`）
 - [x] **记忆检索质量** — 结果按相关性评分排序（命中数×层权重：用户规则优先于旧日志，近期日志加权），取代原插入序；扩写缓存过期行为已测试
+- [x] **AI 资产导出/导入 `ddw_assets_v1`（0.8.1）** — "带走我的 AI 资产"：知识库 + 五层记忆一键打包为可迁移 zip（与 DDW AI Hub 同构中立格式）；支持导回本产品或降级带入 Hub 包（skills/flows 段格式保留、导入时忽略）——反锁定的产品化承诺
 
 ---
 

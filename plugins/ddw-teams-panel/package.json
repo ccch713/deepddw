@@ -1,6 +1,6 @@
 {
   "name": "@deepddw/ddw-teams-panel",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "deepDDW 团队管理——左栏入口+成员/角色/设备绑定+模式选择+共享空间",
   "type": "module",
   "main": "src/index.js",

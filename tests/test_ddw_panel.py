@@ -23,11 +23,11 @@ def test_cordis_patch():
 def test_package_json():
     pkg = json.loads((PLUGIN / "package.json").read_text(encoding="utf-8"))
     assert pkg["dsh"]["bundle"]["patch"] == "./cordis.patch.yml"
-    assert pkg["version"] == "0.6.0"
+    assert pkg["version"] == "0.7.0"
 
 
 def test_v06_left_rail_pairing():
-    """v0.6.0 左栏入口：panellist 与 main 必须成对注册且 id 与 key 同值。
+    """v0.7.0 左栏入口：panellist 与 main 必须成对注册且 id 与 key 同值。
 
     契约依据（DSH 0.2.2-rc.5 类型定义）：
     - sidebar.panellist（list/root，声明于 dsh-client-ui-sidebar）
@@ -49,14 +49,14 @@ def test_v06_left_rail_pairing():
 
 
 def test_v06_left_rail_naming():
-    """v0.6.0 命名裁定：左栏/设置页 = 团队管理（Team Admin），右栏页签 = 团队（Team）。"""
+    """v0.7.0 命名裁定：左栏/设置页 = 团队管理（Team Admin），右栏页签 = 团队（Team）。"""
     src = (PLUGIN / "src" / "client" / "index.ts").read_text(encoding="utf-8")
     assert "团队管理" in src
     assert "Team Admin" in src
 
 
 def test_v06_right_pane_tab():
-    """v0.6.0 右栏页签（裁定方案 C）：sidebarRightTabs 服务 + sidebar.right.pane.tab keyed 槽。"""
+    """v0.7.0 右栏页签（裁定方案 C）：sidebarRightTabs 服务 + sidebar.right.pane.tab keyed 槽。"""
     src = (PLUGIN / "src" / "client" / "index.ts").read_text(encoding="utf-8")
     assert "sidebar.right.pane.tab" in src
     assert "ddw-team-tab" in src
@@ -67,7 +67,7 @@ def test_v06_right_pane_tab():
 
 
 def test_v06_role_anti_spoof_client():
-    """v0.6.0 客户端配合角色层：X-DDW-Device 头 + 绑定码输入 + 403 提示。"""
+    """v0.7.0 客户端配合角色层：X-DDW-Device 头 + 绑定码输入 + 403 提示。"""
     src = (PLUGIN / "src" / "client" / "index.ts").read_text(encoding="utf-8")
     assert "X-DDW-Device" in src
     assert "invite_code" in src

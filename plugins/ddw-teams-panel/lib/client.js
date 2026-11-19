@@ -30,7 +30,7 @@ let react = require("react");
 react = __toESM(react, 1);
 //#region plugins/ddw-teams-panel/src/client/index.ts
 /**
-* deepDDW 团队管理面板 — DSH 客户端插件源码（v0.6.0）
+* deepDDW 团队管理面板 — DSH 客户端插件源码（v0.7.0）
 *
 * 构建：tsdown → lib/client.js（__ModuleLoader__ 格式）
 * 本文件是唯一权威源；不要直接手改 lib/client.js（构建会覆盖）。
@@ -41,7 +41,7 @@ react = __toESM(react, 1);
 * - 不能读 ctx.config（除非 inject 声明 'config'）；网关地址固定 8500。
 * - BASE 不能用 window.location.origin（那是 DSH web 3080，网关是独立 8500）。
 *
-* v0.6.0 左栏入口（契约依据 DSH 0.2.2-rc.5 类型定义）：
+* v0.7.0 左栏入口（契约依据 DSH 0.2.2-rc.5 类型定义）：
 * - `sidebar.panellist`（list/root，声明于 dsh-client-ui-sidebar）：左栏常驻图标位，
 *   root 作用域 = 不随会话生灭；owner props = { size, active }。
 * - `main`（keyed/root，声明于 dsh-client-ui-layout）："Central panel selected by
@@ -810,7 +810,7 @@ function TeamMain(_props) {
 	} }, h(SettingsPanel));
 }
 /**
-* 右栏页签（v0.6.0，裁定方案 C 的会话伴随面）：当前身份 / 在线设备 / 共享空间。
+* 右栏页签（v0.7.0，裁定方案 C 的会话伴随面）：当前身份 / 在线设备 / 共享空间。
 * 形态参照 dsh-context：sidebarRightTabs 服务注册页签类型，sidebar.right.pane.tab
 * （keyed / session 作用域）出页签体——无会话时页签不存在，属预期行为。
 * 注：「本会话写入的记忆」需按会话过滤的记忆查询 API，留待后端补（v0.7）。
@@ -990,7 +990,7 @@ function apply(ctx) {
 				deviceId
 			})));
 		}).catch(() => {});
-		console.log("[ddw] all slots registered (v0.6.0: settings.section + sidebar.panellist + main + sidebar.right.pane.tab)");
+		console.log("[ddw] all slots registered (v0.7.0: settings.section + sidebar.panellist + main + sidebar.right.pane.tab)");
 	} catch (e) {
 		console.error("[ddw]", e);
 	}

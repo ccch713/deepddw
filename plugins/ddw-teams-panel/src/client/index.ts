@@ -1,5 +1,5 @@
 /**
- * deepDDW 团队管理面板 — DSH 客户端插件源码（v0.6.0）
+ * deepDDW 团队管理面板 — DSH 客户端插件源码（v0.7.0）
  *
  * 构建：tsdown → lib/client.js（__ModuleLoader__ 格式）
  * 本文件是唯一权威源；不要直接手改 lib/client.js（构建会覆盖）。
@@ -10,7 +10,7 @@
  * - 不能读 ctx.config（除非 inject 声明 'config'）；网关地址固定 8500。
  * - BASE 不能用 window.location.origin（那是 DSH web 3080，网关是独立 8500）。
  *
- * v0.6.0 左栏入口（契约依据 DSH 0.2.2-rc.5 类型定义）：
+ * v0.7.0 左栏入口（契约依据 DSH 0.2.2-rc.5 类型定义）：
  * - `sidebar.panellist`（list/root，声明于 dsh-client-ui-sidebar）：左栏常驻图标位，
  *   root 作用域 = 不随会话生灭；owner props = { size, active }。
  * - `main`（keyed/root，声明于 dsh-client-ui-layout）："Central panel selected by
@@ -33,7 +33,7 @@ const t = (zh: string, en: string): string => (LANG === 'zh' ? zh : en)
 // 左栏入口 id：panellist 的 id 与 main 的 key 必须同值
 const PANEL_ID = 'ddw-teams'
 
-// v0.6.0：所有 API 调用带设备头——team 模式 admin 门按「设备→绑定成员角色」判定
+// v0.7.0：所有 API 调用带设备头——team 模式 admin 门按「设备→绑定成员角色」判定
 // （服务端 core/api/teams.py require_admin 读 X-DDW-Device；未绑定设备无管理权限）
 function api(path: string, opts: any = {}): Promise<any> {
   const dev = localStorage.getItem('deepddw_device_id') || ''
@@ -50,7 +50,7 @@ const MODES = [
   { value: 'team',   label: '小团队协作',  spec: '推荐 32GB+ 内存（20 人以内）' },
 ]
 
-// ══════ 成员识别（手动输入；v0.6.0 team 模式需绑定码防冒名）══════
+// ══════ 成员识别（手动输入；v0.7.0 team 模式需绑定码防冒名）══════
 function MemberIdentify(props: any) {
   const [st, setSt] = React.useState({ name: '', code: '', error: '', submitting: false })
   function submit() {
@@ -304,7 +304,7 @@ function OnboardingModal() {
   )
 }
 
-// ══════ 左栏入口（v0.6.0）══════
+// ══════ 左栏入口（v0.7.0）══════
 
 /**
  * 左栏图标位（sidebar.panellist 的占用者）。owner 传 { size, active }：
@@ -333,7 +333,7 @@ function TeamMain(_props: any) {
 }
 
 /**
- * 右栏页签（v0.6.0，裁定方案 C 的会话伴随面）：当前身份 / 在线设备 / 共享空间。
+ * 右栏页签（v0.7.0，裁定方案 C 的会话伴随面）：当前身份 / 在线设备 / 共享空间。
  * 形态参照 dsh-context：sidebarRightTabs 服务注册页签类型，sidebar.right.pane.tab
  * （keyed / session 作用域）出页签体——无会话时页签不存在，属预期行为。
  * 注：「本会话写入的记忆」需按会话过滤的记忆查询 API，留待后端补（v0.7）。
@@ -399,7 +399,7 @@ export function apply(ctx: any) {
       }).catch(() => { /* ignore */ })
     }
     ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'ddw-multiuser-settings', order: 100, label: () => t('团队管理', 'Team Admin') }, SettingsPanel))
-    // 左栏入口（v0.6.0）：panellist 画图标、main 承接点击——两个 root 槽成对注册，
+    // 左栏入口（v0.7.0）：panellist 画图标、main 承接点击——两个 root 槽成对注册，
     // id 与 key 同值（PANEL_ID）；设置 → 团队管理 保留为配置页，两处并存。
     registerWhenDeclared(ctx, 'sidebar.panellist',
       { name: 'sidebar.panellist', id: PANEL_ID, order: 30, label: () => t('团队管理', 'Team Admin') },
@@ -468,6 +468,6 @@ export function apply(ctx: any) {
         }
       }).catch(() => { /* ignore */ })
     }
-    console.log('[ddw] all slots registered (v0.6.0: settings.section + sidebar.panellist + main + sidebar.right.pane.tab)')
+    console.log('[ddw] all slots registered (v0.7.0: settings.section + sidebar.panellist + main + sidebar.right.pane.tab)')
   } catch (e) { console.error('[ddw]', e) }
 }

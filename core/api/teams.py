@@ -242,10 +242,23 @@ def add_member_direct(
 ) -> Dict[str, Any]:
     """family 模式：管理员直接添加成员（免邀请码——家人互信）。
 
-    v0.6.0 裁定：family 全员 admin（家庭互信）；team 模式不走此路径（邀请码制）。
+    v0.6.0 裁定：family 全员 admin（家庭互信）；team 模式冷启动首个成员 = admin
+    （部署者裁定；此后 team 走邀请码制）。
     """
     mode = get_deployment_mode()
     role = "admin" if mode == "family" else "member"
+    if mode == "team":
+        conn = _get_conn()
+        try:
+            active = conn.execute(
+                "SELECT COUNT(*) AS n FROM members WHERE revoked=0 AND deleted=0"
+            ).fetchone()["n"]
+        except sqlite3.Error:
+            active = 0
+        finally:
+            conn.close()
+        if active == 0:
+            role = "admin"  # 冷启动首加 = 部署者
     member_id = "m-" + "".join(secrets.choice(_INVITE_CHARS) for _ in range(8))
     conn = _get_conn()
     try:
@@ -445,12 +458,25 @@ def require_admin(device_id: str) -> Optional[Dict[str, Any]]:
 
     - solo：单用户模型，无成员层，放行（向后兼容）
     - family：家庭互信（裁定：全员 admin），放行
-    - team：调用设备必须绑定到**活跃 admin 成员**；未绑定设备一律拒绝
+    - team：调用设备必须绑定到**活跃 admin 成员**；未绑定设备一律拒绝；
+      但**冷启动放行**——无任何活跃成员时放行（首个操作者经注册/直加
+      成为 admin，否则 invite/create 与 member/add 互相锁死，鸡生蛋）
     返回 None = 放行；否则为拒绝 dict（配 HTTP 403）。
     """
     mode = get_deployment_mode()
     if mode in ("solo", "family"):
         return None
+    conn = _get_conn()
+    try:
+        active = conn.execute(
+            "SELECT COUNT(*) AS n FROM members WHERE revoked=0 AND deleted=0"
+        ).fetchone()["n"]
+    except sqlite3.Error:
+        active = 0
+    finally:
+        conn.close()
+    if active == 0:
+        return None  # 冷启动：没有任何成员，放行首配操作
     m = member_for_device((device_id or "").strip())
     if m and m.get("role") == "admin" and not m.get("revoked"):
         return None
@@ -652,9 +678,16 @@ async def member_revoke(
 @router.post("/device/bind-member")
 async def device_bind(
     payload: DeviceBindReq,
+    request: Request,
     claims: Dict[str, Any] = Depends(require_access_token),
 ) -> Dict[str, Any]:
-    """设备 ↔ 成员绑定（launcher 注册后调用；重连自动识别）。"""
+    """设备 ↔ 成员绑定（launcher 注册后调用；重连自动识别）。admin 门。
+
+    team 模式收紧（2026-11-19 真机审计）：此端点原本无角色校验，构成
+    identify 绑定码防冒名的旁路——任何内网设备可直绑任意 member_id。
+    收紧后 team 模式仅 admin 设备可直绑；新成员一律走 /device/identify+绑定码。
+    """
+    _guard_admin(request)
     return ok(bind_device_to_member(payload.device_id, payload.member_id))
 
 

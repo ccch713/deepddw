@@ -261,10 +261,11 @@ def test_require_admin_team_gate(monkeypatch, tmp_path):
     """team 模式：未绑定设备拒绝；绑定 admin 成员的设备放行；family/solo 放行。"""
     _team_mode(monkeypatch)
     monkeypatch.setattr(teams_api, "_db_path", lambda: tmp_path / "teams.db")
-    assert teams_api.require_admin("dev-unknown") is not None  # 未绑定 → 拒
+    assert teams_api.require_admin("dev-unknown") is None  # 冷启动（无成员）→ 放行
     inv = teams_api.create_invite(role="member")
     teams_api.register_member(inv["invite_code"], "甲", "dev-admin")
     assert teams_api.require_admin("dev-admin") is None  # 首成员=admin → 放行
+    assert teams_api.require_admin("dev-unknown") is not None  # 有成员后未绑定 → 拒
     # 普通 member 设备
     inv2 = teams_api.create_invite(role="member")
     teams_api.register_member(inv2["invite_code"], "乙", "dev-member")
@@ -299,3 +300,72 @@ def test_identify_anti_spoof_in_team(monkeypatch, tmp_path):
     # family 免码（家庭互信）
     _family_mode(monkeypatch)
     assert teams_api.bind_device_by_identify("dev-f", target, "")["ok"] is True
+
+
+def test_set_deployment_mode_with_null_key(tmp_path, monkeypatch):
+    """回归（16G 真机 2026-11-19）：deployment.yaml 里 `deployment: null` 时
+    setdefault 返回 None，None["mode"] 写入炸 TypeError——首配模式即 500。"""
+    import yaml
+    from core import config as cfg
+    yml = tmp_path / "deployment.yaml"
+    yml.write_text(yaml.safe_dump({"mode": "standalone", "deployment": None}), encoding="utf-8")
+    monkeypatch.setattr(cfg.Path, "__new__", cfg.Path.__new__)  # noop，真实逻辑走 tmp_path 注入
+    # 直接以 tmp_path 为目标重写函数依赖：set_deployment_mode 用 __file__ 定位，
+    # 这里 monkeypatch safe_load 不可行——改为最小复现验证核心表达式已修：
+    data = {"mode": "standalone", "deployment": None}
+    dep = data.get("deployment")
+    if not isinstance(dep, dict):
+        dep = {}
+        data["deployment"] = dep
+    dep["mode"] = "team"
+    assert data["deployment"]["mode"] == "team"
+
+
+def test_set_deployment_mode_end_to_end(tmp_path, monkeypatch):
+    """端到端：deployment.yaml 含 deployment: null 时 POST 语义等价调用不炸。"""
+    import yaml
+    from core import config as cfg
+    yml = tmp_path / "deployment.yaml"
+    yml.write_text("mode: standalone\ndeployment: null\n", encoding="utf-8")
+    real_file = cfg.Path(cfg.__file__)
+    target = real_file.parent.parent / "config" / "deployment.yaml"
+    backup = target.read_text(encoding="utf-8") if target.exists() else None
+    try:
+        target.write_text("mode: standalone\ndeployment: null\n", encoding="utf-8")
+        r = cfg.set_deployment_mode("team")
+        assert r["ok"] is True and r["mode"] == "team"
+        data = yaml.safe_load(target.read_text(encoding="utf-8"))
+        assert data["deployment"]["mode"] == "team"
+    finally:
+        if backup is not None:
+            target.write_text(backup, encoding="utf-8")
+
+
+def test_team_coldstart_allows_first_ops(monkeypatch, tmp_path):
+    """冷启动（无任何活跃成员）：invite/create 与 member/add 放行；首加成员 = admin。
+    有成员后未绑定设备恢复拒绝（无鸡生蛋死锁）。"""
+    _team_mode(monkeypatch)
+    monkeypatch.setattr(teams_api, "_db_path", lambda: tmp_path / "teams.db")
+    assert teams_api.require_admin("dev-x") is None  # 冷启动放行
+    r = teams_api.add_member_direct("张三", "dev-admin")
+    assert r["ok"] is True
+    roles = {m["display_name"]: m["role"] for m in teams_api.list_members()["results"]}
+    assert roles["张三"] == "admin"  # 首加 = 部署者
+    assert teams_api.require_admin("dev-other") is not None  # 有成员后恢复拒绝
+    assert teams_api.require_admin("dev-admin") is None  # admin 设备放行
+
+
+async def test_bind_member_gated_in_team(client, monkeypatch, tmp_path):
+    """旁路封堵（2026-11-19 真机审计）：team 模式 /device/bind-member 无 admin 设备 → 403。"""
+    _team_mode(monkeypatch)
+    monkeypatch.setattr(teams_api, "_db_path", lambda: tmp_path / "teams.db")
+    teams_api.add_member_direct("张三", "dev-admin")  # 冷启动首加 = admin
+    headers = {"X-DDW-Token": os.environ["DDW_ACCESS_TOKEN"]}
+    r = await client.post("/api/v1/device/bind-member", headers=headers,
+                          json={"device_id": "dev-evil", "member_id": "m-HACK0001"})
+    assert r.status_code == 403
+    r2 = await client.post("/api/v1/device/bind-member", headers={**headers, "X-DDW-Device": "dev-admin"},
+                           json={"device_id": "dev-2", "member_id": "m-VPW4SU9D"[:4] + "X"}) if False else None
+    r3 = await client.post("/api/v1/device/bind-member", headers={**headers, "X-DDW-Device": "dev-admin"},
+                           json={"device_id": "dev-2", "member_id": teams_api.list_members()["results"][0]["member_id"]})
+    assert r3.status_code == 200

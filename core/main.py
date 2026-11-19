@@ -256,7 +256,7 @@ def create_app() -> FastAPI:
         allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
-        allow_headers=["Authorization", "X-DDW-Token", "Content-Type", "Mcp-Session-Id"],
+        allow_headers=["Authorization", "X-DDW-Token", "X-DDW-Device", "Content-Type", "Mcp-Session-Id"],
     )
 
     # P0-2（multidevice）：网关限流与过载保护（Token/IP 双维度 + 全局 503）。

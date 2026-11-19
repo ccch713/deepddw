@@ -289,7 +289,13 @@ def set_deployment_mode(mode: str) -> Dict[str, Any]:
             data = {}
     if not isinstance(data, dict):
         data = {}
-    data.setdefault("deployment", {})["mode"] = mode
+    # 防 deployment.yaml 里 `deployment:` 键存在但值为 null——setdefault 会返回
+    # None（已有键的现值），None["mode"] 写入即炸（16G 真机 2026-11-19 首配踩中）。
+    dep = data.get("deployment")
+    if not isinstance(dep, dict):
+        dep = {}
+        data["deployment"] = dep
+    dep["mode"] = mode
     cfg_path.parent.mkdir(parents=True, exist_ok=True)
     cfg_path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False),
                         encoding="utf-8")

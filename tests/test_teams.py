@@ -364,8 +364,6 @@ async def test_bind_member_gated_in_team(client, monkeypatch, tmp_path):
     r = await client.post("/api/v1/device/bind-member", headers=headers,
                           json={"device_id": "dev-evil", "member_id": "m-HACK0001"})
     assert r.status_code == 403
-    r2 = await client.post("/api/v1/device/bind-member", headers={**headers, "X-DDW-Device": "dev-admin"},
-                           json={"device_id": "dev-2", "member_id": "m-VPW4SU9D"[:4] + "X"}) if False else None
     r3 = await client.post("/api/v1/device/bind-member", headers={**headers, "X-DDW-Device": "dev-admin"},
                            json={"device_id": "dev-2", "member_id": teams_api.list_members()["results"][0]["member_id"]})
     assert r3.status_code == 200

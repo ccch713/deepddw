@@ -186,3 +186,116 @@ def test_resolve_namespace_invalid_member_id():
     """非法 member_id → 回退 shared（防注入）。"""
     assert teams_api.resolve_namespace("team", "bad id!") == "shared"
     assert teams_api.resolve_namespace("team", "x" * 65) == "shared"
+
+
+# ---------------------------------------------------------------------------
+# v0.6.0 角色层（admin/member）：赋权 + 邀请码继承 + 服务端强制 + 冒名防护
+# ---------------------------------------------------------------------------
+
+
+def _team_mode(monkeypatch) -> None:
+    """team 模式：覆盖 teams_api 命名空间的 mode 引用 + 重置角色引导标志。"""
+    monkeypatch.setattr(teams_api, "get_deployment_mode", lambda: "team")
+    monkeypatch.setattr(teams_api, "members_enabled", lambda: True)
+    monkeypatch.setattr(teams_api, "_admin_bootstrapped", False)
+
+
+def _family_mode(monkeypatch) -> None:
+    monkeypatch.setattr(teams_api, "get_deployment_mode", lambda: "family")
+    monkeypatch.setattr(teams_api, "members_enabled", lambda: True)
+    monkeypatch.setattr(teams_api, "_admin_bootstrapped", False)
+
+
+def test_invite_role_inherited(monkeypatch, tmp_path):
+    """admin 邀请码 → 注册成员继承 admin 角色。"""
+    _team_mode(monkeypatch)
+    monkeypatch.setattr(teams_api, "_db_path", lambda: tmp_path / "teams.db")
+    inv = teams_api.create_invite(note="admin-code", role="admin")
+    assert inv["ok"] is True and inv["role"] == "admin"
+    r = teams_api.register_member(inv["invite_code"], "管理员甲", "dev-a")
+    assert r["ok"] is True
+    members = teams_api.list_members()["results"]
+    assert members[0]["role"] == "admin"
+
+
+def test_team_first_member_bootstrap_admin(monkeypatch, tmp_path):
+    """team 模式首个成员（member 码注册）直接 admin（部署者裁定）。"""
+    _team_mode(monkeypatch)
+    monkeypatch.setattr(teams_api, "_db_path", lambda: tmp_path / "teams.db")
+    inv = teams_api.create_invite(role="member")
+    teams_api.register_member(inv["invite_code"], "甲", "dev-1")
+    teams_api.register_member(inv["invite_code"] if inv["max_uses"] > 1 else teams_api.create_invite(role="member")["invite_code"], "乙", "dev-2")
+    roles = {m["display_name"]: m["role"] for m in teams_api.list_members()["results"]}
+    assert roles["甲"] == "admin"
+    assert roles["乙"] == "member"
+
+
+def test_family_direct_add_is_admin(monkeypatch, tmp_path):
+    """family 裁定：直接添加的成员全员 admin（家庭互信）。"""
+    _family_mode(monkeypatch)
+    monkeypatch.setattr(teams_api, "_db_path", lambda: tmp_path / "teams.db")
+    r = teams_api.add_member_direct("家人甲", "dev-f1")
+    assert r["ok"] is True
+    members = teams_api.list_members()["results"]
+    assert members[0]["role"] == "admin"
+
+
+def test_set_member_role_lockout_guard(monkeypatch, tmp_path):
+    """唯一 admin 不可自降（防锁死）；提升第二 admin 后可降。"""
+    _team_mode(monkeypatch)
+    monkeypatch.setattr(teams_api, "_db_path", lambda: tmp_path / "teams.db")
+    inv = teams_api.create_invite(role="member", max_uses=5)
+    m1 = teams_api.register_member(inv["invite_code"], "甲", "dev-1")["member_id"]
+    m2 = teams_api.register_member(teams_api.create_invite(role="member")["invite_code"], "乙", "dev-2")["member_id"]
+    # 甲是首个成员 = admin；降级应被拒（唯一 admin）
+    r = teams_api.set_member_role(m1, "member")
+    assert r["ok"] is False and "唯一管理员" in r["note"]
+    # 提升乙为 admin 后，甲可降
+    assert teams_api.set_member_role(m2, "admin")["ok"] is True
+    assert teams_api.set_member_role(m1, "member")["ok"] is True
+    # 非法角色
+    assert teams_api.set_member_role(m1, "root")["ok"] is False
+
+
+def test_require_admin_team_gate(monkeypatch, tmp_path):
+    """team 模式：未绑定设备拒绝；绑定 admin 成员的设备放行；family/solo 放行。"""
+    _team_mode(monkeypatch)
+    monkeypatch.setattr(teams_api, "_db_path", lambda: tmp_path / "teams.db")
+    assert teams_api.require_admin("dev-unknown") is not None  # 未绑定 → 拒
+    inv = teams_api.create_invite(role="member")
+    teams_api.register_member(inv["invite_code"], "甲", "dev-admin")
+    assert teams_api.require_admin("dev-admin") is None  # 首成员=admin → 放行
+    # 普通 member 设备
+    inv2 = teams_api.create_invite(role="member")
+    teams_api.register_member(inv2["invite_code"], "乙", "dev-member")
+    assert teams_api.require_admin("dev-member") is not None  # member → 拒
+    # family 全放行（家庭互信）
+    _family_mode(monkeypatch)
+    assert teams_api.require_admin("") is None
+
+
+def test_identify_anti_spoof_in_team(monkeypatch, tmp_path):
+    """team 模式冒名防护：无码拒绝；错码/错成员拒绝；正确绑定码放行并计次。"""
+    _team_mode(monkeypatch)
+    monkeypatch.setattr(teams_api, "_db_path", lambda: tmp_path / "teams.db")
+    inv = teams_api.create_invite(role="member")
+    target = teams_api.register_member(inv["invite_code"], "张三", "dev-0")["member_id"]
+    # 无码 → 拒
+    r = teams_api.bind_device_by_identify("dev-x", target, "")
+    assert r["ok"] is False and "绑定码" in r["note"]
+    # 生成绑定码（bound_member_id=target）
+    bind = teams_api.create_invite(note="bind-code", bound_member_id=target)
+    code = bind["invite_code"]
+    # 错成员 → 拒（码与成员不匹配，且不计次）
+    r2 = teams_api.bind_device_by_identify("dev-x", "m-WRONG123", code)
+    assert r2["ok"] is False and "不匹配" in r2["note"]
+    # 正确 → 放行并绑定
+    r3 = teams_api.bind_device_by_identify("dev-x", target, code.lower())  # 大小写归一
+    assert r3["ok"] is True
+    assert teams_api.member_for_device("dev-x")["member_id"] == target
+    # 绑定码计次耗尽（max_uses=1）→ 再用拒绝
+    r4 = teams_api.bind_device_by_identify("dev-y", target, code)
+    assert r4["ok"] is False and "最大使用次数" in r4["note"]
+    # family 免码（家庭互信）
+    _family_mode(monkeypatch)
+    assert teams_api.bind_device_by_identify("dev-f", target, "")["ok"] is True

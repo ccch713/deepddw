@@ -30,7 +30,7 @@ let react = require("react");
 react = __toESM(react, 1);
 //#region plugins/ddw-teams-panel/src/client/index.ts
 /**
-* deepDDW 多用户设置面板 — DSH 客户端插件源码（v0.5.1）
+* deepDDW 团队管理面板 — DSH 客户端插件源码（v0.6.0）
 *
 * 构建：tsdown → lib/client.js（__ModuleLoader__ 格式）
 * 本文件是唯一权威源；不要直接手改 lib/client.js（构建会覆盖）。
@@ -40,8 +40,28 @@ react = __toESM(react, 1);
 *   未声明则访问 ctx.slots 抛 "cannot get property slots without inject"。
 * - 不能读 ctx.config（除非 inject 声明 'config'）；网关地址固定 8500。
 * - BASE 不能用 window.location.origin（那是 DSH web 3080，网关是独立 8500）。
+*
+* v0.6.0 左栏入口（契约依据 DSH 0.2.2-rc.5 类型定义）：
+* - `sidebar.panellist`（list/root，声明于 dsh-client-ui-sidebar）：左栏常驻图标位，
+*   root 作用域 = 不随会话生灭；owner props = { size, active }。
+* - `main`（keyed/root，声明于 dsh-client-ui-layout）："Central panel selected by
+*   sidebar entry id"，保留 key 是 conversation，其余 key 不绑会话。
+* - 两者必须成对（id 与 key 同值）：只有图标没有 main 占用者 = 死按钮。
+* - 注册必须包 ctx.slots.inject(slot, cb)：槽未声明时直接注册会抛
+*   slot "…" is not declared，且一次抛错会让整个插件 fiber failed
+*   （DSH 界面显示 Failed to load plugins）。参照 MisakaNet registerWhenDeclared。
 */
 const h = react.createElement;
+const BASE = "http://127.0.0.1:8500";
+const LANG = typeof navigator !== "undefined" && (navigator.language || "zh").toLowerCase().startsWith("zh") ? "zh" : "en";
+const t = (zh, en) => LANG === "zh" ? zh : en;
+const PANEL_ID = "ddw-teams";
+function api(path, opts = {}) {
+	const dev = localStorage.getItem("deepddw_device_id") || "";
+	opts.headers = Object.assign({ "Content-Type": "application/json" }, opts.headers, { "X-DDW-Device": dev });
+	return fetch(BASE + path, opts);
+}
+const FORBIDDEN_MSG = "需要管理员角色（team 模式下须绑定管理员成员的设备）";
 const inject = ["slots"];
 const MODES = [
 	{
@@ -63,6 +83,7 @@ const MODES = [
 function MemberIdentify(props) {
 	const [st, setSt] = react.useState({
 		name: "",
+		code: "",
 		error: "",
 		submitting: false
 	});
@@ -71,6 +92,7 @@ function MemberIdentify(props) {
 		if (!n) {
 			setSt({
 				name: n,
+				code: st.code,
 				error: "请输入成员名称",
 				submitting: false
 			});
@@ -78,6 +100,7 @@ function MemberIdentify(props) {
 		}
 		setSt({
 			name: n,
+			code: st.code,
 			error: "",
 			submitting: true
 		});
@@ -86,32 +109,42 @@ function MemberIdentify(props) {
 			if (!match) {
 				setSt({
 					name: n,
+					code: st.code,
 					error: "未找到成员：\"" + n + "\"（请检查拼写）",
 					submitting: false
 				});
 				return;
 			}
-			return fetch("http://127.0.0.1:8500/api/v1/device/identify", {
+			return api("/api/v1/device/identify", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					device_id: props.deviceId,
-					member_id: match.member_id
+					member_id: match.member_id,
+					invite_code: (st.code || "").trim()
 				})
-			}).then((r) => {
+			}).then(async (r) => {
 				if (r.ok) {
 					localStorage.setItem("deepddw_member_id", match.member_id);
 					localStorage.setItem("deepddw_workspace", "member:" + match.member_id);
 					location.reload();
-				} else setSt({
-					name: n,
-					error: "绑定失败，请重试",
-					submitting: false
-				});
+				} else {
+					let note = "绑定失败，请重试";
+					try {
+						const j = await r.json();
+						note = j && (j.detail || j.message || j.data && j.data.note) || note;
+					} catch (e) {}
+					setSt({
+						name: n,
+						code: st.code,
+						error: note,
+						submitting: false
+					});
+				}
 			});
 		}).catch((e) => {
 			setSt({
 				name: n,
+				code: st.code,
 				error: "网络错误：" + e.message,
 				submitting: false
 			});
@@ -147,6 +180,7 @@ function MemberIdentify(props) {
 		onChange: (e) => {
 			setSt({
 				name: e.target.value,
+				code: st.code,
 				error: "",
 				submitting: false
 			});
@@ -165,6 +199,31 @@ function MemberIdentify(props) {
 			color: "var(--dsw-alias-label-primary)",
 			fontSize: "15px",
 			outline: "none"
+		}
+	}), h("input", {
+		value: st.code,
+		onChange: (e) => {
+			setSt({
+				name: st.name,
+				code: e.target.value,
+				error: "",
+				submitting: false
+			});
+		},
+		onKeyDown: (e) => {
+			if (e.key === "Enter") submit();
+		},
+		placeholder: "绑定码（team 模式必填，向管理员索取；家庭模式可留空）",
+		style: {
+			width: "100%",
+			padding: "12px",
+			borderRadius: "8px",
+			border: "1px solid var(--dsw-alias-border-l2)",
+			background: "var(--dsw-alias-bg-layer-2)",
+			color: "var(--dsw-alias-label-primary)",
+			fontSize: "13px",
+			outline: "none",
+			marginTop: "10px"
 		}
 	}), st.error ? h("p", { style: {
 		color: "#e74c3c",
@@ -266,43 +325,58 @@ function SettingsPanel() {
 	react.useEffect(refresh, []);
 	function setMode(m) {
 		if (!confirm("切换为 \"" + MODES.find((x) => x.value === m).label + "\" 模式后需重启服务，确认？")) return;
-		fetch("http://127.0.0.1:8500/api/v1/deployment/mode", {
+		api("/api/v1/deployment/mode", {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ mode: m })
 		}).then((r) => {
+			if (r.status === 403) {
+				alert(FORBIDDEN_MSG);
+				return;
+			}
 			if (r.ok) refresh();
 		});
 	}
 	function addMember() {
 		if (!newName.trim()) return;
-		fetch("http://127.0.0.1:8500/api/v1/member/add", {
+		api("/api/v1/member/add", {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ display_name: newName.trim() })
-		}).then(() => {
+		}).then((r) => {
+			if (r.status === 403) {
+				alert(FORBIDDEN_MSG);
+				return;
+			}
 			setName("");
 			refresh();
 		});
 	}
 	function removeMember(mid) {
 		if (!confirm("定要移除此成员？该成员的记忆体和知识库将保留但无法再访问。")) return;
-		fetch("http://127.0.0.1:8500/api/v1/member/revoke", {
+		api("/api/v1/member/revoke", {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ member_id: mid })
-		}).then(() => {
+		}).then((r) => {
+			if (r.status === 403) {
+				alert(FORBIDDEN_MSG);
+				return;
+			}
 			refresh();
 		});
 	}
 	function extractMembers() {
 		if (sel.size === 0) return alert("请先选择成员");
 		if (!confirm("将选中成员的记忆体和知识库提取到团队共享空间，并删除成员？")) return;
-		fetch("http://127.0.0.1:8500/api/v1/member/extract", {
+		api("/api/v1/member/extract", {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ member_ids: Array.from(sel) })
-		}).then((r) => r.json()).then((d) => {
+		}).then(async (r) => {
+			if (r.status === 403) {
+				alert(FORBIDDEN_MSG);
+				return null;
+			}
+			return r.json();
+		}).then((d) => {
+			if (!d) return;
 			alert("已提取 " + (d.data && d.data.extracted || 0) + " 条记忆到团队共享空间，已删除 " + (d.data && d.data.deleted || 0) + " 个成员。");
 			setSel(/* @__PURE__ */ new Set());
 			refresh();
@@ -693,6 +767,128 @@ function OnboardingModal() {
 		}
 	}, st.submitting ? "保存中..." : "确认")));
 }
+/**
+* 左栏图标位（sidebar.panellist 的占用者）。owner 传 { size, active }：
+* size 是请求的方形边长，active 表示该面板当前在主区选中。图标用
+* currentColor 描边，深浅主题自动跟随。
+*/
+function TeamIcon(props) {
+	const size = props && props.size || 22;
+	const active = !!(props && props.active);
+	return h("span", { style: {
+		display: "inline-flex",
+		alignItems: "center",
+		justifyContent: "center",
+		width: size,
+		height: size,
+		opacity: active ? 1 : .75
+	} }, h("svg", {
+		width: size,
+		height: size,
+		viewBox: "0 0 24 24",
+		fill: "none",
+		stroke: "currentColor",
+		strokeWidth: 1.6,
+		strokeLinecap: "round",
+		strokeLinejoin: "round",
+		"aria-hidden": "true"
+	}, h("path", { d: "M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20" }), h("circle", {
+		cx: 9.5,
+		cy: 7,
+		r: 3
+	}), h("path", { d: "M17 11a3 3 0 1 0-2.5-4.2M21 20v-1.5a4 4 0 0 0-3-3.8" })));
+}
+/**
+* 左栏图标打开的主面板（main keyed 槽，key = PANEL_ID）。main 的非保留 key
+* 不绑会话 = 浏览器级视图；内容即全局管理台（成员/设备/模式/共享空间），
+* 与 设置 → 团队管理 共用同一组件：左栏是「入口」，设置页是「配置」，并存。
+*/
+function TeamMain(_props) {
+	return h("div", { style: {
+		height: "100%",
+		overflowY: "auto"
+	} }, h(SettingsPanel));
+}
+/**
+* 右栏页签（v0.6.0，裁定方案 C 的会话伴随面）：当前身份 / 在线设备 / 共享空间。
+* 形态参照 dsh-context：sidebarRightTabs 服务注册页签类型，sidebar.right.pane.tab
+* （keyed / session 作用域）出页签体——无会话时页签不存在，属预期行为。
+* 注：「本会话写入的记忆」需按会话过滤的记忆查询 API，留待后端补（v0.7）。
+*/
+function TeamSideTab(_props) {
+	const [st, setSt] = react.useState({
+		member: "",
+		role: "",
+		online: 0,
+		total: 0,
+		shared: 0,
+		mode: ""
+	});
+	react.useEffect(() => {
+		const mid = localStorage.getItem("deepddw_member_id") || "";
+		fetch("http://127.0.0.1:8500/api/v1/deployment/mode").then((r) => r.json()).then((d) => {
+			setSt((s) => ({
+				...s,
+				mode: d.data && d.data.mode || ""
+			}));
+		}).catch(() => {});
+		fetch("http://127.0.0.1:8500/api/v1/status").then((r) => r.json()).then((d) => {
+			const devs = d.data && d.data.devices || [];
+			setSt((s) => ({
+				...s,
+				online: devs.filter((x) => x.online).length,
+				total: devs.length
+			}));
+		}).catch(() => {});
+		fetch("http://127.0.0.1:8500/api/v1/member/list").then((r) => r.json()).then((d) => {
+			const me = (d.data && d.data.results || []).find((m) => m.member_id === mid);
+			if (me) setSt((s) => ({
+				...s,
+				member: me.display_name || "",
+				role: me.role || ""
+			}));
+		}).catch(() => {});
+		fetch("http://127.0.0.1:8500/api/v1/admin/stats").then((r) => r.json()).then((d) => {
+			setSt((s) => ({
+				...s,
+				shared: d.data && d.data.shared_memory && d.data.shared_memory.logs_3d || 0
+			}));
+		}).catch(() => {});
+	}, []);
+	const row = (k, v) => h("div", {
+		key: k,
+		style: {
+			display: "flex",
+			justifyContent: "space-between",
+			padding: "6px 8px",
+			borderRadius: "6px",
+			background: "var(--dsw-alias-bg-layer-2)"
+		}
+	}, h("span", { style: { color: "var(--dsw-alias-label-secondary)" } }, k), h("b", { style: { fontWeight: 600 } }, String(v)));
+	return h("div", { style: {
+		padding: "12px",
+		display: "flex",
+		flexDirection: "column",
+		gap: "6px"
+	} }, row(t("当前身份", "Identity"), st.member || t("未绑定", "Unbound")), row(t("角色", "Role"), st.role || "-"), row(t("在线设备", "Devices online"), st.online + " / " + st.total), row(t("共享记忆（3 日）", "Shared (3d)"), st.shared), row(t("部署模式", "Mode"), st.mode || "-"), h("p", { style: {
+		margin: "4px 2px 0",
+		fontSize: "11px",
+		color: "var(--dsw-alias-text-disabled)"
+	} }, t("管理台见左栏「团队管理」。", "Manage in the left-rail Team Admin entry.")));
+}
+/**
+* 注册守卫：把「等槽声明再注册」包成一个 effect。槽已声明则立即执行，
+* 未声明则在其声明调用内执行——两种顺序都正确；直接注册会抛
+* slot "…" is not declared 并让整个插件 fiber failed。单个入口失败只记
+* 日志不向上抛：UI 插件可以丢一个入口，不能丢整个页面。
+*/
+function registerWhenDeclared(ctx, slot, options, component, label) {
+	try {
+		ctx.effect(() => ctx.slots.inject(slot, () => ctx.slots.register(options, component)), "ddw: " + label);
+	} catch (e) {
+		console.error("[ddw] register " + label + " failed", e);
+	}
+}
 function apply(ctx) {
 	try {
 		if (!localStorage.getItem("deepddw_onboarded")) fetch("http://127.0.0.1:8500/api/v1/deployment/mode").then((r) => r.json()).then((d) => {
@@ -708,8 +904,56 @@ function apply(ctx) {
 			name: "settings.section",
 			id: "ddw-multiuser-settings",
 			order: 100,
-			label: () => "多用户设置"
+			label: () => t("团队管理", "Team Admin")
 		}, SettingsPanel));
+		registerWhenDeclared(ctx, "sidebar.panellist", {
+			name: "sidebar.panellist",
+			id: PANEL_ID,
+			order: 30,
+			label: () => t("团队管理", "Team Admin")
+		}, TeamIcon, "left rail icon");
+		registerWhenDeclared(ctx, "main", {
+			name: "main",
+			key: PANEL_ID
+		}, TeamMain, "main panel");
+		try {
+			ctx.inject(["sidebarRightTabs"], (raw) => {
+				const tabs = raw && raw.sidebarRightTabs;
+				if (!tabs || typeof tabs.register !== "function") return void 0;
+				const disposers = [];
+				try {
+					disposers.push(tabs.register({
+						id: "ddw-team-tab",
+						kind: "ddw-team-tab",
+						title: () => t("团队", "Team"),
+						guide: [{
+							id: "ddw-team-tab",
+							order: 30,
+							title: () => t("团队", "Team"),
+							description: () => t("当前身份、在线设备与共享空间", "Identity, devices online and shared space"),
+							icon: TeamIcon
+						}]
+					}));
+					disposers.push(ctx.slots.inject("sidebar.right.pane.tab", () => ctx.slots.register({
+						name: "sidebar.right.pane.tab",
+						key: "ddw-team-tab"
+					}, TeamSideTab)));
+					disposers.push(ctx.slots.inject("sidebar.right.pane.tab.title", () => ctx.slots.register({
+						name: "sidebar.right.pane.tab.title",
+						key: "ddw-team-tab"
+					}, () => h("span", { style: { fontSize: "12px" } }, t("团队", "Team")))));
+				} catch (e) {
+					for (const d of disposers) d();
+					console.error("[ddw] right tab register failed", e);
+					return;
+				}
+				return () => {
+					for (const d of disposers) d();
+				};
+			});
+		} catch (e) {
+			console.error("[ddw] right tab service wait failed", e);
+		}
 		const deviceId = localStorage.getItem("deepddw_device_id") || "dev-" + Date.now().toString(36);
 		localStorage.setItem("deepddw_device_id", deviceId);
 		function heartbeat() {
@@ -746,7 +990,7 @@ function apply(ctx) {
 				deviceId
 			})));
 		}).catch(() => {});
-		console.log("[ddw] all slots registered (v0.5.1)");
+		console.log("[ddw] all slots registered (v0.6.0: settings.section + sidebar.panellist + main + sidebar.right.pane.tab)");
 	} catch (e) {
 		console.error("[ddw]", e);
 	}

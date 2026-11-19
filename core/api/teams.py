@@ -19,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from core.api_response import fail, ok
@@ -91,6 +91,50 @@ def _ensure_members_table(conn) -> None:  # noqa: ANN001
         """
     )
     conn.commit()
+    # v0.6.0 角色层迁移：invites 增 role / bound_member_id 列（老库 ALTER 兜底）
+    for stmt in (
+        "ALTER TABLE invites ADD COLUMN role TEXT NOT NULL DEFAULT 'member'",
+        "ALTER TABLE invites ADD COLUMN bound_member_id TEXT NOT NULL DEFAULT ''",
+    ):
+        try:
+            conn.execute(stmt)
+        except sqlite3.OperationalError:
+            pass  # 列已存在
+    conn.commit()
+    _bootstrap_admin_roles(conn)
+
+
+# 角色引导只跑一次/进程（_get_conn 每次都会走 _ensure_members_table）
+_admin_bootstrapped = False
+
+
+def _bootstrap_admin_roles(conn) -> None:  # noqa: ANN001
+    """存量迁移（v0.6.0 裁定）：family 全员 admin（家庭互信）；team 无 admin 时
+    提升最早注册的活跃成员为 admin（首个成员/部署者）。幂等、只跑一次。"""
+    global _admin_bootstrapped
+    if _admin_bootstrapped or not members_enabled():
+        return
+    _admin_bootstrapped = True
+    mode = get_deployment_mode()
+    try:
+        if mode == "family":
+            conn.execute(
+                "UPDATE members SET role='admin' WHERE revoked=0 AND deleted=0"
+            )
+        else:  # team
+            has_admin = conn.execute(
+                "SELECT 1 FROM members WHERE role='admin' AND revoked=0 AND deleted=0 LIMIT 1"
+            ).fetchone()
+            if not has_admin:
+                conn.execute(
+                    "UPDATE members SET role='admin' WHERE member_id=("
+                    "  SELECT member_id FROM members"
+                    "  WHERE revoked=0 AND deleted=0"
+                    "  ORDER BY registered_at LIMIT 1)"
+                )
+        conn.commit()
+    except sqlite3.Error as exc:  # noqa: BLE001
+        logger.warning("admin bootstrap degraded: %s", exc)
 
 
 # ---------------------------------------------------------------------------
@@ -109,21 +153,34 @@ def members_enabled() -> bool:
 
 def create_invite(
     note: str = "", max_uses: int = 1, expires_hours: int = 168,
+    role: str = "member", bound_member_id: str = "",
 ) -> Dict[str, Any]:
-    """管理员生成邀请码（可设过期/最大次数；默认 7 天 1 次）。"""
+    """管理员生成邀请码（可设过期/最大次数；默认 7 天 1 次）。
+
+    v0.6.0 角色层：
+    - ``role``：新成员注册时继承的角色（admin/member；admin 码仅 team 模式有意义）
+    - ``bound_member_id``：非空 = 「绑定码」——/device/identify 把新设备绑到
+      这个**已有成员**时必须持此码（堵 display_name 冒名认领的提权洞）
+    """
+    if role not in ("admin", "member"):
+        return {"ok": False, "note": f"非法角色: {role}"}
+    if bound_member_id and not _MEMBER_ID_RE.match(bound_member_id):
+        return {"ok": False, "note": "非法成员 ID"}
     code = _gen_invite()
     expires_at = datetime.now().timestamp() + expires_hours * 3600
     conn = _get_conn()
     try:
         conn.execute(
             "INSERT INTO invites (invite_code, note, max_uses, used_count, "
-            "expires_at, created_at) VALUES (?, ?, ?, 0, ?, datetime('now'))",
+            "expires_at, created_at, role, bound_member_id) "
+            "VALUES (?, ?, ?, 0, ?, datetime('now'), ?, ?)",
             (code, (note or "")[:100], max(1, int(max_uses)),
-             int(expires_at)),
+             int(expires_at), role, bound_member_id or ""),
         )
         conn.commit()
         return {"ok": True, "invite_code": code,
-                "expires_at": int(expires_at), "max_uses": max(1, int(max_uses))}
+                "expires_at": int(expires_at), "max_uses": max(1, int(max_uses)),
+                "role": role, "bound_member_id": bound_member_id or ""}
     except Exception as exc:  # noqa: BLE001
         logger.warning("invite create degraded: %s", exc)
         return {"ok": False, "degraded": True, "note": str(exc)}
@@ -141,7 +198,7 @@ def register_member(
     conn = _get_conn()
     try:
         inv = conn.execute(
-            "SELECT invite_code, max_uses, used_count, expires_at "
+            "SELECT invite_code, max_uses, used_count, expires_at, role "
             "FROM invites WHERE invite_code=?", (code,)
         ).fetchone()
         if inv is None:
@@ -152,11 +209,20 @@ def register_member(
             return {"ok": False, "note": "邀请码已过期"}
         # 生成 member_id（8 位短码，防猜）
         member_id = "m-" + "".join(secrets.choice(_INVITE_CHARS) for _ in range(8))
+        # v0.6.0：角色继承邀请码；team 模式首个成员（部署者）直接 admin
+        role = (inv["role"] if "role" in inv.keys() else "member") or "member"
+        if role != "admin":
+            active_count = conn.execute(
+                "SELECT COUNT(*) AS n FROM members WHERE revoked=0 AND deleted=0"
+            ).fetchone()["n"]
+            if get_deployment_mode() == "team" and active_count == 0:
+                role = "admin"
         import json as _json
         conn.execute(
             "INSERT INTO members (member_id, display_name, role, device_ids, "
-            "invite_code, registered_at) VALUES (?, ?, 'member', ?, ?, datetime('now'))",
-            (member_id, (display_name or "")[:40], _json.dumps([device_id]), code),
+            "invite_code, registered_at) VALUES (?, ?, ?, ?, ?, datetime('now'))",
+            (member_id, (display_name or "")[:40], role,
+             _json.dumps([device_id]), code),
         )
         conn.execute(
             "UPDATE invites SET used_count=used_count+1 WHERE invite_code=?",
@@ -174,15 +240,33 @@ def register_member(
 def add_member_direct(
     display_name: str = "", device_id: str = "",
 ) -> Dict[str, Any]:
-    """family 模式：管理员直接添加成员（免邀请码——家人互信）。"""
+    """family 模式：管理员直接添加成员（免邀请码——家人互信）。
+
+    v0.6.0 裁定：family 全员 admin（家庭互信）；team 模式冷启动首个成员 = admin
+    （部署者裁定；此后 team 走邀请码制）。
+    """
+    mode = get_deployment_mode()
+    role = "admin" if mode == "family" else "member"
+    if mode == "team":
+        conn = _get_conn()
+        try:
+            active = conn.execute(
+                "SELECT COUNT(*) AS n FROM members WHERE revoked=0 AND deleted=0"
+            ).fetchone()["n"]
+        except sqlite3.Error:
+            active = 0
+        finally:
+            conn.close()
+        if active == 0:
+            role = "admin"  # 冷启动首加 = 部署者
     member_id = "m-" + "".join(secrets.choice(_INVITE_CHARS) for _ in range(8))
     conn = _get_conn()
     try:
         import json as _json
         conn.execute(
             "INSERT INTO members (member_id, display_name, role, device_ids, "
-            "registered_at) VALUES (?, ?, 'member', ?, datetime('now'))",
-            (member_id, (display_name or "")[:40], _json.dumps([device_id])),
+            "registered_at) VALUES (?, ?, ?, ?, datetime('now'))",
+            (member_id, (display_name or "")[:40], role, _json.dumps([device_id])),
         )
         conn.commit()
         return {"ok": True, "member_id": member_id, "display_name": display_name or member_id}
@@ -255,6 +339,48 @@ def bind_device_to_member(device_id: str, member_id: str) -> Dict[str, Any]:
         conn.close()
 
 
+def bind_device_by_identify(
+    device_id: str, member_id: str, invite_code: str = "",
+) -> Dict[str, Any]:
+    """v0.6.0：/device/identify 的守门版。
+
+    - solo：成员层关闭，放行（函数级不拦截，端点层由 members_enabled 拦）
+    - family：家庭互信（裁定），免码绑定
+    - team：绑定**已有成员**必须持该成员的绑定码（管理员经 invite/create
+      ``bound_member_id`` 生成）——堵 display_name 文本匹配冒名认领的提权洞
+    """
+    if get_deployment_mode() == "team":
+        code = (invite_code or "").strip().upper()
+        if not code:
+            return {"ok": False, "note": "team 模式绑定成员需要绑定码（管理员生成）"}
+        conn = _get_conn()
+        try:
+            inv = conn.execute(
+                "SELECT max_uses, used_count, expires_at, bound_member_id "
+                "FROM invites WHERE invite_code=?",
+                (code,),
+            ).fetchone()
+            if inv is None:
+                return {"ok": False, "note": "绑定码不存在"}
+            if float(inv["expires_at"]) < time.time():
+                return {"ok": False, "note": "绑定码已过期"}
+            if int(inv["used_count"]) >= int(inv["max_uses"]):
+                return {"ok": False, "note": "绑定码已达最大使用次数"}
+            if (inv["bound_member_id"] or "") != member_id:
+                return {"ok": False, "note": "绑定码与成员不匹配"}
+            conn.execute(
+                "UPDATE invites SET used_count=used_count+1 WHERE invite_code=?",
+                (code,),
+            )
+            conn.commit()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("identify guard degraded: %s", exc)
+            return {"ok": False, "degraded": True, "note": str(exc)}
+        finally:
+            conn.close()
+    return bind_device_to_member(device_id, member_id)
+
+
 def member_for_device(device_id: str) -> Optional[Dict[str, Any]]:
     """按设备查成员（重连识别）；无绑定返回 None。"""
     if not device_id:
@@ -278,6 +404,94 @@ def member_for_device(device_id: str) -> Optional[Dict[str, Any]]:
         return None
     finally:
         conn.close()
+
+
+# ---------------------------------------------------------------------------
+# v0.6.0 角色层（admin/member）：赋权 + 服务端强制
+# ---------------------------------------------------------------------------
+
+
+def set_member_role(member_id: str, role: str) -> Dict[str, Any]:
+    """设置成员角色（admin 可互相升降；不可降级自己为唯一 admin——防锁死）。"""
+    if role not in ("admin", "member"):
+        return {"ok": False, "note": f"非法角色: {role}"}
+    conn = _get_conn()
+    try:
+        cur = conn.execute(
+            "UPDATE members SET role=? WHERE member_id=? AND revoked=0 AND deleted=0",
+            (role, member_id),
+        )
+        if cur.rowcount == 0:
+            return {"ok": False, "note": "成员不存在或已吊销/删除"}
+        if role == "member":
+            # 防锁死：不允许把最后一名活跃 admin 降级
+            admins_left = conn.execute(
+                "SELECT COUNT(*) AS n FROM members "
+                "WHERE role='admin' AND revoked=0 AND deleted=0 AND member_id != ?",
+                (member_id,),
+            ).fetchone()["n"]
+            if admins_left == 0:
+                return {"ok": False, "note": "不能降级唯一管理员（先提升其他成员）"}
+        conn.commit()
+        return {"ok": True, "member_id": member_id, "role": role}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("member role degraded: %s", exc)
+        return {"ok": False, "degraded": True, "note": str(exc)}
+    finally:
+        conn.close()
+
+
+def _request_device(request: Request) -> str:
+    """取调用方设备 ID：X-DDW-Device 头优先，其次 query ?device_id=。
+
+    客户端（plugins/ddw-teams-panel）所有 API 调用统一带 X-DDW-Device；
+    未携带 = 未绑定设备，team 模式下不具管理员权限。
+    """
+    dev = (request.headers.get("x-ddw-device") or "").strip()
+    if not dev:
+        dev = (request.query_params.get("device_id") or "").strip()
+    return dev[:64]
+
+
+def require_admin(device_id: str) -> Optional[Dict[str, Any]]:
+    """写操作的角色门（服务端强制，非仅 UI 隐藏）。
+
+    - solo：单用户模型，无成员层，放行（向后兼容）
+    - family：家庭互信（裁定：全员 admin），放行
+    - team：调用设备必须绑定到**活跃 admin 成员**；未绑定设备一律拒绝；
+      但**冷启动放行**——无任何活跃成员时放行（首个操作者经注册/直加
+      成为 admin，否则 invite/create 与 member/add 互相锁死，鸡生蛋）
+    返回 None = 放行；否则为拒绝 dict（配 HTTP 403）。
+    """
+    mode = get_deployment_mode()
+    if mode in ("solo", "family"):
+        return None
+    conn = _get_conn()
+    try:
+        active = conn.execute(
+            "SELECT COUNT(*) AS n FROM members WHERE revoked=0 AND deleted=0"
+        ).fetchone()["n"]
+    except sqlite3.Error:
+        active = 0
+    finally:
+        conn.close()
+    if active == 0:
+        return None  # 冷启动：没有任何成员，放行首配操作
+    m = member_for_device((device_id or "").strip())
+    if m and m.get("role") == "admin" and not m.get("revoked"):
+        return None
+    return {
+        "ok": False,
+        "forbidden": True,
+        "note": "需要管理员角色（team 模式下须为绑定管理员成员的设备）",
+    }
+
+
+def _guard_admin(request: Request) -> None:
+    """FastAPI 端点用：admin 门不通过 → HTTP 403。"""
+    rejection = require_admin(_request_device(request))
+    if rejection is not None:
+        raise HTTPException(status_code=403, detail=rejection["note"])
 
 
 # ---------------------------------------------------------------------------
@@ -328,6 +542,8 @@ class InviteReq(BaseModel):
     note: str = Field(default="", max_length=100)
     max_uses: int = Field(default=1, ge=1, le=1000)
     expires_hours: int = Field(default=168, ge=1, le=8760)
+    role: str = Field(default="member", max_length=16)          # v0.6.0：新成员继承角色
+    bound_member_id: str = Field(default="", max_length=64)     # v0.6.0：非空 = 已有成员的绑定码
 
 
 class MemberRegisterReq(BaseModel):
@@ -348,6 +564,14 @@ class MemberRevokeReq(BaseModel):
 class DeviceBindReq(BaseModel):
     device_id: str = Field(..., min_length=1, max_length=64)
     member_id: str = Field(..., min_length=4, max_length=64)
+    invite_code: str = Field(default="", max_length=16)  # v0.6.0：team 模式绑码防冒名
+
+
+class MemberRoleReq(BaseModel):
+    """v0.6.0：角色变更（admin 收紧）。"""
+
+    member_id: str = Field(..., min_length=4, max_length=64)
+    role: str = Field(..., min_length=4, max_length=16)
 
 
 @router.get("/deployment/mode")
@@ -367,9 +591,11 @@ async def get_mode(
 @router.post("/deployment/mode")
 async def set_mode(
     payload: ModeReq,
+    request: Request,
     claims: Dict[str, Any] = Depends(require_access_token),
 ) -> Dict[str, Any]:
-    """设置部署模式（写 deployment.yaml；重启生效，不支持热切换）。"""
+    """设置部署模式（写 deployment.yaml；重启生效，不支持热切换）。admin 门。"""
+    _guard_admin(request)
     from core.config import set_deployment_mode
 
     return ok(set_deployment_mode(payload.mode))
@@ -378,12 +604,17 @@ async def set_mode(
 @router.post("/invite/create")
 async def invite_create(
     payload: InviteReq,
+    request: Request,
     claims: Dict[str, Any] = Depends(require_access_token),
 ) -> Dict[str, Any]:
-    """管理员生成邀请码（仅 family/team 模式）。"""
+    """管理员生成邀请码（仅 family/team 模式）。admin 门。"""
+    _guard_admin(request)
     if not members_enabled():
         return ok({"ok": False, "note": "成员系统未启用（当前 solo 模式）"})
-    return ok(create_invite(payload.note, payload.max_uses, payload.expires_hours))
+    return ok(create_invite(
+        payload.note, payload.max_uses, payload.expires_hours,
+        role=payload.role, bound_member_id=payload.bound_member_id,
+    ))
 
 
 @router.post("/member/register")
@@ -400,12 +631,27 @@ async def member_register(
 @router.post("/member/add")
 async def member_add(
     payload: MemberAddReq,
+    request: Request,
     claims: Dict[str, Any] = Depends(require_access_token),
 ) -> Dict[str, Any]:
-    """直接添加成员（family 模式免邀请码；team 模式建议走邀请码）。"""
+    """直接添加成员（family 模式免邀请码；team 模式建议走邀请码）。admin 门。"""
+    _guard_admin(request)
     if not members_enabled():
         return ok({"ok": False, "note": "成员系统未启用（当前 solo 模式）"})
     return ok(add_member_direct(payload.display_name, payload.device_id))
+
+
+@router.post("/member/role")
+async def member_role(
+    payload: MemberRoleReq,
+    request: Request,
+    claims: Dict[str, Any] = Depends(require_access_token),
+) -> Dict[str, Any]:
+    """v0.6.0：设置成员角色（admin/member）。admin 门；唯一 admin 不可自降。"""
+    if not members_enabled():
+        return ok({"ok": False, "note": "成员系统未启用（当前 solo 模式）"})
+    _guard_admin(request)
+    return ok(set_member_role(payload.member_id, payload.role))
 
 
 @router.get("/member/list")
@@ -421,29 +667,38 @@ async def member_list(
 @router.post("/member/revoke")
 async def member_revoke(
     payload: MemberRevokeReq,
+    request: Request,
     claims: Dict[str, Any] = Depends(require_access_token),
 ) -> Dict[str, Any]:
-    """吊销成员。"""
+    """吊销成员。admin 门。"""
+    _guard_admin(request)
     return ok(revoke_member(payload.member_id))
 
 
 @router.post("/device/bind-member")
 async def device_bind(
     payload: DeviceBindReq,
+    request: Request,
     claims: Dict[str, Any] = Depends(require_access_token),
 ) -> Dict[str, Any]:
-    """设备 ↔ 成员绑定（launcher 注册后调用；重连自动识别）。"""
+    """设备 ↔ 成员绑定（launcher 注册后调用；重连自动识别）。admin 门。
+
+    team 模式收紧（2026-11-19 真机审计）：此端点原本无角色校验，构成
+    identify 绑定码防冒名的旁路——任何内网设备可直绑任意 member_id。
+    收紧后 team 模式仅 admin 设备可直绑；新成员一律走 /device/identify+绑定码。
+    """
+    _guard_admin(request)
     return ok(bind_device_to_member(payload.device_id, payload.member_id))
 
 
-# M4 v0.5.0：/device/identify（与 /device/bind-member 同义，M4 弹窗使用）
+# M4 v0.5.0：/device/identify（M4 弹窗使用）；v0.6.0 team 模式需绑定码防冒名
 @router.post("/device/identify")
 async def device_identify(
     payload: DeviceBindReq,
     claims: Dict[str, Any] = Depends(require_access_token),
 ) -> Dict[str, Any]:
-    """M4 成员识别：设备首次打开 DSH 后弹窗绑定（device_id + member_id）。"""
-    return ok(bind_device_to_member(payload.device_id, payload.member_id))
+    """M4 成员识别：设备绑定（team 模式须持管理员生成的绑定码，堵冒名认领）。"""
+    return ok(bind_device_by_identify(payload.device_id, payload.member_id, payload.invite_code))
 
 
 @router.get("/device/member")
@@ -492,10 +747,12 @@ async def admin_stats(
 
 @router.post("/admin/distill")
 async def admin_distill(
+    request: Request,
     payload: Any = None,  # DistillReq（延迟导入避免循环；None → 默认）
     claims: Dict[str, Any] = Depends(require_access_token),
 ) -> Dict[str, Any]:
-    """管理员手动触发蒸馏（solo 不可用）。"""
+    """管理员手动触发蒸馏（solo 不可用）。admin 门。"""
+    _guard_admin(request)
     from core.api.distill import DistillReq, get_distillation_targets
 
     payload = payload if isinstance(payload, DistillReq) else DistillReq()
@@ -513,10 +770,12 @@ async def admin_distill(
 # ─── v0.5.0-patch8：成员记忆提取（提取到团队共享空间）
 @router.post("/member/extract")
 async def extract_member_memory(
+    request: Request,
     member_ids: List[str] = Body(..., description="要提取记忆的成员 ID 列表"),
     claims: Dict[str, Any] = Depends(require_access_token),
 ) -> Dict[str, Any]:
-    """将指定成员的个人记忆/知识库提取到团队共享空间，然后标记为"已删除"。"""
+    """将指定成员的个人记忆/知识库提取到团队共享空间，然后标记为"已删除"。admin 门。"""
+    _guard_admin(request)
     try:
         conn = _get_conn()
         extracted = 0

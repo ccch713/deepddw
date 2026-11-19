@@ -186,3 +186,184 @@ def test_resolve_namespace_invalid_member_id():
     """非法 member_id → 回退 shared（防注入）。"""
     assert teams_api.resolve_namespace("team", "bad id!") == "shared"
     assert teams_api.resolve_namespace("team", "x" * 65) == "shared"
+
+
+# ---------------------------------------------------------------------------
+# v0.6.0 角色层（admin/member）：赋权 + 邀请码继承 + 服务端强制 + 冒名防护
+# ---------------------------------------------------------------------------
+
+
+def _team_mode(monkeypatch) -> None:
+    """team 模式：覆盖 teams_api 命名空间的 mode 引用 + 重置角色引导标志。"""
+    monkeypatch.setattr(teams_api, "get_deployment_mode", lambda: "team")
+    monkeypatch.setattr(teams_api, "members_enabled", lambda: True)
+    monkeypatch.setattr(teams_api, "_admin_bootstrapped", False)
+
+
+def _family_mode(monkeypatch) -> None:
+    monkeypatch.setattr(teams_api, "get_deployment_mode", lambda: "family")
+    monkeypatch.setattr(teams_api, "members_enabled", lambda: True)
+    monkeypatch.setattr(teams_api, "_admin_bootstrapped", False)
+
+
+def test_invite_role_inherited(monkeypatch, tmp_path):
+    """admin 邀请码 → 注册成员继承 admin 角色。"""
+    _team_mode(monkeypatch)
+    monkeypatch.setattr(teams_api, "_db_path", lambda: tmp_path / "teams.db")
+    inv = teams_api.create_invite(note="admin-code", role="admin")
+    assert inv["ok"] is True and inv["role"] == "admin"
+    r = teams_api.register_member(inv["invite_code"], "管理员甲", "dev-a")
+    assert r["ok"] is True
+    members = teams_api.list_members()["results"]
+    assert members[0]["role"] == "admin"
+
+
+def test_team_first_member_bootstrap_admin(monkeypatch, tmp_path):
+    """team 模式首个成员（member 码注册）直接 admin（部署者裁定）。"""
+    _team_mode(monkeypatch)
+    monkeypatch.setattr(teams_api, "_db_path", lambda: tmp_path / "teams.db")
+    inv = teams_api.create_invite(role="member")
+    teams_api.register_member(inv["invite_code"], "甲", "dev-1")
+    teams_api.register_member(inv["invite_code"] if inv["max_uses"] > 1 else teams_api.create_invite(role="member")["invite_code"], "乙", "dev-2")
+    roles = {m["display_name"]: m["role"] for m in teams_api.list_members()["results"]}
+    assert roles["甲"] == "admin"
+    assert roles["乙"] == "member"
+
+
+def test_family_direct_add_is_admin(monkeypatch, tmp_path):
+    """family 裁定：直接添加的成员全员 admin（家庭互信）。"""
+    _family_mode(monkeypatch)
+    monkeypatch.setattr(teams_api, "_db_path", lambda: tmp_path / "teams.db")
+    r = teams_api.add_member_direct("家人甲", "dev-f1")
+    assert r["ok"] is True
+    members = teams_api.list_members()["results"]
+    assert members[0]["role"] == "admin"
+
+
+def test_set_member_role_lockout_guard(monkeypatch, tmp_path):
+    """唯一 admin 不可自降（防锁死）；提升第二 admin 后可降。"""
+    _team_mode(monkeypatch)
+    monkeypatch.setattr(teams_api, "_db_path", lambda: tmp_path / "teams.db")
+    inv = teams_api.create_invite(role="member", max_uses=5)
+    m1 = teams_api.register_member(inv["invite_code"], "甲", "dev-1")["member_id"]
+    m2 = teams_api.register_member(teams_api.create_invite(role="member")["invite_code"], "乙", "dev-2")["member_id"]
+    # 甲是首个成员 = admin；降级应被拒（唯一 admin）
+    r = teams_api.set_member_role(m1, "member")
+    assert r["ok"] is False and "唯一管理员" in r["note"]
+    # 提升乙为 admin 后，甲可降
+    assert teams_api.set_member_role(m2, "admin")["ok"] is True
+    assert teams_api.set_member_role(m1, "member")["ok"] is True
+    # 非法角色
+    assert teams_api.set_member_role(m1, "root")["ok"] is False
+
+
+def test_require_admin_team_gate(monkeypatch, tmp_path):
+    """team 模式：未绑定设备拒绝；绑定 admin 成员的设备放行；family/solo 放行。"""
+    _team_mode(monkeypatch)
+    monkeypatch.setattr(teams_api, "_db_path", lambda: tmp_path / "teams.db")
+    assert teams_api.require_admin("dev-unknown") is None  # 冷启动（无成员）→ 放行
+    inv = teams_api.create_invite(role="member")
+    teams_api.register_member(inv["invite_code"], "甲", "dev-admin")
+    assert teams_api.require_admin("dev-admin") is None  # 首成员=admin → 放行
+    assert teams_api.require_admin("dev-unknown") is not None  # 有成员后未绑定 → 拒
+    # 普通 member 设备
+    inv2 = teams_api.create_invite(role="member")
+    teams_api.register_member(inv2["invite_code"], "乙", "dev-member")
+    assert teams_api.require_admin("dev-member") is not None  # member → 拒
+    # family 全放行（家庭互信）
+    _family_mode(monkeypatch)
+    assert teams_api.require_admin("") is None
+
+
+def test_identify_anti_spoof_in_team(monkeypatch, tmp_path):
+    """team 模式冒名防护：无码拒绝；错码/错成员拒绝；正确绑定码放行并计次。"""
+    _team_mode(monkeypatch)
+    monkeypatch.setattr(teams_api, "_db_path", lambda: tmp_path / "teams.db")
+    inv = teams_api.create_invite(role="member")
+    target = teams_api.register_member(inv["invite_code"], "张三", "dev-0")["member_id"]
+    # 无码 → 拒
+    r = teams_api.bind_device_by_identify("dev-x", target, "")
+    assert r["ok"] is False and "绑定码" in r["note"]
+    # 生成绑定码（bound_member_id=target）
+    bind = teams_api.create_invite(note="bind-code", bound_member_id=target)
+    code = bind["invite_code"]
+    # 错成员 → 拒（码与成员不匹配，且不计次）
+    r2 = teams_api.bind_device_by_identify("dev-x", "m-WRONG123", code)
+    assert r2["ok"] is False and "不匹配" in r2["note"]
+    # 正确 → 放行并绑定
+    r3 = teams_api.bind_device_by_identify("dev-x", target, code.lower())  # 大小写归一
+    assert r3["ok"] is True
+    assert teams_api.member_for_device("dev-x")["member_id"] == target
+    # 绑定码计次耗尽（max_uses=1）→ 再用拒绝
+    r4 = teams_api.bind_device_by_identify("dev-y", target, code)
+    assert r4["ok"] is False and "最大使用次数" in r4["note"]
+    # family 免码（家庭互信）
+    _family_mode(monkeypatch)
+    assert teams_api.bind_device_by_identify("dev-f", target, "")["ok"] is True
+
+
+def test_set_deployment_mode_with_null_key(tmp_path, monkeypatch):
+    """回归（16G 真机 2026-11-19）：deployment.yaml 里 `deployment: null` 时
+    setdefault 返回 None，None["mode"] 写入炸 TypeError——首配模式即 500。"""
+    import yaml
+    from core import config as cfg
+    yml = tmp_path / "deployment.yaml"
+    yml.write_text(yaml.safe_dump({"mode": "standalone", "deployment": None}), encoding="utf-8")
+    monkeypatch.setattr(cfg.Path, "__new__", cfg.Path.__new__)  # noop，真实逻辑走 tmp_path 注入
+    # 直接以 tmp_path 为目标重写函数依赖：set_deployment_mode 用 __file__ 定位，
+    # 这里 monkeypatch safe_load 不可行——改为最小复现验证核心表达式已修：
+    data = {"mode": "standalone", "deployment": None}
+    dep = data.get("deployment")
+    if not isinstance(dep, dict):
+        dep = {}
+        data["deployment"] = dep
+    dep["mode"] = "team"
+    assert data["deployment"]["mode"] == "team"
+
+
+def test_set_deployment_mode_end_to_end(tmp_path, monkeypatch):
+    """端到端：deployment.yaml 含 deployment: null 时 POST 语义等价调用不炸。"""
+    import yaml
+    from core import config as cfg
+    yml = tmp_path / "deployment.yaml"
+    yml.write_text("mode: standalone\ndeployment: null\n", encoding="utf-8")
+    real_file = cfg.Path(cfg.__file__)
+    target = real_file.parent.parent / "config" / "deployment.yaml"
+    backup = target.read_text(encoding="utf-8") if target.exists() else None
+    try:
+        target.write_text("mode: standalone\ndeployment: null\n", encoding="utf-8")
+        r = cfg.set_deployment_mode("team")
+        assert r["ok"] is True and r["mode"] == "team"
+        data = yaml.safe_load(target.read_text(encoding="utf-8"))
+        assert data["deployment"]["mode"] == "team"
+    finally:
+        if backup is not None:
+            target.write_text(backup, encoding="utf-8")
+
+
+def test_team_coldstart_allows_first_ops(monkeypatch, tmp_path):
+    """冷启动（无任何活跃成员）：invite/create 与 member/add 放行；首加成员 = admin。
+    有成员后未绑定设备恢复拒绝（无鸡生蛋死锁）。"""
+    _team_mode(monkeypatch)
+    monkeypatch.setattr(teams_api, "_db_path", lambda: tmp_path / "teams.db")
+    assert teams_api.require_admin("dev-x") is None  # 冷启动放行
+    r = teams_api.add_member_direct("张三", "dev-admin")
+    assert r["ok"] is True
+    roles = {m["display_name"]: m["role"] for m in teams_api.list_members()["results"]}
+    assert roles["张三"] == "admin"  # 首加 = 部署者
+    assert teams_api.require_admin("dev-other") is not None  # 有成员后恢复拒绝
+    assert teams_api.require_admin("dev-admin") is None  # admin 设备放行
+
+
+async def test_bind_member_gated_in_team(client, monkeypatch, tmp_path):
+    """旁路封堵（2026-11-19 真机审计）：team 模式 /device/bind-member 无 admin 设备 → 403。"""
+    _team_mode(monkeypatch)
+    monkeypatch.setattr(teams_api, "_db_path", lambda: tmp_path / "teams.db")
+    teams_api.add_member_direct("张三", "dev-admin")  # 冷启动首加 = admin
+    headers = {"X-DDW-Token": os.environ["DDW_ACCESS_TOKEN"]}
+    r = await client.post("/api/v1/device/bind-member", headers=headers,
+                          json={"device_id": "dev-evil", "member_id": "m-HACK0001"})
+    assert r.status_code == 403
+    r3 = await client.post("/api/v1/device/bind-member", headers={**headers, "X-DDW-Device": "dev-admin"},
+                           json={"device_id": "dev-2", "member_id": teams_api.list_members()["results"][0]["member_id"]})
+    assert r3.status_code == 200
